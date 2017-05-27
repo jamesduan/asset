@@ -1,0 +1,944 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %}Production发布列表{% endblock %}
+{% block content %}
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker-v2/css/bootstrap-datetimepicker.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-multiselect/css/bootstrap-multiselect.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-slider-v7.1.1/css/bootstrap-slider.min.css" rel="stylesheet"/>
+    <style>
+        div.slide {
+            padding-top: 7px;
+        }
+    </style>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/date-format/js/date.format.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker-v2/js/bootstrap-datetimepicker.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-multiselect/js/bootstrap-multiselect.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-slider-v7.1.1/js/bootstrap-slider.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-json/js/jquery.json.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/queryParser/jquery-queryParser.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/dialog/dialog.js"></script>
+    <script src="{{ STATIC_URL }}deploy/js/utils.js"></script>
+    <script>
+        var query;
+        function from_unixtime(timestamp) {
+            if (!timestamp) return null;
+            var date = new Date(parseInt(timestamp) * 1000);
+            return date.format("yyyy-mm-dd HH:MM:ss");
+        }
+
+        function unix_timestamp(date_format, offset) {
+            if (!date_format) return '';
+            return Date.parse(date_format) / 1000 + offset;
+        }
+
+        function refresh() {
+            var param = {
+                app_id: query.app_id || $.trim($('#app_id').val()),
+                min_status: $.trim($('#status').val()) == "3" ? "0" : $.trim($('#status').val()),
+                max_status: $.trim($('#status').val()),
+                packtype: $.trim($('#packtype').val()),
+                deptype: $.trim($('#deptype').val()),
+                valid: $.trim($('#valid').val()),
+                is_gray_release: $.trim($('#is_gray_release').val()),
+                min_publishdatetimefrom: unix_timestamp($('div.date.from > input[type="text"]').val(), 0),
+                max_publishdatetimefrom: unix_timestamp($('div.date.to > input[type="text"]').val(), 0),
+            }
+            $('#table_code').bootstrapTable('refresh', {
+                url: '/api/deploy/main/list/v2/?' + $.param(param),
+                silent: false,
+            });
+        }
+        function condition_reset() {
+            $('select.combobox.code').each(function () {
+                $(this).data('combobox').clearElement();
+                $(this).data('combobox').clearTarget();
+            })
+            $('div.date > input[type="text"]').val('').datetimepicker('update');
+            refresh();
+        }
+        function server() {
+            $.ajax({
+                url: '/api/server/',
+                async: false,
+                data: {
+                    app_id: $('input[name="packtype"]:checked').val() == "0" ? $('#app_id_create').val() : {{ static_app_id }},
+                    format: 'json',
+                    page_size: 10000
+                },
+                headers: {
+                    Authorization: 'Token {{ API_TOKEN }}'
+                },
+                success: function (json) {
+                    var room_obj = {};
+                    $('#staging_create').empty();
+                    $('#production_create').empty();
+                    $('#staging_create').append($('<option>').text('--------').attr('value', ''));
+                    $.each(json.results, function (index, value) {
+                        if (value.server_status_id != 200) return;
+                        switch (value.server_env_id) {
+                            case 1:
+                                // var network_segment = value.ip.split('.').slice(0, 2).join('.');
+                                // if (network_segment == '{{ staging_network_segment.DCB }}')
+                                $('#staging_create').append($('<option>').text(value.ip).attr('value', value.ip));
+                                break;
+                            case 2:
+                                room_obj[value.room] = value.room_comment;
+                                $('#production_create').append($('<option>').text(value.ip).attr({
+                                    value: value.ip,
+                                    room: value.room
+                                }));
+                        }
+                    });
+                    $('#production_create').multiselect('rebuild');
+                    $('#dst_list div.checkbox').empty();
+                    $.each(room_obj, function (index, value) {
+                        $('#dst_list div.checkbox').append(
+                                $('<label>').attr('class', 'checkbox-inline')
+                                        .append($('<input>').attr({
+                                            type: 'checkbox',
+                                            id: index,
+                                            value: index,
+                                        }))
+                                        .append($('<label>').attr({
+                                            for: index,
+                                        }).css('padding-left', '0px').text(value.substring(0, 4)))
+                        )
+                    })
+                    $('#dst_list div.checkbox input[type="checkbox"]').change(function () {
+                        var option_array = $.map($('#production_create option[room="' + $(this).val() + '"]'), function (i) {
+                            return i.value;
+                        });
+                        $('#production_create').multiselect($(this).prop('checked') ? 'select' : 'deselect', option_array)
+                    })
+                },
+            })
+        }
+        function ftp() {
+            $.ajax({
+                url: '/api/deploy/ftp/list/',
+                async: false,
+                data: {
+                    app_id: $('#app_id_create').val(),
+                    packtype: $('input[name="packtype"]:checked').val(),
+                    date: $('#ftp_date').val().replace(/\//g, ''),
+                    format: 'json',
+                },
+                headers: {
+                    Authorization: 'Token {{ API_TOKEN }}'
+                },
+                success: function (json) {
+                    $('#ftp_path_create').empty();
+                    $('#ftp_path_create').append($('<option>').text('--------').attr('value', ''));
+                    $.each(json, function (index, value) {
+                        $('#ftp_path_create').append($('<option>').text(value).attr('value', value));
+                    });
+                },
+                {#                error: function (json) {#}
+                {#                    bootbox.alert('操作失败，原因为：' + json.responseText);#}
+                {#                }#}
+            });
+        }
+        function init_alert(alert_target, alert_class, alert) {
+            alert_target.empty();
+            $('<div>').attr({
+                class: ['alert', alert_class, 'alert-dismissible'].join(' '),
+                role: 'alert'
+            }).append($('<button>').attr({
+                        type: 'button',
+                        class: 'close',
+                        'data-dismiss': 'alert',
+                        'aria-label': 'Close'
+                    }).append($('<span>').attr('aria-hidden', 'true').html('&times;'))
+            ).append($('<strong>').text(alert)).prependTo(alert_target);
+        }
+        function get_url(app_id, app_id_array, is_gray_release) {
+            if ($.inArray(app_id, app_id_array) != -1)
+                return '/deploy/prod/detail/?depid='
+            else
+                return '/deploy/' + (is_gray_release == 0 ? 'normal' : 'gray') + '/detail/?depid='
+        }
+    </script>
+
+    <!-- 代码发布申请 -->
+    <div class="modal fade" id="modal_code" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:800px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="form_code">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">代码发布申请</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">发布模式</label>
+                            <div class="col-sm-9">
+                                <div>
+                                    <label class="radio-inline">
+                                        <input type="radio" name="pattern" value="0" checked> 常规发布
+                                    </label>
+                                    <label class="radio-inline">
+                                        <input type="radio" name="pattern" value="1"> 灰度发布
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="app_id_create" class="col-sm-3 control-label">站点/应用</label>
+                            <div class='col-sm-9'>
+                                <select id="app_id_create" name="app_id_create"
+                                        class="form-control combobox">
+                                    <option value="">请选择站点/应用</option>
+                                    {% for app in app_queryset %}
+                                        <option value="{{ app.id }}">{{ app.site.name }}/{{ app.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">发布包类型</label>
+                            <div class="col-sm-9">
+                                <div>
+                                    {% for pack_type in pack_type_list %}
+                                        <label class="radio-inline">
+                                            {% ifequal pack_type pack_type_list|first %}
+                                                <input type="radio" name="packtype" value="{{ pack_type.0 }}" checked>
+                                                {{ pack_type.1 }}
+                                            {% else %}
+                                                <input type="radio" name="packtype" value="{{ pack_type.0 }}">
+                                                {{ pack_type.1 }}
+                                            {% endifequal %}
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">发布类型</label>
+                            <div class="col-sm-9">
+                                <div>
+                                    {% for deploy_type in deploy_type_list %}
+                                        <label class="radio-inline">
+                                            {% ifequal deploy_type deploy_type_list|first %}
+                                                <input type="radio" name="deptype" value="{{ deploy_type.0 }}" checked>
+                                                {{ deploy_type.1 }}
+                                            {% else %}
+                                                <input type="radio" name="deptype" value="{{ deploy_type.0 }}">
+                                                {{ deploy_type.1 }}
+                                            {% endifequal %}
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group" id="src_list">
+                            <label for="staging_create" class="col-sm-3 control-label">源机器</label>
+                            <div class='col-sm-9'>
+                                <select id="staging_create" name="staging_create"
+                                        class="form-control">
+                                    <option value="">--------</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group" id="ftp_path" hidden>
+                            <label for="ftp_date" class="col-sm-3 control-label">FTP路径</label>
+                            <div class="col-sm-3">
+                                <div class="input-group date ftp">
+                                    <input class="form-control" type="text" id="ftp_date" disabled>
+                                    <span class="input-group-addon"><span class="glyphicon glyphicon-th"></span></span>
+                                </div>
+                            </div>
+                            <div class="col-sm-6">
+                                <select id="ftp_path_create" name="ftp_path_create"
+                                        class="form-control" disabled>
+                                    <option value="">--------</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group" id="dst_list">
+                            <label for="production_create" class="col-sm-3 control-label">目标机器</label>
+                            <div class='col-sm-6'>
+                                <select id="production_create" name="production_create"
+                                        class="form-control multiselect" multiple="multiple">
+                                </select>
+                            </div>
+                            <div class='col-sm-3 checkbox'>
+                            </div>
+                        </div>
+                        <div class="form-group" id="dst_list_manual">
+                            <label for="production_create_manual" class="col-sm-3 control-label">输入目标机器</label>
+                            <div class='col-sm-9'>
+                                <textarea class="form-control" id="production_create_manual" name="production_create_manual" style="height: 150px;" placeholder="ip用逗号分隔, 例如: 10.0.1.2,10.0.1.3,10.0.1.4"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">是否重启</label>
+                            <div class="col-sm-7">
+                                <div class="checkbox">
+                                    <label>
+                                        <input type="checkbox" id="restart" checked>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="jiraid" class="col-sm-3 control-label">Trident ID</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="jiraid">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="comment" class="col-sm-3 control-label">备注</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="comment">
+                            </div>
+                        </div>
+                        <div class="form-group normal">
+                            <label for="interval" class="col-sm-3 control-label">发布间隔</label>
+                            <div class="col-sm-9 slide">
+                                <input type="text" class="form-control slider" id="interval"
+                                       data-slider-min="0" data-slider-max="60" data-slider-step="5"
+                                       data-slider-value="{{ deploy_interval }}" style="width: 100%">
+                            </div>
+                        </div>
+                        <div class="form-group gray" hidden>
+                            <label for="gray_policy" class="col-sm-3 control-label">灰度策略</label>
+                            <div class="col-sm-9">
+                                <input type="text" class="form-control" id="gray_policy"
+                                       name="gray_policy"
+                                       placeholder="20,100" disabled>
+                            </div>
+                        </div>
+                        <div class="form-group gray" hidden>
+                            <label for="gray_stage_interval" class="col-sm-3 control-label">阶段间歇</label>
+                            <div class="col-sm-9 slide">
+                                <input type="text" class="form-control slider" id="gray_stage_interval"
+                                       data-slider-min="0" data-slider-max="60" data-slider-step="5"
+                                       data-slider-value="20" style="width: 100%">
+                            </div>
+                        </div>
+                        <div class="form-group gray" hidden>
+                            <label for="recover_time" class="col-sm-3 control-label">应用恢复时长</label>
+                            <div class="col-sm-9 slide">
+                                <input type="text" class="form-control slider" id="recover_time"
+                                       data-slider-min="0" data-slider-max="120" data-slider-step="5"
+                                       data-slider-value="30" style="width: 100%">
+                            </div>
+                        </div>
+                        <div class="form-group gray" hidden>
+                            <label for="colony_surplus" class="col-sm-3 control-label">集群剩余容量下限</label>
+                            <div class="col-sm-9 slide">
+                                <input type="text" class="form-control slider" id="colony_surplus"
+                                       data-slider-min="0" data-slider-max="100" data-slider-step="5"
+                                       data-slider-value="80" style="width: 100%">
+                            </div>
+                        </div>
+                        <div class="form-group gray" hidden>
+                            <label class="col-sm-3 control-label">阶段回滚判断方式</label>
+                            <div class="col-sm-9">
+                                <div>
+                                    {% for gray_rollback_type in gray_rollback_type_list %}
+                                        <label class="radio-inline">
+                                            {% ifequal gray_rollback_type gray_rollback_type_list|last %}
+                                                <input type="radio" name="gray_rollback_type"
+                                                       value="{{ gray_rollback_type.0 }}" checked>
+                                                {{ gray_rollback_type.1 }}
+                                            {% else %}
+                                                <input type="radio" name="gray_rollback_type"
+                                                       value="{{ gray_rollback_type.0 }}">
+                                                {{ gray_rollback_type.1 }}
+                                            {% endifequal %}
+                                        </label>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- toolbar -->
+    <div id="toolbar_code">
+        <div class="form-inline" role="form">
+            <label>From</label>
+            <div class="input-group date from timerange ">
+                <input class="form-control" type="text" disabled>
+                <span class="input-group-addon"><span class="glyphicon glyphicon-remove"></span></span>
+                <span class="input-group-addon"><span class="glyphicon glyphicon-th"></span></span>
+            </div>
+            <label>To</label>
+            <div class="input-group date to timerange ">
+                <input class="form-control" type="text" disabled>
+                <span class="input-group-addon"><span class="glyphicon glyphicon-remove"></span></span>
+                <span class="input-group-addon"><span class="glyphicon glyphicon-th"></span></span>
+            </div>
+            <select id="app_id" class="form-control combobox code">
+                <option value="">站点/应用</option>
+                <option value=" ">--------</option>
+                {% for app in app_queryset %}
+                    <option value="{{ app.id }}">{{ app.site.name }}/{{ app.name }}</option>
+                {% endfor %}
+            </select>
+            <select id="status" class="form-control combobox code">
+                <option value="">状态</option>
+                <option value=" ">--------</option>
+                {% for status in status_list %}
+                    {% if status.0 >= 3 %}
+                        <option value="{{ status.0 }}">{{ status.1 }}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+            <select id="packtype" class="form-control combobox code">
+                <option value="">包类型</option>
+                <option value=" ">--------</option>
+                {% for pack_type in pack_type_list %}
+                    <option value="{{ pack_type.0 }}">{{ pack_type.1 }}</option>
+                {% endfor %}
+            </select>
+            <select id="deptype" class="form-control combobox code">
+                <option value="">发布类型</option>
+                <option value=" ">--------</option>
+                {% for deploy_type in deploy_type_list %}
+                    <option value="{{ deploy_type.0 }}">{{ deploy_type.1 }}</option>
+                {% endfor %}
+            </select>
+            <select id="valid" class="form-control combobox code">
+                <option value="">是否有效</option>
+                <option value=" ">--------</option>
+                <option value="0">否</option>
+                <option value="1">是</option>
+            </select>
+            <select id="is_gray_release" class="form-control combobox code">
+                <option value="">是否灰度</option>
+                <option value=" ">--------</option>
+                <option value="0">否</option>
+                <option value="1">是</option>
+            </select>
+            <button class="btn btn-green" onclick="javascript:condition_reset()">重置</button>
+            <button class="btn btn-green" onclick="javascript:$('#modal_code').modal('show')">新增
+            </button>
+        </div>
+    </div>
+    <!-- <div class="inner-h1" style="margin-bottom: 0px">
+        <h1>
+            Production发布列表
+        </h1>
+    </div> -->
+    <div id="alert"></div>
+    <table id="table_code" class="bootstrap-table"></table>
+
+    <script>
+        $(document).ready(function () {
+            var app_id_array = new Array();
+            query = $.getQuery();
+            {% for app_id in app_id_list %}
+                app_id_array.push({{ app_id }})
+            {% endfor %}
+            $('select.combobox').combobox();
+            if (query.app_id)
+                $('#app_id').combobox('disable');
+            $('.timerange').datetimepicker({
+                format: 'yyyy-mm-dd hh:00',
+                autoclose: true,
+                minView: 1,
+                todayBtn: true,
+                todayHighlight: true
+            });
+            $('.ftp').datetimepicker({
+                format: 'yyyy/mm/dd',
+                autoclose: true,
+                showMeridian: true,
+                minView: 2,
+                todayBtn: true,
+                todayHighlight: true
+            });
+            $('#production_create').multiselect({
+                includeSelectAllOption: true,
+                enableFiltering: true,
+                selectAllValue: 'select-all-value',
+                onChange: function () {
+                    $('#dst_list > div.checkbox').find('input[type="checkbox"]').each(function (option, checked, select) {
+                        var option_set = $('#production_create option[room="' + $(this).val() + '"]');
+                        $(this).prop('checked', option_set.filter(':selected').length == option_set.length ? true : false);
+                    })
+                },
+                onSelectAll: function () {
+                    var option_set = $('#production_create option');
+                    var checkbox_set = $('#dst_list > div.checkbox').find('input[type="checkbox"]');
+                    switch (option_set.filter(':selected').length) {
+                        case option_set.length:
+                            checkbox_set.prop('checked', true);
+                            break;
+                        case 0:
+                            checkbox_set.prop('checked', false);
+                    }
+                }
+            });
+            $('#table_code').bootstrapTable({
+                url: '/api/deploy/main/list/v2/',
+                ajaxOptions: {
+                    'headers': {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    }
+                },
+                columns: [
+                    {
+                        title: '发布号',
+                        formatter: function (value, row, index) {
+                            return $('<a>').attr({
+{#                                href: get_url(row.app_id, app_id_array, row.is_gray_release) + row.depid,#}
+                                href: '/deploy/prod/detail/?depid=' + row.depid,
+                                target: '_blank'
+                            }).text(row.depid)[0].outerHTML;
+                        }
+                    },
+                    {
+                        title: 'Trident ID',
+                        formatter: function (value, row, index) {
+                            return $('<a>').attr({
+                                href: '{{ trident_prefix }}/secure/queryDeployRequestForm.jspa?issueKey=' + row.jiraid,
+                                target: '_blank'
+                            }).text(row.jiraid)[0].outerHTML;
+                        }
+                    },
+                    {
+                        title: '灰度',
+                        formatter: function (value, row, index) {
+                            return row.is_gray_release ? '是' : '否';
+                        }
+                    },
+                    {
+                        field: 'username',
+                        title: '操作人',
+                        visible: false
+                    },
+                    {
+                        title: 'Pool',
+                        formatter: function (value, row, index) {
+                            return row.site_name + '/' + row.app_name;
+                        }
+                    },
+                    {
+                        field: 'deptype_name',
+                        title: '发布类型',
+                        visible: false
+                    },
+                    {
+                        field: 'packtype_name',
+                        title: '包类型'
+                    },
+                    {
+                        title: '是否重启',
+                        formatter: function (value, row, index) {
+                            return row.restart ? '是' : '否';
+                        },
+                        visible: false
+                    },
+                    {
+                        title: '创建时间',
+                        formatter: function (value, row, index) {
+                            return from_unixtime(row.create_time);
+                        },
+                        visible: false
+                    },
+                    {
+                        title: '发布开始时间',
+                        formatter: function (value, row, index) {
+                            return from_unixtime(row.publishdatetimefrom);
+                        }
+                    },
+                    {
+                        title: '发布结束时间',
+                        formatter: function (value, row, index) {
+                            return from_unixtime(row.publishdatetimeto);
+                        }
+                    },
+                    {
+                        title: '最后修改时间',
+                        formatter: function (value, row, index) {
+                            return from_unixtime(row.last_modified);
+                        },
+                        visible: false
+                    },
+                    {
+                        field: 'status_name',
+                        title: '状态'
+                    },
+                    {
+                        field: 'comment',
+                        title: '备注',
+                        visible: false
+                    },
+                    {
+                        title: '有效',
+                        formatter: function (value, row, index) {
+                            return row.valid ? '是' : '否';
+                        },
+                        visible: false
+                    },
+                    {#                    {#}
+                    {#                        field: 'operate',#}
+                    {#                        title: '操作',#}
+                    {#                        align: 'left',#}
+                    {#                        formatter: operateFormatter,#}
+                    {#                        events: deployPathEvents#}
+                    {#                    }#}
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    var param = {
+                        group_name: 'DEPLOY',
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search,
+                        format: 'json',
+                    };
+                    if (query.app_id)
+                        param.app_id = query.app_id
+                    return param;
+                },
+                pagination: true,
+                pageSize: 10,
+                pageList: [10, 20, 50, 100],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: true,
+                {#                searchAlign: 'left',#}
+                {#                buttonsAlign: 'left',#}
+                showColumns: true,
+                toolbar: "#toolbar_code",
+                cache: false,
+                {#                showExport: true,#}
+                {#                exportDataType: 'all'#}
+            });
+            $('#form_code').bootstrapValidator({
+                        excluded: [":disabled"],
+                        fields: {
+                            app_id_create: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '站点/应用不能为空'
+                                    }
+                                }
+                            },
+                            staging_create: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '源机器为空'
+                                    }
+                                }
+                            },
+                            // production_create: {
+                            //     validators: {
+                            //         notEmpty: {
+                            //             message: '目标机器为空'
+                            //         }
+                            //     }
+                            // },
+                            // production_create_manual: {
+                            //     validators: {
+                            //         notEmpty: {
+                            //             message: '输入目标机器为空'
+                            //         }
+                            //     }
+                            // },          
+                            ftp_path_create: {
+                                validators: {
+                                    notEmpty: {
+                                        message: 'FTP路径为空'
+                                    }
+                                }
+                            },
+                            gray_policy: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '灰度策略为空'
+                                    },
+                                    regexp: {
+                                        regexp: /^(\d+,)+100$/,
+                                        message: '灰度策略格式不对'
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        var targets = new Array();
+                        var production_create_all = $.map($('#production_create option'), function (i) {
+                            return i.value;
+                        });
+
+                        var production_create_arr = $.map($('#production_create option:selected'), function (i) {
+                            return i.value;
+                        });
+                        var prod_create_manual = $("#production_create_manual").val();
+
+                        if(prod_create_manual) {
+                            $.each(prod_create_manual.split(','), function(index, value) {
+                                if(value) {
+                                    targets.push(value);
+                                } else {
+                                    Confirm({
+                                        msg: '<p class="text-danger">您填写的IP list有不合法的地方，请重新填写!</p>',
+                                        onOk: function() {
+                                            $('#form_code').bootstrapValidator('resetForm', true);
+                                        },
+                                        onCancel: function () {
+                                            $('#form_code').bootstrapValidator('resetForm', true);
+                                        }
+                                    });
+                                }
+                            });
+                        } else {
+                            if(production_create_arr!=[]) {
+                                targets = production_create_arr;
+                            }
+                        }
+                        var target_hosts = targets.join(',');
+                        function _post() {
+                            var data = {
+                                'uid': "{{ UID }}",
+                                'pubtype': 1,
+                                'app_id': parseInt($('#app_id_create').val()),
+                                'packtype': parseInt($('input[type="radio"][name="packtype"]:checked').val()),
+                                'deptype': parseInt($('input[type="radio"][name="deptype"]:checked').val()),
+                                'comment': $('#comment').val(),
+                                'ftpath': $('#ftp_path_create').val(),
+                                'jiraid': $('#jiraid').val(),
+                                'restart': $('#restart').prop('checked') ? 1 : 0,
+                                'publishDateTimeFrom': 0,
+                                'publishDateTimeTo': 0,
+                                'srcs': $('#staging_create').val(),
+                                'dets': targets.join(','),
+                                'taskid': 0
+                            }
+                            switch ($('input[type="radio"][name="pattern"]:checked').val()) {
+                                case "0":
+                                    data.restartInterval = parseInt($('#interval').val());
+                                    break;
+                                case "1":
+                                    data.grayDeployFlag = 1;
+                                    data.grayDetailInfo = {
+                                        grayPercent: $('#gray_policy').val(),
+                                        stageInterval: parseInt($('#gray_stage_interval').val()),
+                                        colonySurplus: parseInt($('#colony_surplus').val()),
+                                        recoverTime: parseInt($('#recover_time').val()),
+                                        rollbackType: parseInt($('input[type="radio"][name="gray_rollback_type"]:checked').val())
+                                    }
+                            }
+                            $.ajax({
+                                url: '/api/deploy/muti_save_deploy_v2/',
+                                type: 'post',
+                                async: false,
+                                data: {
+                                    data: $.toJSON([data])
+                                },
+                                headers: {
+                                    Authorization: 'Token {{ API_TOKEN }}'
+                                },
+                                success: function (json) {
+                                    if (json[0].depid) {
+                                        init_alert($('#alert'), 'alert-success', '创建成功');
+                                        condition_reset();
+                                    }
+                                    else
+                                        init_alert($('#alert'), 'alert-danger', json[0].detail)
+                                },
+                                error: function (json) {
+                                    init_alert($('#alert'), 'alert-danger', json.responseText)
+                                }
+                            });
+                            $('#modal_code').modal('hide');
+                        }
+
+                        if(!target_hosts) {
+                            Confirm({
+                                msg: '<p>* 目标主机未填写</p> <p>* 如若继续则会自动选择当前pool下所有目标机器</p><p class="text-warning">  要继续吗？</p>',
+                                onOk: function(){
+                                    _post();
+                                },
+                                onCancel: function(){
+                                    $('#form_code').bootstrapValidator('resetForm', true);
+                                }
+                            });
+                        } else {
+                            var not_valid_ips = new Array();
+                            $.each(targets, function(index, el){
+                                if(!production_create_all.contains(el) || isValidIP(el) == false) {
+                                    not_valid_ips.push(el);
+                                }
+                            });
+                            if (not_valid_ips.length == 0)
+                                _post();
+                            else
+                            {
+                                Confirm({
+                                        msg: '<p class="text-danger">* 输入的主机IP有不合法的存在!IP为:' + not_valid_ips.join(',') + '</p>',
+                                        onOk: function() {
+                                            $('#form_code').bootstrapValidator('resetForm', true);
+                                        },
+                                        onCancel: function() {
+                                            $('#form_code').bootstrapValidator('resetForm', true);
+                                        }
+                                });
+                            }
+                        }
+                    });
+            <!-- 所有slider事件 -->
+            $("#interval").slider({
+                tooltip: 'always',
+                formatter: function (value) {
+                    return value + '秒';
+                }
+            });
+            $("#gray_stage_interval").slider({
+                tooltip: 'always',
+                formatter: function (value) {
+                    return value + '分钟';
+                }
+            });
+            $("#recover_time").slider({
+                tooltip: 'always',
+                formatter: function (value) {
+                    return value + '秒/台';
+                }
+            });
+            $("#colony_surplus").slider({
+                tooltip: 'always',
+                formatter: function (value) {
+                    return value + '%';
+                }
+            });
+            <!-- 模态框关闭事件 -->
+            $('#modal_code').on('hidden.bs.modal', function (e) {
+                <!-- 重置表单 -->
+                $('#form_code').bootstrapValidator('resetForm', true);
+                <!-- 初始化单选框 -->
+                $('input[type="radio"][name="pattern"]:first').click();
+                $('input[type="radio"][name="packtype"]:first').click();
+                $('input[type="radio"][name="deptype"]:first').click();
+                $('input[type="radio"][name="gray_rollback_type"]:last').click();
+                <!-- 初始化站点/应用 -->
+                $('#app_id_create').data('combobox').clearElement();
+                $('#app_id_create').data('combobox').clearTarget();
+                <!-- 初始化源机器 -->
+                $('#staging_create').empty();
+                $('#staging_create').append($('<option>').text('--------').attr('value', ''));
+                <!-- 初始化FTP路径 -->
+                $('#ftp_date').val('').datetimepicker('update');
+                $('#ftp_path_create').empty();
+                $('#ftp_path_create').append($('<option>').text('--------').attr('value', ''));
+                <!-- 初始化目标机器 -->
+                $('#production_create').empty();
+                $('#production_create').multiselect('rebuild');
+                $('#dst_list div.checkbox').empty();
+                <!-- 初始化是否重启 -->
+                $('#restart').prop('checked', true);
+                <!-- 初始化文本框 -->
+                $('#jiraid').val('');
+                $('#comment').val('');
+            });
+            <!-- 所有change事件 -->
+            $('div.date.from, div.date.to > input[type="text"]').change(function () {
+                refresh();
+            })
+            $('select.combobox.code').change(function () {
+                if ($(this).val())
+                    refresh();
+            });
+            $('input[name="deptype"]').change(function () {
+                switch ($(this).val()) {
+                    case "1":
+                        $('#src_list').show();
+                        $('#ftp_path').hide();
+                        $('#staging_create').prop('disabled', false);
+                        $('#ftp_path_create').prop('disabled', true);
+                        break;
+                    case "2":
+                        $('#src_list').hide();
+                        $('#ftp_path').show();
+                        $('#staging_create').prop('disabled', true);
+                        $('#ftp_path_create').prop('disabled', false);
+                }
+            })
+            $('#app_id_create').change(function () {
+                if (!$(this).val()) return;
+                server();
+                if ($('#ftp_date').val())
+                    ftp();
+                $(this).parents('form')
+                        .data('bootstrapValidator')
+                        .revalidateField($(this).attr('id'));
+            })
+            $('input[name="packtype"]').change(function () {
+                if ($('#app_id_create').val()) {
+                    server();
+                    if ($('#ftp_date').val())
+                        ftp();
+                }
+            })
+            $('#ftp_date').change(function () {
+                if ($('#app_id_create').val())
+                    ftp();
+            })
+            $('input[name="pattern"]').change(function () {
+                switch ($(this).val()) {
+                    case "0":
+                        $('#form_code div.normal').show();
+                        $('#form_code div.gray').hide();
+                        $('#gray_policy').prop('disabled', true);
+                        $('input[type="radio"][name="packtype"]:last').prop('disabled', false);
+                        break;
+                    case "1":
+                        $('#form_code div.normal').hide();
+                        $('#form_code div.gray').show();
+                        $('#gray_policy').prop('disabled', false);
+                        $('input[type="radio"][name="packtype"]:first').click();
+                        $('input[type="radio"][name="packtype"]:last').prop('disabled', true);
+                }
+            });
+            $('#staging_create').change(function () {
+                $(this).parents('form')
+                        .data('bootstrapValidator')
+                        .revalidateField($(this).attr('id'));
+            });
+            // $('#production_create').change(function () {
+            //     $(this).parents('form')
+            //             .data('bootstrapValidator')
+            //             .revalidateField($(this).attr('id'));
+            // });
+            $('#ftp_path_create').change(function () {
+                $(this).parents('form')
+                        .data('bootstrapValidator')
+                        .revalidateField($(this).attr('id'));
+            });
+            <!-- 其他 -->
+            $('div.modal').modal({
+                backdrop: 'static',
+                show: false
+            });
+            $('div.search>input[type="text"]').attr('placeholder', '发布号、Trident ID').width(200);
+        })
+    </script>
+{% endblock %}

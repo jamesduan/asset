@@ -1,0 +1,108 @@
+{% extends "mobile/base/monitor_base.html" %}
+
+{% block inner_content %}
+<script src="{{ STATIC_URL }}mobile/libs/echarts.min.js"></script>
+
+<style>
+    .chart {
+        height: 200px;
+        margin: 0px;
+        padding: 0px;
+    }
+    h5 {
+        margin-top: 30px;
+        font-weight: bold;
+    }
+    h5:first-child {
+        margin-top: 15px;
+    }
+</style>
+
+<div class="mui-content-padded" id="#refreshChart">
+    <div class="chart" id="lineChart"></div>
+</div>
+
+<script>
+{#	mui.init();#}
+
+	var old_back = mui.back;
+	mui.back = function(){
+		alert('弹个框 意思一下...');
+		var btn = ["确定","取消"];
+		mui.confirm('确认关闭当前窗口？','Hello MUI',btn,function(e){
+			if(e.index==0){
+				old_back();
+			}
+		});
+	}
+
+	// 监听tap事件，解决 a标签 不能跳转页面问题
+{#	mui('body').on('tap','a',function(){document.location.href=this.getAttribute("href");});#}
+
+	var lineChart = echarts.init(document.getElementById('lineChart'), 'macarons');
+		lineChart.hideLoading("站好别动...");
+
+	mui.ajax('{{ ROOT_URL }}api/chart/realtime_order/',{
+		data:{},
+		dataType:'json',//服务器返回json格式数据
+		type:'get',//HTTP请求类型
+		timeout:10000,//超时时间设置为10秒；
+		headers:{'Content-Type':'application/json'},
+		success:function(data){
+
+			var chartOption = {
+				tooltip: {
+					trigger: 'axis'
+				},
+				legend: {
+					data:['实时订单量', '一周对比订单量']
+				},
+				grid: {
+					left: '3%',
+					right: '4%',
+					bottom: '3%',
+					containLabel: true
+				},
+				xAxis: {
+					type: 'category',
+					boundaryGap: false,
+					data: data.xAxis_data
+				},
+				yAxis: {
+					type: 'value',
+					axisLabel : {
+						formatter : function(v){
+							if(v>=1000){
+								return (v/1000) + 'k'
+							}else{
+								return v
+							}
+						}
+					}
+				},
+				series: [{
+						name: '实时订单量',
+						type: 'line',
+						data:data.realtime_data
+				}, {
+						name: '一周对比订单量',
+						type: 'line',
+						data:data.com_data
+				}]
+			};
+
+
+			lineChart.setOption(chartOption);
+		},
+
+		error:function(xhr,type,errorThrown){
+		  //异常处理；
+		  console.log('异常处理');
+	    }
+	});
+
+	window.addEventListener("resize", function () {
+	  lineChart.resize();
+    });
+</script>
+{% endblock %}

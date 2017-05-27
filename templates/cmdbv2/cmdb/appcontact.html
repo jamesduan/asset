@@ -1,0 +1,301 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js" ></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/spin.min.js" ></script>
+
+<style>
+    .bootstrap-table .table > tbody > tr > th,
+    .bootstrap-table .table > tfoot > tr > th,
+    .bootstrap-table .table > thead > tr > td,
+    .bootstrap-table .table > tbody > tr > td,
+    .bootstrap-table .table > tfoot > tr > td {
+        padding: 4px !important;
+        white-space:nowrap;
+    }
+    .fixed-table-container tbody tr td {
+        line-height: 22px;
+    }
+    .fixed-table-container tbody .selected td {
+        background-color: #C7CCD5;
+    }
+
+    .fixed-table-container tbody tr:hover td{
+        background-color: #C7CCD5;
+    }
+
+</style>
+<!-- <div class="inner-h1">Pool联系人信息</div> -->
+
+<div id="loading"></div>
+
+<div id="toolbar">
+    <div class="form-inline" role="form">
+        <select name="site_id" id="site_id" class="form-control api_url">
+            <option value="">选择站点</option>
+            <option value=" ">--------</option>
+            {%  for item in sitelist %}
+                <option value="{{ item.id }}">{{ item.name}}</option>
+            {%  endfor %}
+        </select>
+        <select name="app_id" id="app_id" class="form-control api_url">
+            <option value="">选择POOL</option>
+            <option value=" ">--------</option>
+            {%  for item in applist %}
+                <option value="{{ item.id }}">{{ item.site.name }}/{{item.name }}</option>
+            {%  endfor %}
+        </select>
+        <button id="synchronize" class="btn btn-green">
+            CMIS同步
+        </button>
+    </div>
+</div>
+
+<table id="poolcontact">
+</table>
+<script>
+    $('#site_id').change(function(){
+        if ($("#site_id").val() != '') {
+            var site_id = $('#site_id').val();
+            var api_url = '{{ CMDBAPI_URL }}cmdb/appcontact/?format=json';
+            var app_api_url = '{{ CMDBAPI_URL }}cmdb/app/?format=json&page_size=1000';
+            if (site_id != "" && site_id != " ") {
+                api_url = api_url + '&site_id=' + site_id;
+                app_api_url = app_api_url + '&site_id=' + site_id;
+            }
+            $('#poolcontact').bootstrapTable('refresh', {
+                url: api_url
+            });
+
+            $.ajax({
+                url: app_api_url,
+                dataType: 'json',
+                type: 'GET',
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (json) {
+                    var data = eval(json);
+                    $("#app_id").data('combobox').clearTarget();
+                    $("#app_id").combobox('clearElement');
+
+                    $("#app_id").find("option").remove();
+                    $('#app_id').append($('<option>').text('选择Pool').attr('value', ''));
+                    if (data.count == 0) {
+                        $('#app_id').append($('<option>').text('未搜索到所属Pool').attr('value', '0'));
+                    } else {
+                        var rs = data.results;
+                        $('#app_id').append($('<option>').text('------').attr('value', ' '));
+                        $.each(rs, function (key, val) {
+                            $('#app_id').append($('<option>').text(val.site_name + '/' + val.name).attr('value', val.id));
+                        });
+                    }
+                    $("#app_id").data('combobox').refresh();
+                }
+            });
+        }
+    });
+
+    $("#app_id").change(function() {
+        if ($("#app_id").val() != '') {
+            var site_id = $('#site_id').val();
+            var pool_id = $('#app_id').val();
+            var api_url = '{{ CMDBAPI_URL }}cmdb/appcontact/?';
+            var params = ['format=json'];
+            if (site_id != '' && site_id != ' ') {
+                params.push('site_id=' + site_id)
+            }
+            if (pool_id != '' && pool_id != ' ') {
+                params.push('pool_id=' + pool_id)
+            }
+            api_url = api_url + params.join('&');
+            $('#poolcontact').bootstrapTable('refresh', {
+                url: api_url
+            });
+        }
+    });
+
+$(document).ready(function(){
+    $('#site_id, #app_id').combobox({});
+
+    var opts = {
+        lines: 13, // 花瓣数目
+        length: 10, // 花瓣长度
+        width: 8, // 花瓣宽度
+        radius: 25, // 花瓣距中心半径
+        corners: 1, // 花瓣圆滑度 (0-1)
+        rotate: 0, // 花瓣旋转角度
+        direction: 1, // 花瓣旋转方向 1: 顺时针, -1: 逆时针
+        color: '#5882FA', // 花瓣颜色
+        speed: 1, // 花瓣旋转速度
+        trail: 60, // 花瓣旋转时的拖影(百分比)
+        shadow: false, // 花瓣是否显示阴影
+        hwaccel: false, //spinner 是否启用硬件加速及高速旋转
+        className: 'spinner', // spinner css 样式名称
+        zIndex: 2e9, // spinner的z轴 (默认是2000000000)
+        top: '0%', // spinner 相对父容器Top定位 单位 px
+        left: '0%'// spinner 相对父容器Left定位 单位 px
+    };
+    var spinner = new Spinner(opts);
+
+    $("#synchronize").click(function(e){
+        e.preventDefault();
+        $.ajax({
+            url: '{{ CMDBAPI_URL }}cmdb/app/syncbycmis/',
+            type: 'GET',
+            dataType: 'json',
+            beforeSend: function(){
+                $("#loading").css({display:"",top:"40%",left:"50%",position:"absolute"});
+                var target = $("#loading").get(0);
+                spinner.spin(target);
+            },
+            success: function (response) {
+                spinner.spin();
+                if (response['success']) {
+                    alert('Success: ' + response['msg']);
+                } else {
+                    alert('Error: ' + response['msg']);
+                }
+
+            }
+
+        });
+    });
+
+    var search = window.location.search;
+    var init_url = '{{ CMDBAPI_URL }}cmdb/appcontact/?format=json';
+    if(search.length>1){
+        init_url += '&' + search.substr(1);
+    }
+    $('#poolcontact').bootstrapTable({
+        url: init_url,
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'site_name',
+                title: '站点名称',
+            },
+            {
+                field: 'app_name',
+                title: 'Pool名称',
+            },
+            {
+                field: 'server_total',
+                title: '机器数量',
+            },
+            {
+                field: 'department',
+                title: '3级部门',
+            },
+            {
+                field: 'domain_name',
+                title: 'Domain名称',
+            },
+            {
+                field: 'head_user',
+                title: '3级部门Leader',
+            },
+            {
+                field: 'head_email',
+                title: 'Leader邮箱',
+            },
+            {
+                field: 'head_no',
+                title: 'Leader电话',
+            },
+            {
+                field: 'p_user',
+                title: 'DL',
+            },
+            {
+                field: 'p_email',
+                title: 'DL邮箱',
+            },
+            {
+                field: 'p_no',
+                title: 'DL电话',
+            },
+            {
+                field: 'b_user',
+                title: '后备DL',
+            },
+            {
+                field: 'b_email',
+                title: '后备DL邮箱',
+            },
+            {
+                field: 'b_no',
+                title: '后备DL电话',
+            },
+            {
+                field: 'domain_email',
+                title: 'Domain组邮箱',
+            },
+            {
+                field: 'sa_user',
+                title: 'SRE负责人',
+            },
+            {
+                field: 'sa_email',
+                title: 'SRE邮箱',
+            },
+            {
+                field: 'sa_no',
+                title: 'SRE电话',
+            },
+            {
+                field: 'sa_backup_user',
+                title: '后备SRE负责人',
+            },
+            {
+                field: 'sa_backup_email',
+                title: '后备SRE邮箱',
+            },
+            {
+                field: 'sa_backup_no',
+                title: '后备SRE电话',
+            },
+            {
+                field: 'app_comment',
+                title: 'Pool说明',
+            }
+
+        ],
+        pagination: true,
+        pageSize: 10,
+        pageList: [10,20,50,100, 500],
+        sidePagination: 'client',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false,
+        showExport: true,
+        exportDataType: 'all'
+    });
+
+    $('#poolcontact').on('dbl-click-row.bs.table', function (e, row, $element){
+        if(row.app_type == 0){
+           alert('Pool联系人信息同步于CMIS系统，修改请在portal上提domain变更申请！');
+        }else{
+           alert('该Pool属于基础服务类型，暂不维护Pool联系人信息！');
+        }
+
+    });
+
+});
+
+</script>
+{% endblock %}

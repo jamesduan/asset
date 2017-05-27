@@ -1,0 +1,305 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block title %} 发布-Stg发布详情 {% endblock %}
+
+{% block content %}
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+    <link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+    <link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+    <script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+    <link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/daterangepicker-bs3.css"rel="stylesheet" type="text/css" media="all"  />
+    <script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+    <style>
+        .table {
+            margin-bottom: 0px;
+            max-width: 100%;
+            width: 100%;
+        }
+
+        .container #log-info{
+            border: solid 1px;
+        }
+
+        .container table tbody th {
+            background-color: rgba(96, 143, 159, 0.6);
+            line-height: 36px;
+            max-height: 72px;
+            border: solid 1px #999999;
+            padding: 1px;
+            text-align: center;
+        }
+        .container table tbody td{
+            line-height: 36px;
+            max-height: 72px;
+            border: solid 1px #999999;
+            padding: 1px;
+        }
+        .container #deploy-info table tbody td{
+            height: 36px;
+            border-bottom: none;
+            padding: 1px;
+            text-align: center;
+        }
+
+        .container #show_log table tbody tr td:first-child{
+            background-color: rgba(178, 200, 187, 0.3);
+        }
+
+        .progress {
+             height: 36px;
+             margin-bottom: 0px;
+        }
+
+        .progress-bar {
+            background-color: rgba(251,178,23,0.88);
+            box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.15) inset;
+            color: #fff;
+            float: left;
+            font-size: 14px;
+            height: 100%;
+            line-height: 20px;
+            text-align: center;
+            transition: width 0.6s ease 0s;
+            width: 0;
+        }
+        
+    </style>
+<div class="inner-h1">Stg发布单详情</div>
+<div class="inner-box inner-list-box">
+<div style="font-size: medium"><strong>基本信息</strong></div>
+<div>
+    <div id="deploy-info">
+        <table id="show_deployinfo" class="table table-bordered">
+            <thead>
+                <tr>
+                    <th style="width: 16%">发布单号</th>
+                    <th>站点</th>
+                    <th>应用</th>
+                    <th>发布类型</th>
+                    <th>发布人</th>
+                    <th>是否重启</th>
+                    <th>创建时间</th>
+                    <th>回滚时间</th>
+                    <th>完成时间</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+    <div id="host-info">
+        <table id="show_hostinfo" class="table table-bordered">
+            <tr>
+                <th style="width: 16%;">发布服务器IP</th>
+                <td id="target_host"></td>
+            </tr>
+            <tr>
+                <th>发布包</th>
+                <td  id="source_path"></td>
+            </tr>
+            <tr>
+                <th>版本号</th>
+                <td   id="version"></td>
+            </tr>
+            <tr>
+                <th>备注</th>
+                <td id="bz"></td>
+            </tr>
+            <tr>
+                <th>发布状态</th>
+                <td id="status_name"></td>
+            </tr>
+            <tr>
+                <th>发布进度</th>
+                <td>
+                    <div  id="processbar"></div>
+                </td>
+            </tr>
+            <tr>
+                <th>发布操作</th>
+                <td id="deploy_action"></td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<div style="font-size: medium; margin-top: 10px;"><strong>发布LOG</strong>
+</div>
+<div id="log-info">
+</div>
+</div>
+<script>
+$(document).ready(function() {
+	var depid = window.location.search;
+	depid = depid.substr(7);
+
+	$.ajax({
+		url: '{{ CMDBAPI_URL }}deploy/stg/detail/?format=json',
+		data: 'depid=' + depid,
+		dataType: 'json',
+		async: false,
+		headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+		success: function (json) {
+			var stg = json['results'][0];
+			if (stg == null) {
+				bootbox.alert('该发布申请单不存在！')
+			} else {
+				var is_restart;
+				if (stg.is_restart == 1) {
+					is_restart = '是';
+				} else {
+					is_restart = '否';
+				}
+				$('#show_deployinfo tbody').remove();
+				$('#show_deployinfo').append('<tbody>');
+				$('#show_deployinfo tbody').append('<tr><td style="width: 16%">' + stg.depid + '</td><td>' + stg.site_name + '</td><td>' + stg.app_name + '</td><td>' + stg.deploy_type_name
+						+ '</td><td>' + stg.uid + '</td><td>' + is_restart + '</td><td>' + stg.created_time + '</td><td>' + stg.rollback_time + '</td><td>' + stg.success_time + '</td></tr>');
+				$('#show_deployinfo').append('</tbody>');
+
+				$('#target_host').html('');
+				$('#target_host').append('&nbsp;&nbsp;');
+				$.each(stg.detail, function (i, value) {
+					$('#target_host').append(value.target_host + '&nbsp;&nbsp;&nbsp;&nbsp;');
+					if ((i + 1) % 10 == 0) {
+						$('#target_host').append('<br>');
+					}
+				});
+
+				$('#source_path').html('&nbsp;&nbsp;' + stg.source_path);
+				$('#version').html('&nbsp;&nbsp;' + stg.version);
+				$('#bz').html('&nbsp;&nbsp;' + stg.bz_safe);
+				$('#status_name').html('&nbsp;&nbsp;' + stg.status_name);
+
+				$('#deploy_action').html('');
+				$('#deploy_action').append('<div class="form-inline" role="form">');
+				if (stg.status == 1 || stg.status == 4) {
+					$('#deploy_action').append('&nbsp;&nbsp;<button class="btn btn-green stg_event" id="btn_deploy">发布</button>');
+				}
+				if (stg.status == 2) {
+					$('#deploy_action').append('&nbsp;&nbsp;<button type="button" class="btn btn-green stg_event" id="btn_rollback">回滚</button>');
+				}
+				if (stg.status == 1 || stg.status == 4) {
+					$('#deploy_action').append('&nbsp;&nbsp;<button type="button" class="btn btn-danger stg_event" id="btn_cancel">作废</button>');
+				}
+				$('#deploy_action').append('</div>');
+				$('#processbar').html('');
+				if (stg.process == 0 || stg.process == 100 || stg.is_process == 0) {
+					$('#processbar').append('<div class="progress">' +
+							'<div class="progress-bar" role="progressbar" aria-valuenow="' + stg.process + '" aria-valuemin="0" aria-valuemax="100" style="width: ' + stg.process + '%;">' + stg.process + '%</div>' +
+							'</div>');
+				} else {
+					$('#processbar').append('<div class="progress progress-striped active">' +
+							'<div class="progress-bar" role="progressbar" aria-valuenow="' + stg.process + '" aria-valuemin="0" aria-valuemax="100" style="width: ' + stg.process + '%;">' + stg.process + '%</div>' +
+							'</div>');
+				}
+
+				if (stg.logs.length) {
+					$('#log-info').append('<table class="table table-bordered" id="show_log">');
+					$('#show_log').append('<tbody>');
+					$.each(stg.logs, function (i, value) {
+						$('#show_log tbody').append('<tr><td style="width: 16%">' + value.create_time_str + '</td><td>' + value.host + '</td><td>' + value.log + '</td></tr>');
+					});
+					$('#show_log').append('</tbody>');
+					$('#log-info').append('</table>')
+				} else {
+					$('#log-info').append('<div style="font-size: 16px;" align="center"><p>无LOG记录</p></div>');
+				}
+
+				is_process = stg.is_process;
+				$(".stg_event").click(function (e) {
+					var action_id = $(e.target).attr('id');
+					var action, action_name;
+					if (action_id == 'btn_deploy') {
+						action = 'deploy';
+						action_name = '发布';
+						is_process = 1;
+					} else if (action_id == 'btn_rollback') {
+						action = 'rollback';
+						action_name = '回滚';
+						is_process = 1;
+					} else {
+						action = 'cancel';
+						action_name = '作废';
+						is_process = 0;
+					}
+					bootbox.confirm("你确定要" + action_name + "该申请单吗？", function (result) {
+						if (result) {
+							$.ajax({
+								url: '{{ CMDBAPI_URL }}deploy/stg/detail/event/',
+								type: 'POST',
+								async: false,
+								data: {
+									'action': action,
+									'depid': depid
+								},
+								headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+								success: function () {
+									if (action == 'cancel') {
+										alert('已作废');
+									}
+									window.location.reload();
+								},
+								error: function (json) {
+									bootbox.alert('失败：' + JSON.stringify(json.responseText));
+								}
+							});
+						}
+					});
+				});
+
+				if (is_process == 1) {
+					$(".stg_event").attr("disabled", true);
+					ajax_cycle = setInterval(function () {
+						$.ajax({
+							url: '{{ CMDBAPI_URL }}deploy/stg/detail/?format=json',
+							data: 'depid=' + depid,
+							dataType: 'json',
+							async: false,
+							headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+							success: function (json) {
+								var cur_stg = json['results'][0];
+								$('#status_name').html('&nbsp;&nbsp;' + cur_stg.status_name);
+
+								$('#processbar').html('');
+								if (cur_stg.process == 0 || cur_stg.process == 100 || cur_stg.is_process == 0) {
+									$('#processbar').append('<div class="progress">' +
+											'<div class="progress-bar" role="progressbar" aria-valuenow="' + cur_stg.process + '" aria-valuemin="0" aria-valuemax="100" style="width: ' + cur_stg.process + '%;">' + cur_stg.process + '%</div>' +
+											'</div>');
+								} else {
+									$('#processbar').append('<div class="progress progress-striped active">' +
+											'<div class="progress-bar" role="progressbar" aria-valuenow="' + cur_stg.process + '" aria-valuemin="0" aria-valuemax="100" style="width: ' + cur_stg.process + '%;">' + cur_stg.process + '%</div>' +
+											'</div>');
+								}
+								$('#log-info table').remove();
+								$('#log-info div').remove();
+								if (cur_stg.logs.length) {
+									$('#log-info').append('<table class="table table-bordered" id="show_log">');
+									$('#show_log').append('<tbody>');
+									$.each(cur_stg.logs, function (i, value) {
+										$('#show_log tbody').append('<tr><td style="width: 16%">' + value.create_time_str + '</td><td>' + value.host + '</td><td>' + value.log + '</td></tr>');
+									});
+									$('#show_log').append('</tbody>');
+									$('#log-info').append('</table>')
+								} else {
+									$('#log-info').append('<div style="font-size: 16px;" align="center"><p>无LOG记录</p></div>');
+								}
+								if (cur_stg.is_process == 0) {
+									clearInterval(ajax_cycle);
+									window.location.href = window.location.href
+								}
+							}
+						});
+					}, 2000);
+				}
+			}
+		}
+	});
+
+});
+
+</script>
+{% endblock %}

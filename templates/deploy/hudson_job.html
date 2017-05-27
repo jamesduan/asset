@@ -1,0 +1,460 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %}自动化测试配置{% endblock %}
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox-v1.1.6/css/bootstrap-combobox.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"
+      rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox-v1.1.6/js/bootstrap-combobox.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+
+<!-- 新建HudsonJob -->
+<div class="modal fade" id="modal_hudson_job_create" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog" style="width:800px;">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="form_hudson_job_create">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span
+                            class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="myModalLabel">新建HudsonJob</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="hudson_job_app_create" class="col-sm-2 control-label">Pool</label>
+                        <div class='col-sm-10'>
+                            <select id="hudson_job_app_create" name="hudson_job_app_create"
+                                    class="form-control combobox">
+                                <option value="">请选择站点/应用</option>
+                                {% for app in app_queryset %}
+                                <option value="{{ app.id }}">{{ app.site.name }}/{{ app.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="hudson_job_type_create" class="col-sm-2 control-label">类型</label>
+                        <div class='col-sm-10'>
+                            <select id="hudson_job_type_create" name="hudson_job_type_create"
+                                    class="form-control combobox">
+                                <option value="">请选择类型</option>
+                                {% for job_type in job_type_list %}
+                                <option value="{{ job_type.0 }}">{{ job_type.1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="hudson_job_name_create" class="col-sm-2 control-label">名称</label>
+                        <div class='col-sm-10'>
+                            <input type='text' class="form-control" id="hudson_job_name_create"
+                                   name="hudson_job_name_create"/>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="hudson_job_url_create" class="col-sm-2 control-label">URL</label>
+                        <div class='col-sm-10'>
+                            <input type='text' class="form-control" id="hudson_job_url_create"
+                                   name="hudson_job_url_create"/>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="hudson_job_token_create" class="col-sm-2 control-label">Token</label>
+                        <div class='col-sm-10'>
+                            <input type='text' class="form-control" id="hudson_job_token_create"
+                                   name="hudson_job_token_create"/>
+                        </div>
+                    </div>
+
+
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-green">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 修改HudsonJob -->
+<div class="modal fade" id="modal_hudson_job_edit" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog" style="width:800px;">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="form_hudson_job_edit">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span
+                            class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="myModalLabel">修改HudsonJob</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="hudson_job_app_edit" class="col-sm-2 control-label">Pool</label>
+                        <div class='col-sm-10'>
+                            <input type='text' class="form-control" id="hudson_job_app_edit"
+                                   name="hudson_job_app_edit" disabled="disabled"/>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="hudson_job_type_edit" class="col-sm-2 control-label">类型</label>
+                        <div class='col-sm-10'>
+                            <select id="hudson_job_type_edit" name="hudson_job_type_edit"
+                                    class="form-control combobox">
+                                <option value="">请选择类型</option>
+                                {% for job_type in job_type_list %}
+                                <option value="{{ job_type.0 }}">{{ job_type.1 }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="hudson_job_name_edit" class="col-sm-2 control-label">名称</label>
+                        <div class='col-sm-10'>
+                            <input type='text' class="form-control" id="hudson_job_name_edit"
+                                   name="hudson_job_name_edit"/>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="hudson_job_url_edit" class="col-sm-2 control-label">URL</label>
+                        <div class='col-sm-10'>
+                            <input type='text' class="form-control" id="hudson_job_url_edit"
+                                   name="hudson_job_url_edit"/>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="hudson_job_token_edit" class="col-sm-2 control-label">Token</label>
+                        <div class='col-sm-10'>
+                            <input type='text' class="form-control" id="hudson_job_token_edit"
+                                   name="hudson_job_token_edit"/>
+                        </div>
+                    </div>
+
+
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-green">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div id="toolbar_hudson_job">
+
+    <form class="form-inline">
+        <div class="form-group">
+            <label for="app">Pool筛选：</label>
+            <select id="app" class="form-control combobox">
+                <option value="">请选择站点/应用</option>
+                {% for app in app_queryset %}
+                <option value="{{ app.id }}">{{ app.site.name }}/{{ app.name }}</option>
+                {% endfor %}
+            </select></div>
+        <button type="button" class="btn btn-green" onclick="javascript:$('#modal_hudson_job_create').modal('show')">新增
+        </button>
+    </form>
+</div>
+<table id="table_hudson_job" class="bootstrap-table"></table>
+
+<script>
+    $(document).ready(function () {
+        var id = null;
+
+        function operateFormatter(value, row, index) {
+            var edit = $('<a>').attr('class', 'edit').append(
+                    $('<span>').attr({
+                        class: 'glyphicon glyphicon-pencil',
+                        title: ' 编辑',
+                    }).css({
+                        cursor: 'pointer',
+                        'margin-right': '10px'
+                    }))
+            var remove = $('<a>').attr('class', 'remove').append(
+                    $('<span>').attr({
+                        class: 'glyphicon glyphicon-remove',
+                        title: ' 删除',
+                    }).css({
+                        cursor: 'pointer',
+                    }))
+            return edit[0].outerHTML + remove[0].outerHTML;
+        };
+        function ajax(url, method, data) {
+            $.ajax({
+                url: url,
+                async: false,
+                method: method,
+                data: data,
+                headers: {
+                    Authorization: 'Token {{ API_TOKEN }}'
+                },
+                success: function (json) {
+                    bootbox.alert('操作成功');
+                },
+                error: function (json) {
+                    bootbox.alert('操作失败，原因为' + json.responseText);
+                }
+            });
+        }
+
+        window.operateEvents = {
+            'click .edit': function (e, value, row, index) {
+                $('#hudson_job_app_edit').val(row.site_name + '/' + row.app_name);
+                $("#hudson_job_type_edit").val(row.jobtype).data('combobox').refresh();
+                $('#hudson_job_name_edit').val(row.name);
+                $('#hudson_job_url_edit').val(row.url);
+                $('#hudson_job_token_edit').val(row.token);
+                $('#modal_hudson_job_edit').modal('show');
+            }, 'click .remove': function (e, value, row, index) {
+                bootbox.confirm('是否删除？', function (result) {
+                    if (result) {
+                        ajax(
+                                '/api/deploy/hudson_job/' + row.id + '/',
+                                'delete',
+                                null
+                        )
+                        $('#table_hudson_job').bootstrapTable('refresh', {
+                            silent: false,
+                            query: $('#app').val() ? {
+                                app_id: $('#app').val()
+                            } : null
+                        });
+                    }
+                })
+            },
+        };
+        $('select.combobox').combobox({});
+        $('#app').change(function () {
+            if ($(this).val())
+                $('#table_hudson_job').bootstrapTable('refresh', {
+                    silent: false,
+                    query: {
+                        app_id: $(this).val()
+                    }
+                });
+        })
+        $('#table_hudson_job').bootstrapTable({
+            url: '/api/deploy/hudson_job/',
+            ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+            columns: [
+                {
+                    field: 'id',
+                    title: 'id',
+                    visible: false
+                },
+                {
+                    field: 'app_id',
+                    title: 'app_id',
+                    visible: false
+                },
+                {
+                    field: 'pool',
+                    title: 'Pool',
+                    formatter: function (value, row, index) {
+                        return row.site_name + '/' + row.app_name;
+                    }
+                },
+                {
+                    field: 'jobtype_name',
+                    title: '类型'
+                },
+                {
+                    field: 'name',
+                    title: 'Job名称'
+                },
+                {
+                    field: 'url',
+                    title: 'URL'
+                },
+                {
+                    field: 'token',
+                    title: 'Token'
+                },
+                {
+                    field: 'operate',
+                    title: '操作',
+                    align: 'left',
+                    formatter: operateFormatter,
+                    events: operateEvents
+                }
+            ],
+            responseHandler: function (res) {
+                var result = new Object();
+                result.rows = res.results;
+                result.total = res.count;
+                return result
+            },
+            queryParams: function (p) {
+                return {
+                    page_size: p.limit,
+                    page: p.offset / p.limit + 1,
+                    search: p.search,
+                    format: 'json',
+                };
+            },
+            pagination: true,
+            pageSize: 10,
+            pageList: [10, 20, 50, 100],
+            sidePagination: 'server',
+            showRefresh: true,
+            search: false,
+            showColumns: true,
+            toolbar: "#toolbar_hudson_job",
+            cache: false
+        });
+        <!-- hudson_job_create -->
+        $('#form_hudson_job_create')
+                .bootstrapValidator({
+                    excluded: ':disabled',
+                    fields: {
+                        hudson_job_app_create: {
+                            validators: {
+                                notEmpty: {
+                                    message: 'Pool不能为空'
+                                }
+                            }
+                        },
+                        hudson_job_type_create: {
+                            validators: {
+                                notEmpty: {
+                                    message: '类型不能为空。'
+                                }
+                            }
+                        },
+                        hudson_job_name_create: {
+                            validators: {
+                                notEmpty: {
+                                    message: '名称不能为空'
+                                }
+                            }
+                        },
+                        hudson_job_url_create: {
+                            validators: {
+                                notEmpty: {
+                                    message: 'URL不能为空。'
+                                }
+                            }
+                        },
+                        hudson_job_token_create: {
+                            validators: {
+                                notEmpty: {
+                                    message: 'Token不能为空。'
+                                }
+                            }
+                        },
+                    }
+                })
+                .on('success.form.bv', function (e) {
+                    e.preventDefault();
+                    ajax(
+                            '/api/deploy/hudson_job/',
+                            'post',
+                            {
+                                app_id: $('#hudson_job_app_create').val(),
+                                jobtype: $('#hudson_job_type_create').val(),
+                                name: $('#hudson_job_name_create').val(),
+                                url: $('#hudson_job_url_create').val(),
+                                token: $('#hudson_job_token_create').val(),
+                            }
+                    );
+                    $('#table_hudson_job').bootstrapTable('refresh', {
+                        silent: false,
+                        query: $('#app').val() ? {
+                            app_id: $('#app').val()
+                        } : null
+                    });
+                    $('#modal_hudson_job_create').modal('hide');
+                });
+        $("#hudson_job_app_create").change(function () {
+            $('#form_hudson_job_create').data('bootstrapValidator')
+                    .updateStatus('hudson_job_app_create', 'NOT_VALIDATED').validateField('hudson_job_app_create');
+        });
+        $("#hudson_job_type_create").change(function () {
+            $('#form_hudson_job_create').data('bootstrapValidator')
+                    .updateStatus('hudson_job_type_create', 'NOT_VALIDATED').validateField('hudson_job_type_create');
+        });
+        $('#modal_hudson_job_create').on('hidden.bs.modal', function (e) {
+            $("#hudson_job_app_create").data('combobox').clearElement();
+            $("#hudson_job_type_create").data('combobox').clearElement();
+            $('#form_hudson_job_create').bootstrapValidator('resetForm', true);
+        });
+        <!-- hudson_job_edit -->
+        $('#form_hudson_job_edit')
+                .bootstrapValidator({
+                    excluded: ':disabled',
+                    fields: {
+                        hudson_job_type_edit: {
+                            validators: {
+                                notEmpty: {
+                                    message: '类型不能为空。'
+                                }
+                            }
+                        },
+                        hudson_job_name_edit: {
+                            validators: {
+                                notEmpty: {
+                                    message: '名称不能为空'
+                                }
+                            }
+                        },
+                        hudson_job_url_edit: {
+                            validators: {
+                                notEmpty: {
+                                    message: 'URL不能为空。'
+                                }
+                            }
+                        },
+                        hudson_job_token_edit: {
+                            validators: {
+                                notEmpty: {
+                                    message: 'Token不能为空。'
+                                }
+                            }
+                        },
+                    }
+                })
+                .on('success.form.bv', function (e) {
+                    e.preventDefault();
+                    ajax(
+                            '/api/deploy/hudson_job/' + id + '/',
+                            'patch',
+                            {
+                                jobtype: $('#hudson_job_type_edit').val(),
+                                name: $('#hudson_job_name_edit').val(),
+                                url: $('#hudson_job_url_edit').val(),
+                                token: $('#hudson_job_token_edit').val(),
+                            }
+                    );
+                    $('#table_hudson_job').bootstrapTable('refresh', {
+                        silent: false,
+                        query: $('#app').val() ? {
+                            app_id: $('#app').val()
+                        } : null
+                    });
+                    $('#modal_hudson_job_edit').modal('hide');
+                });
+        $('#modal_hudson_job_edit').on('hidden.bs.modal', function (e) {
+            $("#hudson_job_type_edit").data('combobox').clearElement();
+            $('#form_hudson_job_edit').bootstrapValidator('resetForm', true);
+        });
+        <!-- hudson_job_init -->
+        $('#table_hudson_job').on('click-row.bs.table', function (e, row, $element) {
+            id = row.id;
+        });
+    })
+</script>
+{% endblock %}

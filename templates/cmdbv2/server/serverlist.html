@@ -1,0 +1,1102 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %} 部署 {% endblock %}
+{% block content %}
+
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-select-1.10.0/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-select-1.10.0/dist/js/bootstrap-select.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-json/js/jquery.json.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/extensions/export/bootstrap-table-export.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-json/js/jquery.json.min.js"></script>
+    <style>
+        .bootstrap-table .table > tbody > tr > th,
+        .bootstrap-table .table > tfoot > tr > th,
+        .bootstrap-table .table > thead > tr > td,
+        .bootstrap-table .table > tbody > tr > td,
+        .bootstrap-table .table > tfoot > tr > td {
+            padding: 4px !important;
+        }
+
+        .fixed-table-container tbody tr td {
+            line-height: 26px;
+        }
+
+        .fixed-table-container tbody .selected td {
+            background-color: #C7CCD5;
+        }
+
+        .fixed-table-container tbody tr:hover td {
+            background-color: #C7CCD5;
+        }
+    </style>
+
+    <!-- <div class="inner-h1">主机管理</div> -->
+
+    <div id="alert">
+    </div>
+
+    <div class="modal fade" id="deployModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="deployForm" method="POST" action="{{ API_HYBRID_SAVE }}">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">主机上架</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-4 control-label">站点/应用</label>
+                            <div class='col-sm-8'>
+                                <select name="deploy_app_id" id="deploy_app_id"
+                                        class="form-control selectpicker width-false"
+                                        data-live-search="true" data-width="false">
+                                    <option value="">请选择站点/应用</option>
+                                    {% for app_obj in app %}
+                                        <option value="{{ app_obj.id }}">{{ app_obj.site.name }}/{{ app_obj.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-4 control-label">Haproxy分组
+                            </label>
+                            <div class='col-sm-4'>
+                                <select name="haproxy_room" id="haproxy_room"
+                                        class="form-control selectpicker width-false"
+                                        data-width="false" disabled>
+                                    <option value="">请选择机房</option>
+                                    {% for r in room %}
+                                        {% if r.haproxy_zk_cluster %}
+                                            <option value="{{ r.name }}">{{ r.name }}</option>
+                                        {% endif %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class='col-sm-4'>
+                                <select name="haproxy_group" id="haproxy_group"
+                                        class="form-control selectpicker width-false"
+                                        data-width="false" disabled>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-4 control-label">YCC_ZONE
+                            </label>
+                            <div class='col-sm-8'>
+                                <select name="ycc_zone_init" id="ycc_zone_init"
+                                        class="form-control selectpicker width-false"
+                                        data-width="false">
+                                    <option value="">请选择zone</option>
+                                    {% for room_obj in room %}
+                                        {% ifequal room_obj.status 1 %}
+                                            <option value="{{ room_obj.id }}">{{ room_obj.ycc_code }}</option>
+                                        {% endifequal %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-4 control-label">备注</label>
+                            <div class="col-sm-8">
+                                <input type="text" value="" name="deploy_comment" id="deploy_comment"
+                                       class="form-control">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-4 col-sm-8">
+                                <div class="checkbox">
+                                    <label>
+                                        <input type="checkbox" name="is_init_tomcat" id="is_init_tomcat" value="2">
+                                        Tomcat自动部署？
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-4 col-sm-8">
+                                <div class="checkbox">
+                                    <label>
+                                        <input type="checkbox" name="is_one_click" id="is_one_click" value="0"> 代码自动部署？
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-4 col-sm-8">
+                                <div class="checkbox">
+                                    <label>
+                                        <input type="checkbox" name="haproxy_registration" id="haproxy_registration"
+                                               value="0" disabled> Haproxy自动上架？
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green" id="submit1">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="batchQueryModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="batchQueryForm" method="POST"
+                      action="{{ API_HYBRID_SAVE }}">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">批量查询</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label class="col-sm-3 control-label">查询条件:</label>
+                            <div class='col-sm-6'>
+                                <select name="query_key" id="query_key" class="form-control selectpicker">
+                                    <option value="">选择查询条件（IP/资产号/主机名）</option>
+                                    <option name="query_ip" value="ip">IP地址</option>
+                                    <option name="query_assetid" value="assetid">资产号</option>
+                                    <option name="query_name" value="hostname">主机名</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class='col-sm-10 col-sm-push-1'>
+                                <textarea name="query_value" id="query_value" class="form-control" rows="5"
+                                          placeholder="输入查询内容" aria-multiline="true"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green" id="submit3">确定</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="deployfailureModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="deployfailureForm" method="POST"
+                      action="{{ API_HYBRID_SAVE }}">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">处理预上架失败</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-3 control-label">选择处理方式</label>
+                            <div class='col-sm-6'>
+                                <select name="deal_type" id="deal_type" class="form-control">
+                                    <option value="">请选择</option>
+                                    <option name="redeploy" value="redeploy" disabled>重新预上架</option>
+                                    <option name="change_using" value="change_using">修改为使用中</option>
+                                    <option name="change_maintain" value="change_maintain">修改为维护中</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green" id="submit2">确定</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editComment" tabindex="-1" role="dialog" aria-labelledby="editCommentLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="editCommentForm" method="POST"
+                      action="{{ API_HYBRID_SAVE }}">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="editCommentLabel">修改主机信息</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group" aria-disabled="true" hidden>
+                            <label for="inputEmail3" class="col-sm-3 control-label">主机编号</label>
+                            <div class='col-sm-6'>
+                                <input type='text' class="form-control" name="e_id" id="e_id" readonly/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-3 control-label">设备编号</label>
+                            <div class="col-sm-6">
+                                <input type="text" size="16" value="" name="e_assetid" id="e_assetid"
+                                       class="form-control" readonly>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="e_comment" class="col-sm-3 control-label">备注信息</label>
+                            <div class="col-sm-6">
+                                <input type="text" size="16" value="" name="e_comment" id="e_comment"
+                                       class=" form-control">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="ycc_zone" class="col-sm-3 control-label">YCC_ZONE</label>
+                            <div class='col-sm-6'>
+                                <select id="ycc_zone" name="ycc_zone" class="form-control selectpicker">
+                                    <option value="">请选择zone</option>
+                                    {% for room_obj in room %}
+                                        {% ifequal room_obj.status 1 %}
+                                            <option value="{{ room_obj.id }}">{{ room_obj.ycc_code }}</option>
+                                        {% endifequal %}
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green" id="submit4">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modal_haproxy" tabindex="-1" role="dialog" aria-labelledby="label_haproxy"
+         aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span
+                            class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="h4_haproxy"></h4>
+                </div>
+                <div class="modal-body">
+                    <form role="form">
+                        <div class="checkbox">
+                            <label>
+                                <input type="checkbox" id="checkbox_haproxy"> <span id="span_haproxy"></span>
+                            </label>
+                        </div>
+                        <div class="checkbox" id="div_hedwig" hidden>
+                            <label>
+                                <input type="checkbox" id="checkbox_hedwig"> <span id="span_hedwig"></span>
+                            </label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-green" id="button_haproxy">确定</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-inline" role="form" style="padding-top: 10px">
+        <span><strong>主机筛选：</strong></span>
+        <select name="params_app_id" id="params_app_id" class="form-control">
+            <option value=" ">选择站点/Pool</option>
+            {% for item in app %}
+                <option value="{{ item.id }}">{{ item.site.name }}/{{ item.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="params_server_status_id" id="params_server_status_id"
+                class="form-control selectpicker control_api_url">
+            <option value="">状态</option>
+            {% for item in server_status %}
+                <option value="{{ item.id }}">{{ item.comment }}</option>
+            {% endfor %}
+        </select>
+        <select name="params_idc" id="params_idc" class="form-control selectpicker control_api_url">
+            <option value="">机房</option>
+            {% for item in room %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="params_server_env_id" id="params_server_env_id" class="form-control selectpicker control_api_url">
+            <option value="">环境</option>
+            {% for item in server_env %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="params_server_type_id" id="params_server_type_id"
+                class="form-control selectpicker control_api_url">
+            <option value="">类型</option>
+            {% for item in server_type %}
+                <option value="{{ item.id }}">{{ item.comment }}</option>
+            {% endfor %}
+        </select>
+        <button id="clear" class="btn btn-green">
+            条件重置
+        </button>
+        <button id="batch_query" class="btn btn-green" data-toggle="modal" data-target="#batchQueryModal">
+            批量查询
+        </button>
+    </div>
+    <div id="toolbar">
+        <div class="form-inline" role="form">
+            <button id="deploy" class="btn btn-green" disabled data-toggle="modal" data-target="#deployModal">
+                上架
+            </button>
+            <button id="deploy_failure" class="btn btn-green" disabled data-toggle="modal"
+                    data-target="#deployfailureModal">
+                处理预上架失败
+            </button>
+            <button id="maintain" class="btn btn-green" disabled>
+                维护
+            </button>
+            <button id="maintain_finish" class="btn btn-danger" disabled>
+                维护完成
+            </button>
+            <button id="recycle" class="btn btn-danger" disabled>
+                下架回收
+            </button>
+            <button id="scrap_off" class="btn btn-danger" disabled>
+                下架报废
+            </button>
+            <button id="scrap" class="btn btn-danger" disabled>
+                报废
+            </button>
+        </div>
+    </div>
+
+    <table id="server">
+    </table>
+
+
+    <script>
+        $(document).ready(function () {
+            $("#button_haproxy").attr("disabled", false);
+            $("#deploy,#scrap,#maintain,#maintain_finish,#recycle,#scrap_off,#deploy_failure").attr("disabled", true);
+
+            $('#params_app_id').selectpicker({
+                'liveSearch': true,
+                'liveSearchPlaceholder': '搜索',
+                'width': 'fit',
+            }).on('change', function () {
+                refreshTable();
+            });
+
+            $('.selectpicker').not('.width-false').selectpicker({
+                'width': 'auto'
+            })
+
+            {#            $("#deploy_site_id").combobox({});#}
+
+            $(".control_api_url").change(function () {
+                refreshTable();
+            });
+
+            function refreshTable() {
+                var params_app_id = $("#params_app_id option:selected").val();
+                var params_server_status_id = $("#params_server_status_id option:selected").val();
+                var params_idc = $("#params_idc option:selected").val();
+                var params_server_type_id = $("#params_server_type_id option:selected").val();
+                var params_server_env_id = $("#params_server_env_id option:selected").val();
+                var api_url = '{{ CMDBAPI_URL }}server/serverstandard/?';
+                var params = ['format=json'];
+                if (params_server_status_id != "") {
+                    params.push('server_status__id=' + params_server_status_id)
+                }
+                if (params_idc != "") {
+                    params.push('rack__room__id=' + params_idc)
+                }
+                if (params_server_type_id != "") {
+                    params.push('server_type__id=' + params_server_type_id)
+                }
+                if (params_server_env_id != "") {
+                    params.push('server_env__id=' + params_server_env_id)
+                }
+                if (params_app_id != "" && params_app_id != " ") {
+                    params.push('app__id=' + params_app_id)
+                }
+                api_url = api_url + params.join('&');
+
+                $('#server').bootstrapTable('refresh', {
+                    url: api_url
+                });
+            }
+
+            function confirm(action, description, button) {
+                var error = '', success_count = 0, error_count = 0, server_id_list = [];
+                $.each($('#server').bootstrapTable('getSelections'), function (index, value) {
+                    server_id_list.push(value.id)
+                    $.ajax({
+                        url: '/api/server/serverstandard/' + value.id + '/',
+                        type: 'patch',
+                        async: false,
+                        data: {
+                            'action': action,
+                            'haproxy': $('#checkbox_haproxy').prop('checked'),
+                            'hedwig': $('#checkbox_hedwig').prop('checked')
+                        },
+                        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                        success: function () {
+                            success_count += 1;
+                        },
+                        error: function (json) {
+                            error = JSON.stringify(json.responseText);
+                            error_count += 1;
+                        }
+                    });
+                });
+                bootbox.alert([
+                    success_count ? $('<span>').text(success_count + '台机器' + description + '成功')[0].outerHTML : '',
+                    error_count ? $('<span>').text(error_count + '台机器' + description + '失败，失败原因为：' + error).css('color', 'red')[0].outerHTML : ''
+                ].join('<br>'));
+                $('#server').bootstrapTable('refresh', {
+                    silent: false
+                });
+                button.prop('disabled', true)
+                $.ajax({
+                    url: '/api/server/notification/',
+                    type: 'post',
+                    async: true,
+                    data: {
+                        'server_id_list': $.toJSON(server_id_list),
+                        'title': action
+                    },
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function () {
+                    },
+                    error: function (json) {
+                    }
+                });
+            }
+
+            {#            $("#deploy_site_id").change(function () {#}
+            {#                if ($(this).val()) {#}
+            {#                    var site_id = $(this).val();#}
+            {#                    $.ajax({#}
+            {#                        url: '{{ CMDBAPI_URL }}cmdb/app/?site_id=' + site_id + '&page_size=500&format=json',#}
+            {#                        async: false,#}
+            {#                        headers: {'Authorization': 'Token {{ API_TOKEN }}'},#}
+            {#                        success: function (json) {#}
+            {#                            $("#deploy_app_id").find("option").remove();#}
+            {#                            $.each(json.results, function (i, value) {#}
+            {#                                $('#deploy_app_id').append($('<option>').text(value.name).attr('value', value.id));#}
+            {#                            });#}
+            {#                            $("#deploy_app_id").data('combobox').refresh();#}
+            {#                        }#}
+            {#                    });#}
+            {#                }#}
+            {#            });#}
+
+            $("#clear").click(function () {
+                $("#params_app_id").val('');
+                $(".control_api_url").val('');
+                $("#params_app_id").selectpicker('refresh');
+                $('.control_api_url').selectpicker('refresh');
+                $('#server').bootstrapTable('refresh', {
+                    url: '{{ CMDBAPI_URL }}server/serverstandard/'
+                });
+            });
+
+            window.operateEvents = {
+                'click .edit': function (e, value, row, index) {
+                    $("#e_id").val(row.id);
+                    $("#e_assetid").val(row.assetid);
+                    $("#e_comment").val(row.comment);
+                    $('#ycc_zone').selectpicker('val', row.ycc_zone);
+                    $('#editCommentForm').bootstrapValidator('resetForm');
+                    $('#editComment').modal('show');
+                }
+            };
+
+            var search = window.location.search;
+            var init_url = '{{ CMDBAPI_URL }}server/serverstandard/?format=json';
+            if (search.length > 1) {
+                init_url += '&' + search.substr(1);
+            }
+            $('#server').bootstrapTable({
+                url: init_url,
+                ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                columns: [
+                    {
+                        field: 'state',
+                        checkbox: true
+                    },
+                    {
+                        field: 'id',
+                        visible: false
+                    },
+                    {
+                        field: 'app_name',
+                        title: '应用',
+                        formatter: get_app_name
+                    },
+                    {
+                        field: 'ip',
+                        title: 'IP',
+                        formatter: getServerDetail,
+                    },
+                    {
+                        field: 'assetid',
+                        title: '资产号',
+                        visible: false
+                    },
+                    {
+                        field: 'sn',
+                        title: '序列号',
+                        visible: false
+                    },
+                    {
+                        field: 'group',
+                        title: '分组',
+                        formatter: get_group_info
+                    },
+                    {
+                        field: 'mgmt_ip',
+                        title: '管理IP'
+                    },
+                    {
+                        field: 'parent_ip',
+                        title: '宿主机IP'
+                    },
+                    {
+                        field: 'hostname',
+                        title: '主机名',
+                    },
+                    {
+                        field: 'room',
+                        title: '机房'
+                    },
+                    {
+                        field: 'rack_name',
+                        title: '机架'
+                    },
+                    {
+                        field: 'server_env_name',
+                        title: '环境'
+                    },
+                    {
+                        field: 'server_type_comment',
+                        title: '类型'
+                    },
+                    {
+                        field: 'server_status_name',
+                        title: '状态'
+                    },
+                    {
+                        field: 'ycc_code',
+                        title: 'YCC_ZONE'
+                    },
+                    {
+                        field: 'parent_app_name',
+                        title: '宿主机类型'
+                    },
+                    {
+                        field: 'comment',
+                        title: '备注'
+                    },
+                    {
+                        title: '操作',
+                        formatter: editCommentInfo,
+                        events: operateEvents
+                    }
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search
+                    };
+                },
+                pagination: true,
+                pageSize: 50,
+                pageList: [10, 20, 50, 100, 500, 1000],
+                clickToSelect: true,
+                sidePagination: 'server',
+                showRefresh: true,
+                search: true,
+                showColumns: true,
+                toolbar: "#toolbar",
+                showExport: true,
+                cache: false
+            });
+
+            function get_app_name(value, row, index) {
+                if (row.app_id != 0 && row.app_id != null) {
+                    return '<a href="{{ ROOT_URL }}cmdb/app/?id=' + row.app_id +'" target="_blank"  title="点击查看Pool详情">' + row.site_name + '/' + row.app_name + '</a>';
+                } else {
+                    return "";
+                }
+            }
+
+            function getServerDetail(value, row, index) {
+                return '<a href="{{ ROOT_URL }}server/detail/?id=' + row.id +'" target="_blank"  title="点击查看主机详情">' + value + '</a>';
+            };
+
+            function get_group_info(value, row, index) {
+                var ret = [];
+                $.each(row.groups, function (i, value) {
+                    if (row.room == value.room_name) {
+                        ret.push(value.cname);
+                    }
+                });
+                return ret.join("<br />")
+            }
+
+            function editCommentInfo(value, row, index) {
+                return $('<a>').attr('class', 'edit').append(
+                        $('<span>').attr({
+                            class: 'glyphicon glyphicon-pencil',
+                            title: ' 编辑',
+                        }).css({
+                            cursor: 'pointer',
+                        }))[0].outerHTML
+            };
+
+            $('#server').on('click-row.bs.table', function (e, row, $element) {
+                $("#parent").val(row.assetid);
+            }).on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+                var selections = $("#server").bootstrapTable('getSelections');
+                $("#deploy,#scrap,#maintain,#maintain_finish,#recycle,#scrap_off,#deploy_failure").attr("disabled", true);
+                if (selections.length) {
+                    var status = -1;
+                    var disable = false;
+                    var has_docker = 0;
+                    for (var i = 0; i < selections.length; i++) {
+                        if (selections[i].server_type_id == 3) {
+                            has_docker = 1;
+                        }
+                    }
+                    for (var i = 0; i < selections.length; i++) {
+                        if (status >= 0) {
+                            if ((status != selections[i].server_status_id)) {
+                                disable = true;
+                                break;
+                            } else {
+                                disable = false;
+                            }
+                        } else {
+                            status = selections[i].server_status_id;
+                        }
+
+                    }
+                    if (!disable) {
+                        switch (status) {
+                            case 100:
+                                $("#deploy,#scrap").attr("disabled", false);
+                                break;
+                            case 200:
+                                $("#maintain").attr("disabled", false);
+                                break;
+                            case 210:
+                                if (has_docker) {
+                                    $("#maintain_finish,#scrap_off").attr("disabled", false);
+                                } else {
+                                    $("#maintain_finish,#recycle,#scrap_off").attr("disabled", false);
+                                }
+                                break;
+                            case 220:
+                                $("#deploy_failure").attr("disabled", false);
+                                break;
+                            case 230:
+                                $("#deploy_failure").attr("disabled", false);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+
+            });
+
+            $('#deployForm')
+                    .bootstrapValidator({
+                        excluded: ':disabled',
+                        fields: {
+                            deploy_app_id: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '应用不能为空。'
+                                    }
+                                }
+                            },
+                            ycc_zone_init: {
+                                validators: {
+                                    notEmpty: {
+                                        message: 'zone不能为空。'
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .on('success.form.bv', function (e, row) {
+                        e.preventDefault();
+                        var is_init_tomcat = $('#is_init_tomcat').prop('checked');
+                        var is_one_click = $('#is_one_click').prop('checked');
+                        var haproxy_registration = $('#haproxy_registration').prop('checked');
+                        var action = (is_init_tomcat || is_one_click || haproxy_registration ? 'predeploy' : 'deploy');
+                        var errorInfo = '';
+                        var suc_count = 0;
+                        var err_count = 0;
+                        var server_id_list = []
+                        $.each($('#server').bootstrapTable('getSelections'), function (index, value) {
+                            if (action == 'predeploy') {
+                                server_id_list.push(value.id);
+                                var data = {
+                                    'app_id': $("#deploy_app_id").val(),
+                                    'ycc_zone': $('#ycc_zone_init').val(),
+                                    'comment': $("#deploy_comment").val(),
+                                    'action': 'predeploy',
+                                }
+                                if (is_init_tomcat)
+                                    data.is_init_tomcat = 1;
+                                if (is_one_click)
+                                    data.is_one_click = 1;
+                                if (haproxy_registration) {
+                                    data.haproxy_room = $('#haproxy_room').val();
+                                    data.haproxy_group = $('#haproxy_group').val();
+                                }
+                                $.ajax({
+                                    url: '{{ CMDBAPI_URL }}server/serverstandard/' + value.id + '/',
+                                    type: 'PATCH',
+                                    async: false,
+                                    data: data,
+                                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                                    success: function () {
+                                        suc_count += 1;
+                                    },
+                                    error: function (json) {
+                                        errorInfo = JSON.stringify(json.responseText);
+                                        err_count += 1;
+                                    }
+
+                                });
+                            } else {
+                                $.ajax({
+                                    url: '{{ CMDBAPI_URL }}server/serverstandard/' + value.id + '/',
+                                    type: 'PATCH',
+                                    async: false,
+                                    data: {
+                                        'app_id': $("#deploy_app_id option:selected").val(),
+                                        'ycc_zone': $('#ycc_zone_init').val(),
+                                        'comment': $("#deploy_comment").val(),
+                                        'action': 'deploy'
+                                    },
+                                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                                    success: function () {
+                                        suc_count += 1;
+                                    },
+                                    error: function (json) {
+                                        errorInfo = JSON.stringify(json.responseText);
+                                        err_count += 1;
+                                    }
+                                });
+                            }
+                        });
+                        $('#deployForm').bootstrapValidator('resetForm', true);
+                        $('#deployModal').modal('hide');
+                        $("[name=is_init_tomcat]:checkbox").prop("checked", false);
+                        $("[name=is_one_click]:checkbox").prop("checked", false);
+                        $("#deploy_comment").val('');
+                        if (err_count == 0) {
+                            alert(suc_count.toString() + '台主机预上架/上架成功！');
+                        } else {
+                            $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>' + suc_count.toString() + '台主机预上架/上架成功。<strong>' + err_count.toString() + '台发生错误!</strong>错误记录：' + errorInfo + '</div>');
+                        }
+                        $('#server').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#deploy,#scrap').prop('disabled', true);
+                        if (action == 'predeploy')
+                            $.ajax({
+                                url: '/api/server/notification/',
+                                type: 'post',
+                                async: false,
+                                data: {
+                                    'server_id_list': $.toJSON(server_id_list),
+                                    'title': 'predeploy'
+                                },
+                                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                                success: function () {
+                                },
+                                error: function (json) {
+                                }
+                            });
+                    });
+
+{#            $('#scrap').click(function () {#}
+{#                if (confirm("确定继续？")) {#}
+{#                    var errorInfo = '';#}
+{#                    var suc_count = 0;#}
+{#                    var err_count = 0;#}
+{#                    $.map($('#server').bootstrapTable('getSelections'), function (row) {#}
+{#                        $.ajax({#}
+{#                            url: '{{ CMDBAPI_URL }}server/serverstandard/' + row.id + '/',#}
+{#                            type: 'PATCH',#}
+{#                            async: false,#}
+{#                            data: {#}
+{#                                'action': 'trash'#}
+{#                            },#}
+{#                            headers: {'Authorization': 'Token {{ API_TOKEN }}'},#}
+{#                            success: function () {#}
+{#                                suc_count += 1;#}
+{#                            },#}
+{#                            error: function (json) {#}
+{#                                errorInfo = JSON.stringify(json.responseText);#}
+{#                                err_count += 1;#}
+{#                            }#}
+{#                        });#}
+{#                    });#}
+{#                    if (err_count == 0) {#}
+{#                        alert(suc_count.toString() + '台空闲主机报废成功！');#}
+{#                    } else {#}
+{#                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>' + suc_count.toString() + '台空闲主机报废成功。<strong>' + err_count.toString() + '台发生错误!</strong>错误记录：' + errorInfo + '</div>');#}
+{#                    }#}
+{#                    $('#server').bootstrapTable('refresh', {#}
+{#                        silent: true#}
+{#                    });#}
+{#                    $('#deploy,#scrap').prop('disabled', true);#}
+{#                }#}
+{#            });#}
+
+            $('#maintain').click(function () {
+                $('#h4_haproxy').text('维护');
+                $('#span_haproxy').text('Haproxy自动下架？');
+                $('#span_hedwig').text('Hedwig自动下架？');
+                $('#div_hedwig').show();
+                $('#button_haproxy').attr('class', 'btn btn-green maintain');
+                $('#modal_haproxy').modal('show');
+            });
+
+            $('#maintain_finish').click(function () {
+                $('#h4_haproxy').text('维护完成');
+                $('#span_haproxy').text('Haproxy自动上架？');
+                $('#span_hedwig').text('Hedwig自动下架？');
+                $('#div_hedwig').hide();
+                $('#button_haproxy').attr('class', 'btn btn-green maintain_finish');
+                $('#modal_haproxy').modal('show');
+            });
+
+            $('#recycle').click(function () {
+                $('#h4_haproxy').text('下架回收');
+                $('#span_haproxy').text('Haproxy自动下架？');
+                $('#span_hedwig').text('Hedwig自动下架？');
+                $('#div_hedwig').show();
+                $('#button_haproxy').attr('class', 'btn btn-green recycle');
+                $('#modal_haproxy').modal('show');
+            });
+
+            $('#scrap_off, #scrap').click(function () {
+                $('#h4_haproxy').text('下架报废');
+                $('#span_haproxy').text('Haproxy自动下架？');
+                $('#span_hedwig').text('Hedwig自动下架？');
+                $('#div_hedwig').show();
+                $('#button_haproxy').attr('class', 'btn btn-green trash');
+                $('#modal_haproxy').modal('show');
+            });
+
+            $('#deployfailureForm')
+                    .bootstrapValidator({
+                        excluded: ':disabled',
+                        fields: {
+                            deal_type: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '请选择处理方式'
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .on('success.form.bv', function (e, row) {
+                        var errorInfo = '';
+                        var suc_count = 0;
+                        var err_count = 0;
+                        $.map($('#server').bootstrapTable('getSelections'), function (row) {
+                            $.ajax({
+                                url: '{{ CMDBAPI_URL }}server/serverstandard/' + row.id + '/',
+                                type: 'PATCH',
+                                async: false,
+                                data: {
+                                    'action': $("#deal_type").val(),
+                                },
+                                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                                success: function () {
+                                    suc_count += 1;
+                                },
+                                error: function (json) {
+                                    errorInfo = JSON.stringify(json.responseText);
+                                    err_count += 1;
+                                }
+                            });
+                        });
+                        $('#deployfailureForm').bootstrapValidator('resetForm', true);
+                        $('#deployfailureModal').modal('hide');
+                        if (err_count == 0) {
+                            alert(suc_count.toString() + '台主机处理成功！');
+                        } else {
+                            $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>' + suc_count.toString() + '台主机处理成功。<strong>' + err_count.toString() + '台发生错误!</strong>错误记录：' + errorInfo + '</div>');
+                        }
+                        $('#server').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#deploy_failure').prop('disabled', true);
+                    });
+
+            $('#batchQueryForm')
+                    .bootstrapValidator({
+                        excluded: ':disabled',
+                        fields: {
+                            query_key: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '请选择查询条件'
+                                    }
+                                }
+                            },
+                            query_value: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '请输入查询内容'
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        var string = $("#query_value").val().trim();
+                        var batch_uri = '{{ CMDBAPI_URL }}server/serverstandard/?format=json&query_key=' + $("#query_key option:selected").val() + '&query_value=' + string.split('\n') + '';
+                        $('#server').bootstrapTable('refresh', {
+                            url: batch_uri,
+                        });
+                        $("#query_key").val('');
+                        $("#query_key").selectpicker('refresh');
+                        $('#batchQueryForm').bootstrapValidator('resetForm', true);
+                        $('#batchQueryModal').modal('hide');
+                    });
+
+            $('#editCommentForm')
+                    .bootstrapValidator({
+                        excluded: ':disabled',
+                        fields: {
+                            ycc_zone: {
+                                validators: {
+                                    notEmpty: {
+                                        message: 'zone不能为空'
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        $.ajax({
+                            url: '{{ CMDBAPI_URL }}server/serverstandard/' + $("#e_id").val() + '/',
+                            type: 'PATCH',
+                            async: false,
+                            data: {
+                                'action': 'edit',
+                                'comment': $("#e_comment").val(),
+                                'ycc_zone': $("#ycc_zone").val(),
+                            },
+                            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                            success: function () {
+                                $('#server').bootstrapTable('refresh', {
+                                    silent: true
+                                });
+                                $('#editComment').modal('hide');
+                                $('#editCommentForm').bootstrapValidator('resetForm', true);
+                            },
+                            error: function (json) {
+                                $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>修改备注信息错误!</strong>' + JSON.stringify(json.responseText) + '</div>');
+                                $('#editComment').modal('hide');
+                                $('#editCommentForm').bootstrapValidator('resetForm', true);
+                            }
+                        });
+                    });
+            $('#deploy_app_id').change(function () {
+                $('#haproxy_room').prop('disabled', $(this).val() ? false : true).selectpicker('refresh');
+            });
+            $('#haproxy_room').change(function () {
+                if ($(this).val()) {
+                    $.ajax({
+                        url: '/api/server/haproxy/group/',
+                        type: 'get',
+                        async: false,
+                        data: {
+                            app_id: $('#deploy_app_id').val(),
+                            room_name: $(this).val()
+                        },
+                        success: function (data, textStatus, jqXHR) {
+                            if (data.length == 0) {
+                                $('#haproxy_group').empty();
+                                $('#haproxy_group').prop('disabled', true).selectpicker('refresh');
+                                $('#haproxy_registration').prop('checked', false).prop('disabled', true);
+                            }
+                            else {
+                                $('#haproxy_group').empty();
+                                $.each(data, function (index, value) {
+                                    if (value == 'def')
+                                        $('#haproxy_group').prepend($('<option>').val(value).text(value));
+                                    else
+                                        $('#haproxy_group').append($('<option>').val(value).text(value));
+                                });
+                                $('#haproxy_group').selectpicker('val', 'def').selectpicker('refresh');
+                                $('#haproxy_group').prop('disabled', false).selectpicker('refresh');
+                                $('#haproxy_registration').prop('disabled', false);
+                            }
+                        },
+                        error: function (jqXHR, textStatus, errorThrown) {
+                            console.log(jqXHR.responseText);
+                        }
+                    });
+                }
+                else {
+                    $('#haproxy_group').prop('disabled', true).selectpicker('refresh');
+                    $('#haproxy_registration').prop('checked', false).prop('disabled', true);
+                }
+            })
+            $('#deployModal').on('hidden.bs.modal', function (e) {
+                $(this).find('.selectpicker').selectpicker('val', '');
+                $('#haproxy_group').prop('disabled', true).selectpicker('refresh');
+                $(this).find('input[type="checkbox"]').prop('checked', false);
+            })
+            $('#modal_haproxy').on('show.bs.modal', function (e) {
+                $(this).find('input[type="checkbox"]').prop('checked', false);
+            })
+            $('#button_haproxy').bind('click', function () {
+                $("#button_haproxy").attr("disabled", true);
+                $("#modal_haproxy").modal('hide');
+                if ($(this).hasClass('maintain'))
+                    confirm('maintain', '切维护', $('#maintain'))
+                else if ($(this).hasClass('maintain_finish'))
+                    confirm('maintain_finish', '预上架', $('#maintain_finish,#recycle,#scrap_off'))
+                else if ($(this).hasClass('recycle'))
+                    confirm('recycle', '下架回收',  $('#recycle'))
+                else if ($(this).hasClass('trash'))
+                    confirm('trash', '下架报废', $('#scrap_off'))
+                $("#button_haproxy").attr("disabled", false);
+            })
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,1249 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %} 事故处理中心 {% endblock %}
+{% block content %}
+
+<link href="{{ STATIC_URL }}accident/css/timeline_style-web.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}accident/iconfont/iconfont.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/summernote/dist/summernote.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/lightbox2/dist/css/lightbox.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-sweetalert/sweetalert.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/toastr/toastr.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}accident/css/loading.css" rel="stylesheet"/>
+
+<script src="{{ STATIC_URL }}libs/summernote/dist/summernote.min.js"></script>
+<script src="{{ STATIC_URL }}libs/summernote/dist/lang/summernote-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/moment/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery-autocomplete/bootstrap3-typeahead.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/lightbox2/dist/js/lightbox.min.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/spin.min.js" ></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-sweetalert/sweetalert.min.js"></script>
+<script src="{{ STATIC_URL }}libs/toastr/toastr.min.js"></script>
+
+
+<style>
+img{border:0 none;vertical-align:top;}
+button::-moz-focus-inner{padding:0;border:none;}
+.wrap{width:980px;margin:0 auto;}
+.fl{float:left;}
+.fr{float:right;}
+.mt{margin-top:10px;}
+.ml{margin-left:10px;}
+.mt5{margin-top:5px;}
+.mt10{margin-top:10px;}
+.mb{margin-bottom:10px;}
+.none{display:none;}
+
+.ac {
+    border-style: solid;
+    border-width: 1px;
+    border-color: gray;
+    position: absolute;
+    display: none;
+    overflow: auto;
+    z-index: 9999;
+}
+
+.toast-success{
+    background-color: #01a992;
+}
+
+.sa-confirm-button-container .btn-primary{
+    background-color: #01a992;
+}
+</style>
+
+<!-- 左侧悬浮工具栏 -->
+<div class="ld_left_bar">
+    <div class="ld_left_tab">
+        <a href="javascript:;" class="tool cur" id="all"><i class="iconfont">&#xe60d;</i><span>时间轴</span></a>
+        <a href="javascript:;" class="tool" id="change"><i class="iconfont">&#xe60b;</i><span>配置变更</span></a>
+        <a href="javascript:;" class="tool" id="monitor"><i class="iconfont">&#xe60f;</i><span>告警事件</span></a>
+    </div>
+{#    <a href="{{ ROOT_URL }}influence/" class="tool" target="_blank"><i class="iconfont">&#xe60e;</i>影响范围</a>#}
+    <a href="javascript:;" class="tool entry_btn"><i class="iconfont">&#xe676;</i>录入</a>
+    <a href="javascript:;" class="tool first_tool ld_email"><i class="iconfont">&#xe60c;</i>邮件通知</a>
+    <a href="javascript:;" class="tool color_pink close_accident"><i class="iconfont">&#xe604;</i>关闭事故</a>
+</div>
+<!-- /左侧悬浮工具栏 -->
+
+<!-- 主体内容 -->
+<!-- 刷新加载图标 -->
+<div class="loader-box">
+    <!--圆点旋转-->
+    <div class="ball-spin-fade-loader" style="display:none;">
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+    </div>
+</div>
+<!-- /刷新加载图标 -->
+
+<!-- 滚动加载图标 -->
+<div class="loader-box-bottom">
+    <!--圆点旋转-->
+    <div class="ball-spin-fade-loader" style="display:none;">
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
+    </div>
+</div>
+<!-- /滚动加载图标 -->
+<div class="ld_tab_body" id="timelime_content">
+    <div class="ld_tab_item timeline">
+        <!-- 筛选 -->
+        <div class="ld_filtrate clearfix" >
+            <div class="accident_name">
+                <div class="display_box clearfix">
+                    <h2>{{ accident.title }}</h2><i class="iconfont">&#xe608;</i>
+                    值班经理：<strong style="color: red">{% if duty_manager %}{{ duty_manager.username_ch }}{% else %}{% endif %}</strong>
+                    [后备：<strong style="color: red">{% if back_duty_manager %}{{ back_duty_manager.username_ch }}{% else %}{% endif %}</strong>]
+                </div>
+                <div class="edit_box none"><input type="text"/><a href="javascript:;" class="confirm_modify">确定</a><a href="javascript:;" class="cancel_modify">取消</a></div>
+            </div>
+            <div class="form-inline">
+                <form id="main_select_form" role="form"  onkeydown="if(event.keyCode==13){return false;}">
+                    <strong>主时间轴</strong>&nbsp;&nbsp;
+                    <select name="source" id="source" class="form-control main_url selectpicker">
+                        <option value="">log来源</option>
+                        <option value="0">人工录入</option>
+                        <option value="1">配置变更</option>
+                        <option value="2">告警事件</option>
+                    </select>
+                    <input name="username" id="username" class="form-control main_url" data-provide="typeahead" autocomplete="off" placeholder="人名搜索"/>
+                    <button id="main_select_submit" type="button" class="btn btn-green form-control">筛选</button>
+                    <button id="main_select_reset" type="button" class="btn btn-green form-control">重置</button>
+                </form>
+            </div>
+        </div>
+        <!-- /筛选 -->
+        <!-- 时间轴 -->
+        <div class="ld_timeline">
+{#            <div class="ld_entry_accident">#}
+{#                <a href="javascript:;" class="tool entry_btn"><i class="iconfont">&#xe676;</i>录入</a>#}
+{#            </div>#}
+            <div class="node_list"  id="allLine"></div>
+{#            <a href="javascript:;" class="gray_btn">开启事故</a>#}
+{#            <!-- 日期分隔 -->#}
+{#            <div class="date_separated">#}
+{#                <span>10月16日</span>#}
+{#            </div>#}
+{#            <!-- /日期分隔 -->#}
+        </div>
+        <!-- /时间轴 -->
+    </div>
+
+    <div id="loading"></div>
+
+    <div class="ld_tab_item configuration_change none">
+        <!-- 筛选 -->
+        <div class="ld_filtrate clearfix">
+            <div class="form-inline">
+                <form id="change_select_form" role="form"  onkeydown="if(event.keyCode==13){return false;}">
+                    <strong>配置变更</strong>&nbsp;&nbsp;
+                    <select name="change_type" id="change_type" class="form-control change_url selectpicker cform_url">
+                        <option value="">变更类型</option>
+                    </select>
+                    <select name="change_action" id="change_action" class="form-control change_url selectpicker cform_url">
+                        <option value="">变更动作</option>
+                    </select>
+                    <select name="change_app" id="change_app" class="form-control cform_url">
+                        <option value="">站点/应用</option>
+                    </select>
+                    <input name="change_index" id="change_index" class="form-control change_url cform_url" placeholder="索引值搜索"/>
+                    <input name="change_start_time" id="change_start_time" class="form-control change_url  cform_url selectTime" placeholder="开始时间"/>
+                    <input name="change_end_time" id="change_end_time" class="form-control change_url  cform_url selectTime" placeholder="结束时间"/>
+                    <button id="change_select_submit" type="button" class="btn btn-green form-control">筛选</button>
+                    <button id="change_select_reset" type="button" class="btn btn-green form-control">重置</button>
+                </form>
+
+            </div>
+        </div>
+        <!-- /筛选 -->
+        <!-- 时间轴 -->
+        <div class="ld_timeline configuration_change">
+            <div class="node_list" id="changeLine">
+            </div>
+        </div>
+        <!-- /时间轴 -->
+    </div>
+
+    <div class="ld_tab_item none">
+        <!-- 筛选 -->
+        <div class="ld_filtrate clearfix">
+            <div class="form-inline">
+                <form id="monitor_select_form" role="form"  onkeydown="if(event.keyCode==13){return false;}">
+                    <strong>告警记录</strong>&nbsp;&nbsp;
+                    <select name="monitor_source" id="monitor_source" class="form-control monitor_url selectpicker mform_url">
+                        <option value="">告警来源</option>
+                    </select>
+                    <select name="monitor_type" id="monitor_type" class="form-control monitor_url selectpicker mform_url">
+                        <option value="">告警类型</option>
+                    </select>
+                    <select name="monitor_level" id="monitor_level" class="form-control monitor_url selectpicker mform_url">
+                        <option value="">告警等级</option>
+                    </select>
+                    <select name="monitor_app_id" id="monitor_app_id" class="form-control mform_url">
+                        <option value="">站点/应用</option>
+                    </select>
+                    <input name="monitor_start_time" id="monitor_start_time" class="form-control monitor_url selectTime mform_url" placeholder="开始时间"/>
+                    <input name="monitor_end_time" id="monitor_end_time" class="form-control monitor_url selectTime mform_url" placeholder="结束时间"/>
+                    <button id="monitor_select_submit" type="button" class="btn btn-green form-control">筛选</button>
+                    <button id="monitor_select_reset" type="button" class="btn btn-green form-control">重置</button>
+                </form>
+            </div>
+        </div>
+        <!-- /筛选 -->
+        <!-- 时间轴 -->
+        <div class="ld_timeline configuration_change">
+            <div class="node_list" id="monitorLine">
+            </div>
+        </div>
+        <!-- /时间轴 -->
+    </div>
+</div>
+<!-- /主体内容 -->
+<!-- 疑似问题pool -->
+<div class="ld_suspected_problem_pool">
+    <h3>疑似问题Pool</h3>
+    <div class="problem_list">
+    </div>
+    <div class="pool_btn_box">
+        <div class="tool_tip">
+            <a href="javascript:;" class="hand_btn add_pool_btn">添加</a>
+            <div class="form_box none">
+                <div class="form_item clearfix">
+                    <label for="" class="form_name">Pool：</label>
+                    <div class="form_right">
+                    <div class="input-group input_group">
+                        <select name="app" id="app" class="form-control">
+                            <option value="">请选择</option>
+                        </select>
+                    </div>
+                    </div>
+                </div>
+                <div class="btn_box">
+                    <a href="javascript:;" class="green_btn tool_tip_cl" id="add_pool" name="add_pool">添加</a><a href="javascript:;" class="tool_tip_cl gray_btn">取消</a>
+                </div>
+            </div>
+        </div>
+{#        <div class="gray_box">#}
+{#            <a href="javascript:;" class="hand_btn gray_hand">重启</a>#}
+{#            <a href="javascript:;" class="hand_btn gray_hand">回滚</a>#}
+{#            <a href="javascript:;" class="hand_btn gray_hand">删除</a>#}
+{#        </div>#}
+    </div>
+</div>
+<!-- /疑似问题pool -->
+
+<!-- 邮件通知 -->
+<div class="ld_pop_common ld_email_pop none">
+    <div class="pop_head clearfix">
+        <h2 class="pop_tit">邮件通知</h2>
+        <i class="iconfont icon-guanbi1 close_btn"></i>
+        <i class="iconfont icon-zuixiaohua"></i>
+    </div>
+    <div class="fade_cont">
+        <div class="pop_cont">
+            <form class="form">
+                <div class="form-group">
+                    <label class="form_name" for="recipients">收件人：</label>
+                    <div class="pop_form_right">
+                        <div class="recipient_main">
+                            <div class="choosed_people clearfix" id="mail_rec" name="mail_rec">
+                                <div class="drop_select">
+                                    <input type="text" class="recipient_ipt" id="mail_rec_input" name="mail_rec_input" data-provide="typeahead" autocomplete="off"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form_name" for="recipients">抄送：</label>
+                    <div class="pop_form_right">
+                        <div class="recipient_main copy_to">
+                            <div class="choosed_people clearfix"  id="mail_cc" name="mail_cc">
+                                <div class="drop_select">
+                                    <input type="text" class="recipient_ipt" id="mail_cc_input" name="mail_cc_input" data-provide="typeahead" autocomplete="off"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="pop_footer clearfix">
+            <div class="btn_box inline_btn">
+                <a href="javascript:;" class="green_btn close_btn" id="send_mail">发送</a>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- /邮件通知 -->
+<!-- 关闭事故 -->
+<div class="ld_pop_common close_accident_pop none">
+    <div class="pop_head clearfix">
+        <h2 class="pop_tit">关闭事故</h2>
+        <i class="iconfont icon-guanbi1 close_btn"></i>
+    </div>
+    <div class="fade_cont">
+        <form role="form" id="closeAccidentForm" class="form-horizontal" method="POST"  onkeydown="if(event.keyCode==13){return false;}">
+            <div class="pop_cont">
+                <div class="form-group">
+                    <label class="form_name" for="recipients">恢复时间：</label>
+                    <div class="pop_form_right">
+                        <div class="clearfix">
+                            <input name="recover_time" id="recover_time" class="form-control" type="text">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form_name" for="recipients">收件人：</label>
+                    <div class="pop_form_right">
+                        <div class="recipient_main">
+                            <div class="choosed_people clearfix"  id="recover_rec" name="recover_rec">
+                                <div class="drop_select">
+                                    <input type="text" class="recipient_ipt" id="recover_rec_input" name="recover_rec_input" data-provide="typeahead" autocomplete="off"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form_name" for="recipients">抄送人：</label>
+                    <div class="pop_form_right">
+                        <div class="recipient_main copy_to">
+                            <div class="choosed_people clearfix"  id="recover_cc" name="recover_cc">
+                                <div class="drop_select">
+                                    <input type="text" class="recipient_ipt" id="recover_cc_input" name="recover_cc_input" data-provide="typeahead" autocomplete="off"/>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="pop_footer clearfix">
+                <div class="btn_box inline_btn">
+                    <button type="submit" id="close_submit" class="btn btn-green form-control">关闭</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- /关闭事故 -->
+<!-- 录入 -->
+<div class="ld_pop_common entry_btn_pop none">
+    <div class="pop_head clearfix">
+        <h2 class="pop_tit">录入</h2>
+        <i class="iconfont icon-guanbi1 close_btn"></i>
+        <i class="iconfont icon-zuixiaohua" id="insert_log_min"></i>
+    </div>
+    <div class="fade_cont">
+        <form role="form" id="createLogForm" class="form-horizontal" method="POST"  onkeydown="if(event.keyCode==13){return false;}">
+            <div class="pop_cont">
+                <div class="form-group">
+                    <label class="form_name" for="recipients">发生时间：</label>
+                    <div class="pop_form_right">
+                        <div class="clearfix">
+                            <input name="log_happened_time" id="log_happened_time" class="form-control" type="text">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form_name" for="recipients">描述内容：</label>
+                    <div class="pop_form_right">
+                        <div id="log_content" name="log_content" class="form-control"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="pop_footer clearfix">
+                <div class="btn_box inline_btn">
+                    <button type="submit" id="log_submit" class="btn btn-green form-control">提交</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<!-- /录入 -->
+
+<script>
+    var API_URL = '{{ CMDBAPI_URL }}';  //API根路径，引入时间轴的js使用
+    var API_HEADERS = {'Authorization':'Token {{ API_TOKEN }}'};    //API headers，引入时间轴的js使用
+    var cur_accident_id = parseInt('{{ accident.accidentid }}');    //当前事故编号，引入时间轴的js使用
+    var logined_username = '{{ USER.username }}';   //当前登录用户，引入时间轴的js使用
+    var main_next = null;
+    var load_flag = true;
+    var emails = new Array();
+    var usernames = new Array();
+    //时间轴筛选框清空
+    $('.main_url').val('');
+    $('.cform_url').val('');
+    $('.mform_url').val('');
+
+    //人名、邮件列表初始化
+    {% for user in user_list %}
+        usernames.push('{{ user.username }}');
+        emails.push('{{ user.email }}');
+    {% endfor %}
+
+    //人名查询自动补齐
+    $('#username').typeahead({
+        source: usernames,
+    });
+
+    //email输入自动补齐
+    $.each(['#mail_rec_input','#mail_cc_input','#recover_rec_input','#recover_cc_input'], function(i, name){
+        inputAutocomplete(name);
+    });
+
+    //弹出框设置
+    toastr.options = {
+        "closeButton": false,//是否配置关闭按钮
+        "debug": false,//是否开启debug模式
+        "newestOnTop": false,//新消息是否排在最上层
+        "progressBar": false,//是否显示进度条
+        "positionClass": "toast-bottom-left",//消息框的显示位置
+        "preventDuplicates": false,//是否阻止弹出多个消息框
+        "onclick": null,//点击回调函数
+        "showDuration": "300",
+        "hideDuration": "1000",
+        "timeOut": "2000",//2s后关闭消息框
+        "extendedTimeOut": "1000",
+        "showEasing": "swing",
+        "hideEasing": "linear",
+        "showMethod": "fadeIn",
+        "hideMethod": "fadeOut"
+    };
+
+    $('.selectTime').datetimepicker({
+        format: 'yyyy-mm-dd hh:ii:ss',
+        autoclose: true,
+        minView: 1,
+        minuteStep:1
+    });
+    //录入Log时间初始化
+    $('#log_happened_time').datetimepicker({
+        format: 'yyyy-mm-dd hh:ii:ss',
+        weekStart:1,
+        todayHighlight:1,
+        autoclose: true,
+        minView:0,
+        hourStep: 1,
+    }).on('change show', function(e) {
+        $('#createLogForm').bootstrapValidator('revalidateField', 'log_happened_time');
+    });
+    $('#log_happened_time').datetimepicker('setStartDate', '2014-07-01 00:00:00');
+
+    //关闭事故时间初始化
+    $('#recover_time').datetimepicker({
+        format: 'yyyy-mm-dd hh:ii:ss',
+        weekStart:1,
+        todayHighlight:1,
+        autoclose: true,
+        minView:1,
+        hourStep: 1,
+    }).on('change show', function(e) {
+        $('#closeAccidentForm').bootstrapValidator('revalidateField', 'recover_time');
+    });
+    $('#recover_time').datetimepicker('setStartDate', '2014-07-01 00:00:00');
+
+    //选择框初始化
+    $('.selectpicker').selectpicker({
+        'width': 'auto'
+    });
+    $('#app,#monitor_app_id, #change_app').selectpicker({
+        'width': '190px',
+        'liveSearch': true,
+        'liveSearchPlaceholder': '搜索Pool',
+        'size': 10
+    });
+    //异步加载app下拉框，避免页面加载缓慢
+    $.ajax({
+        url:'{{ CMDBAPI_URL }}cmdbv2/cmdb/app/v2/?format=json',
+        headers:{'Authorization':'Token {{ API_TOKEN }}'},
+        success: function( json ) {
+            $.each(json, function(i, value) {
+                $('#app').append('<option value="'+value.id+'">'+value.site.name+'/'+value.name+'</option>');
+                $('#change_app').append('<option value="'+value.id+'">'+value.site.name+'/'+value.name+'</option>');
+                $('#monitor_app_id').append('<option value="'+value.id+'">'+value.site.name+'/'+value.name+'</option>');
+            });
+            $('#app').selectpicker('refresh');
+            $('#change_app').selectpicker('refresh');
+            $('#monitor_app_id').selectpicker('refresh');
+        }
+    });
+
+    //首次加载主时间轴
+    change_Main(false);
+    //首次加载疑似pool
+    updateProblemPool(true);
+    //定时刷新插入最新时间轴数据
+    setInterval(insertMainLine, 1000);
+    //判断是否事故中，重刷页面
+    setInterval(is_accident, 5000);
+    //定时刷新疑似pool
+    setInterval(updateProblemPool, 2000);
+
+    //3个时间轴切换
+    $('#all').click(function(){
+        change_Main(false);
+    });
+    $('#change').click(function(){
+        change_Change();
+    });
+    $('#monitor').click(function(){
+        change_Monitor();
+    });
+
+    //主时间轴条件筛选时间轴数据
+    $('.main_url').change(function(){
+        change_Main(false);
+    });
+    $('#main_select_submit').click(function(){
+        change_Main(false);
+    });
+    $('#main_select_reset').click(function(){
+        $('#source').val('');
+        $('#source').selectpicker('refresh');
+        $('#username').val('');
+        change_Main(false);
+    });
+
+    //点击置顶按钮重置时间轴
+    $('#back-to-top').click(function(){
+       if($( "#all").hasClass('cur')){
+           $('html,body').animate({scrollTop:0},0);//回到顶端
+        return false;
+        }else if($( "#change").hasClass('cur')){
+            $('html,body').animate({scrollTop:0},0);//回到顶端
+        }else if($( "#monitor").hasClass('cur')){
+           $('html,body').animate({scrollTop:0},0);//回到顶端
+        }
+    });
+
+    //判断当前是否事故中
+    function is_accident() {
+        $.ajax({
+            url: '{{ CMDBAPI_URL }}accident/current/?format=json',
+            type: "GET",
+            async: false,
+            timeout : 3000,
+            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+            success: function (res) {
+                if(res.count == 0) {
+                    location.reload()
+                }
+            }
+        });
+    }
+
+    //滚动加载
+    window.onscroll = function () {
+        var scrollTop = document.documentElement.scrollTop || document.body.scrollTop;  //离上方的距离
+        var windowHeight = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight; //可见宽度
+        if (Math.ceil(scrollTop) >= document.documentElement.scrollHeight - windowHeight) {
+            if ($("#all").hasClass('cur')) {
+                if (main_next != null) {
+                    if (load_flag) {
+                        //锁定状态为加载中
+                        load_flag = false;
+                        updateMainLine(main_next, false, 'bottom');
+                    }
+                }
+            }else if ($("#change").hasClass('cur')) {
+                if (change_next != null) {
+                    if (change_load_flag) {
+                        //锁定状态为加载中
+                        change_load_flag = false;
+                        updateChangeLine(change_next, get_change_ids(1), 'bottom');
+                    }
+                }
+            } else if ($("#monitor").hasClass('cur')) {
+                if (monitor_next != null) {
+                    if (monitor_load_flag) {
+                        //锁定状态为加载中
+                        monitor_load_flag = false;
+                        updateMonitorLine(monitor_next, get_change_ids(2), 'bottom');
+                    }
+                }
+            }
+        }
+    }
+
+
+    //log录入初始化
+    $('#log_content').summernote({
+        lang: 'zh-CN',
+{#        placeholder: '描述事故处理进度或发现的问题，可附链接或图片',#}
+        focus: true,
+        height: 200,
+        minHeight: 150,
+        maxHeight: 600,
+{#        dialogsInBody: true,#}
+        toolbar: [
+            ['link', ['link']],
+            ['picture', ['picture']],
+{#            ['fullscreen', ['fullscreen']],#}
+{#            ['codeview', ['codeview']],#}
+        ],
+        popover: {
+            image: [
+                ['imagesize', ['imageSize25','imageSize50', 'imageSize100']],
+                ['remove', ['removeMedia']]
+            ],
+            link: [['link', ['linkDialogShow', 'unlink']]],
+        },
+        callbacks: {
+            onInit: function () {
+                $('.link-dialog .modal-dialog .modal-body .checkbox label').hide();
+            },
+            onImageUpload: function (files, editor, $editable) {
+                sendFile(files[0]);
+            },
+        }
+    });
+    //上传图片
+    function sendFile(file) {
+        var data = new FormData();
+        data.append("image", file);
+        if (file.size > 500000) {
+            swal("", "上传图片的大小不应超过500K！", "warning");
+        } else if (!file.type.match(/.jpg|.jpeg|.png|.gif/i)) {
+            swal("", "图片格式必须是jpg或jpeg或png或gif！", "warning");
+        } else {
+            $.ajax({
+                data: data,
+                type: "POST",
+                url: '{{ CMDBAPI_URL }}accident/log/image/',
+                cache: false,
+                async: false,
+                contentType: false,
+                processData: false,
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (res) {
+                    $('#log_content').summernote('editor.insertImage', res['image']);
+                }
+            });
+        }
+    }
+    //查询最新log插入到主时间轴
+    function insertMainLine(){
+        var last_time = moment($('#allLine .node_time').eq(0).text(), 'YYYY-MM-DD HH:mm:ss').format('X');
+        var end_time = moment().format('X');
+        var insert_api_url = '{{ CMDBAPI_URL }}accident/log/';
+        var source = $('#source').val();
+        var username = $('#username').val().trim();
+        var params = ['?format=json&accident_id={{ accident.accidentid }}'];
+
+        if(source != ''){
+            params.push('source=' + source)
+        }
+        if(username != ''){
+            params.push('username=' + username)
+        }
+        if($('#allLine .node_time').eq(0).text() != ''){
+            params.push('create_time_start=' + last_time)
+        }
+        params.push('create_time_end=' + end_time)
+        $.ajax({
+            url: insert_api_url + params.join('&'),
+            type: "GET",
+            async: false,
+            timeout : 3000,
+            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+            success: function (res) {
+                var count = res.length;
+                if(count > 0) {
+                    for(var i=count-1;i>=0;i--){
+                        var val = res[i];
+                        var image_html = '';
+                        var content = val['message'].replace(/<.*?>/g, '');
+
+                        $.each(val['images'], function (j, img) {
+                            image_html = image_html + '<a class="example-image-link" href="' + img['image'] + '" data-lightbox="example-1" data-title="' + content + '"><img  class="example-image" src="' + img['image'] + '"  alt="image-1"/></a>&nbsp;&nbsp;';
+                        });
+                        if (val['source'] == 1) {
+                            $('#allLine').prepend('<div class="node_item level0' + val['level_id'] + ' cur"> <span class="node_time">' + val['create_time_format'] + '</span> <div class="node_right level0' + val['level_id'] + '"> ' +
+                                    '<div class="node_info"> <ul class="clearfix"> <li><span>' + val['username'] + '</span></li> <li><label for="">系统来源：</label><span>【配置变更】</span></li><li><label for="">重要等级：</label><span>' + val['level_name'] + '</span></li><li><label for="">发生时间：</label><span>' + val['happened_time_format'] + '</span></li> </ul> ' +
+                                    '<div class="describe"> <p>' + val['message'] + '</p> </div></div> </div> </div>');
+
+                        } else if (val['source'] == 2) {
+                            $('#allLine').prepend('<div class="node_item level0' + val['level_id'] + ' cur"> <span class="node_time">' + val['create_time_format'] + '</span> <div class="node_right level0' + val['level_id'] + '"> ' +
+                                    '<div class="node_info"> <ul class="clearfix"> <li><span>' + val['username'] + '</span></li> <li><label for="">系统来源：</label><span>【告警事件】</span></li><li><label for="">告警等级：</label><span>' + val['level_name'] + '</span></li><li><label for="">发生时间：</label><span>' + val['happened_time_format'] + '</span></li> </ul> ' +
+                                    '<div class="describe"> <p>' + val['message'] + '</p> </div></div> </div> </div>');
+                        } else {
+                            $('#allLine').prepend('<div class="node_item level0' + val['level_id'] + ' cur"> <span class="node_time">' + val['create_time_format'] + '</span> <div class="node_right level0' + val['level_id'] + '"> ' +
+                                    '<div class="node_info"> <ul class="clearfix"> <li><span>' + val['username'] + '</span></li><li><label for="">发生时间：</label><span>' + val['happened_time_format'] + '</span></li> </ul> ' +
+                                    '<div class="describe"> <p>' + val['message'] + image_html + '</p> </div></div> </div> </div>');
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    //分页获取主时间轴记录
+    function updateMainLine(url, is_async, loading_position) {
+        if(loading_position== 'center'){
+            $('.loader-box .ball-spin-fade-loader').css({display: ''});
+        }else{
+            $('.loader-box-bottom .ball-spin-fade-loader').css({display: ''});
+        }
+        $.ajax({
+            url: url,
+            type: "GET",
+            async: is_async,
+            timeout : 3000,
+            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+            success: function (json) {
+                if(loading_position== 'center'){
+                    $('.loader-box .ball-spin-fade-loader').css({display: 'none'});
+                }else{
+                    $('.loader-box-bottom .ball-spin-fade-loader').css({display: 'none'});
+                }
+                if (json.count > 0) {
+                    $.each(json.results, function (i, val) {
+                        var image_html = '';
+                        var content = val['message'].replace(/<.*?>/g, '');
+                        $.each(val['images'], function (j, img) {
+                            image_html = image_html + '<a class="example-image-link" href="' + img['image'] + '" data-lightbox="example-1" data-title="' + content + '"><img  class="example-image" src="' + img['image'] + '"  alt="image-1"/></a>&nbsp;&nbsp;';
+                        });
+                        if (val['source'] == 1) {
+                            var ips_html = val['ip'] != '' ? '<p>IP:' + val['ip'] + '</p>' : '';
+                            $('#allLine').append('<div class="node_item level0' + val['level_id'] + ' cur"> <span class="node_time">' + val['create_time_format'] + '</span> <div class="node_right level0' + val['level_id'] + '"> ' +
+                                    '<div class="node_info"> <ul class="clearfix"> <li><span>' + val['username'] + '</span></li> <li><label for="">系统来源：</label><span>【配置变更】</span></li><li><label for="">重要等级：</label><span>' + val['level_name'] + '</span></li><li><label for="">发生时间：</label><span>' + val['happened_time_format'] + '</span></li> </ul> ' +
+                                    '<div class="describe">'+ips_html+' <p>' + val['message'] + '</p> </div></div> </div> </div>');
+
+                        } else if (val['source'] == 2) {
+                            var ips_html = val['ip'] != '' ? '<p>IP:' + val['ip'] + '</p>' : '';
+                            $('#allLine').append('<div class="node_item level0' + val['level_id'] + ' cur"> <span class="node_time">' + val['create_time_format'] + '</span> <div class="node_right level0' + val['level_id'] + '"> ' +
+                                    '<div class="node_info"> <ul class="clearfix"> <li><span>' + val['username'] + '</span></li> <li><label for="">系统来源：</label><span>【告警事件】</span></li><li><label for="">告警等级：</label><span>' + val['level_name'] + '</span></li><li><label for="">发生时间：</label><span>' + val['happened_time_format'] + '</span></li> </ul> ' +
+                                    '<div class="describe">'+ips_html+' <p>' + val['message'] + '</p> </div></div> </div> </div>');
+                        } else {
+                            $('#allLine').append('<div class="node_item level0' + val['level_id'] + ' cur"> <span class="node_time">' + val['create_time_format'] + '</span> <div class="node_right level0' + val['level_id'] + '"> ' +
+                                    '<div class="node_info"> <ul class="clearfix"> <li><span>' + val['username'] + '</span></li><li><label for="">发生时间：</label><span>' + val['happened_time_format'] + '</span></li> </ul> ' +
+                                    '<div class="describe"> <p>' + val['message'] + image_html + '</p> </div></div> </div> </div>');
+                        }
+                    });
+                } else {
+                    $('#allLine').append('<div class="node_item level00 cur"> <div class="node_right level00"> ' +
+                            '<div class="node_info"><div class="alldescribe"> <p>无log记录</p> </div> </div> </div> </div>');
+                }
+                if (json.next == null) {
+                    $('#allLine').append('<a href="javascript:;" class="gray_btn">开启事故</a>')
+                }
+                //滚动加载的URL
+                main_next = json.next;
+            }
+        });
+        //解锁状态为可加载
+        load_flag = true;
+    }
+    //主时间轴默认加载、条件查询
+    function change_Main(is_async) {
+        var main_api_url = '{{ CMDBAPI_URL }}accident/log/';
+        var source = $('#source').val();
+        var username = $('#username').val().trim();
+        var params = ['?format=json&page_size=20&page=1&accident_id={{ accident.accidentid }}'];
+
+        if(source != ''){
+            params.push('source=' + source)
+        }
+        if(username != ''){
+            params.push('username=' + username)
+        }
+        params.push('create_time_end=' + moment().format('X'));
+        $('#allLine').html('');
+        if(load_flag) {
+            //锁定状态为加载中
+            load_flag = false;
+            updateMainLine(main_api_url + params.join('&'), is_async, 'center');
+        }
+    }
+
+    //获取已推送记录ID，source=1代表配置变更，source=2代表告警事件
+    function get_change_ids(source) {
+        var ids_arr = []
+        $.ajax({
+            url: '{{ CMDBAPI_URL }}accident/log/?format=json&accident_id={{ accident.accidentid }}&source=' + source,
+            type: "GET",
+            async: false,
+            headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+            success: function (res) {
+                $.each(res, function (i, val) {
+                    ids_arr.push(val['from_id']);
+                });
+            }
+        });
+        return ids_arr
+    }
+
+    //操作栏点击事件
+    $('.ld_left_tab .tool').on('click', function () {
+        $(this).addClass('cur').siblings().removeClass('cur');
+        $(this).parents('.ld_left_bar').siblings('.ld_tab_body').find('.ld_tab_item').eq($(this).index()).show().siblings().hide();
+    });
+    //筛选
+    //下拉框
+    $('li', '.dropdown-menu').on('click', function () {
+        var value = $(this).find('a').html();
+        $(this).parents('.dropdown-menu').siblings('.ipt_txt').html(value);
+    });
+    //选择开始时间
+    $(".form_datetime").datetimepicker({
+        format: 'yyyy-mm-dd hh:ii',
+        autoclose: 1
+    });
+    //筛选按钮
+    $('.filtrate_btn').on('click', function () {
+        if ($(this).hasClass('clean_btn')) {
+            $(this).removeClass('clean_btn').html('筛选');
+        } else {
+            $(this).addClass('clean_btn').html('清除');
+        }
+    });
+    //编辑事故名称
+    $('i', '.display_box').on('click', function () {
+        var oldName = $(this).siblings('h2').html(),
+                editBox = $(this).parent('.display_box').siblings('.edit_box');
+        editBox.find('input').val(oldName);
+        editBox.show();
+    });
+    //确定修改事故名称
+    $('.confirm_modify').on('click', function () {
+        var nowName = $(this).siblings('input').val();
+        nowName = $.trim(nowName);
+        if (nowName) {
+            nowName = $(this).siblings('input').val();
+            var show = $(this).parent('.edit_box').siblings('.display_box').find('h2');
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/accident/{{ accident.id }}/',
+                type: 'PATCH',
+                async:  false,
+                data: {
+                    'action': 'title',
+                    'title': nowName,
+                },
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (res) {
+                    toastr.success("成功修改事故名称！");
+                    show.html(res['title']);
+                },
+                error: function (json) {
+                    swal("", '修改事故名称失败，原因：' + JSON.stringify(JSON.parse(json.responseText)['detail']), "error");
+                }
+            });
+        } else {
+            swal("", "事故名称不能为空！", "warning");
+        }
+        $(this).parent('.edit_box').hide();
+    });
+    //取消修改
+    $('.cancel_modify').on('click', function () {
+        $(this).parent('.edit_box').hide();
+    });
+    //更新疑似pool
+    function updateProblemPool(is_async){
+        if($('.problem_list .btn-group').hasClass('open')){
+        }else{
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/pool/',
+                type: 'GET',
+                async: is_async,
+                timeout : 3000,
+                data: {
+                    'accident_id': parseInt('{{ accident.accidentid }}'),
+                },
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (res) {
+                    $('.problem_list').html('');
+                    $.each(res, function (i, val) {
+                        $('.problem_list').append('<div class="btn-group">' +
+                                '<button type="button" class="btn btn-danger dropdown-toggle" data-toggle="dropdown">' +
+                                val['site_name']+'/' + val['app_name'] +'<span class="caret"></span></button>' +
+                                '<ul class="dropdown-menu" role="menu"><li role="presentation" class="dropdown-header">'+val['site_name']+'/' + val['app_name'] +'</li>' +
+                                '<li><a href="http://oms.yihaodian.com.cn/ticket/?action=ticket&method=addNewTicketResetSmarty" target="_blank">重启</a></li>' +
+                                '<li><a href="http://oms.yihaodian.com.cn/deploy/prod/list/?app_id='+ val['id'] +'" target="_blank">回滚</a></li>' +
+                                '<li><a href="#" class="delete_pool" id="'+val['id']+'" app_id="'+val['app_id']+'">删除</span></a></li></ul></div>')
+                    });
+                    $('.delete_pool').click(function(){
+                        $.ajax({
+                            url: '{{ CMDBAPI_URL }}accident/pool/'+ $(this).attr('id') + '/',
+                            type: 'PATCH',
+                            async: false,
+                            data: {
+                                'accident_id': parseInt('{{ accident.accidentid }}'),
+                                'app_id': $(this).attr('app_id'),
+                            },
+                            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                            success: function () {
+                                toastr.success("成功删除疑似Pool!");
+                                updateProblemPool(false);
+                            },
+                            error: function (json) {
+                                swal("", '删除疑似Pool失败，原因：' + JSON.stringify(JSON.parse(json.responseText)['detail']), "error");
+                            }
+                        });
+
+                    });
+
+                }
+            });
+        }
+
+    }
+
+    //添加疑似pool
+    $('.add_pool_btn').on('click', function () {
+        $(this).siblings('.form_box').fadeIn();
+    });
+    $('#add_pool').click(function(){
+        if($('#app').val() != ''){
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/pool/',
+                type: 'POST',
+{#                async: false,#}
+                data: {
+                    'accident_id': parseInt('{{ accident.accidentid }}'),
+                    'app_id': $('#app').val(),
+                    'create_time': moment().format('X')
+                },
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (res) {
+                    updateProblemPool(false);
+                    $('#app').val('');
+                    $('#app').selectpicker('refresh');
+                    toastr.success("成功添加疑似Pool！");
+                },
+                error: function (json) {
+                    swal("", '添加疑似Pool失败，原因：' + JSON.stringify(JSON.parse(json.responseText)['detail']), "error");
+                }
+            });
+        }else{
+            swal("", "请选择pool添加！", "warning");
+        }
+
+
+    });
+
+    //下拉框
+    $('li', '.dropdown-menu').on('click', function () {
+        var value = $(this).find('a').html();
+        $(this).parents('.input-group-btn').siblings('.ipt_txt').val(value);
+    });
+    //关闭tool_tip
+    function closeToolTip() {
+        $('.form_box').fadeOut();
+    }
+
+    $('.tool_tip_cl').on('click', function () {
+        closeToolTip();
+    })
+    //弹窗
+    //邮件通知
+    $('.ld_email').click(function () {
+        $('.ld_pop_common').hide();
+        $('.ld_email_pop').show();
+    });
+
+    //关闭事故
+    $('.close_accident').click(function () {
+        $('.ld_pop_common').hide();
+        $('#recover_time').val(moment().format('YYYY-MM-DD HH:mm:ss'));
+        $('#closeAccidentForm').bootstrapValidator('revalidateField', 'recover_time');
+        $('.close_accident_pop').show();
+    });
+
+    //录入
+    $('.entry_btn').click(function () {
+        $('.ld_pop_common').hide();
+        $('#log_happened_time').val(moment().format('YYYY-MM-DD HH:mm:ss'));
+        $('#createLogForm').bootstrapValidator('revalidateField', 'log_happened_time');
+        $('.link-dialog .modal-dialog .modal-body .checkbox label').hide();
+        $('.entry_btn_pop').show();
+    });
+    //点击关闭弹框
+    $('.ld_pop_common').on('click', '.close_btn', function () {
+        $(this).parents('.ld_pop_common').find('input,textarea').val('');
+        $(this).parents('.ld_pop_common').hide();
+    });
+    //弹窗最小化
+    $('.ld_pop_common').on('click', '.icon-zuixiaohua', function () {
+        $(this).parents('.pop_head').addClass('pop_hd').next('.fade_cont').addClass('none');
+        $(this).addClass('icon-fangda').removeClass('icon-zuixiaohua');
+    });
+    //弹窗最大化
+    $('.ld_pop_common').on('click', '.icon-fangda', function () {
+        $(this).parents('.pop_head').removeClass('pop_hd');
+        $(this).parents('.ld_pop_common').children('.fade_cont').removeClass('none');
+        $(this).addClass('icon-zuixiaohua').removeClass('icon-fangda');
+        $('#log_happened_time').val(moment().format('YYYY-MM-DD HH:mm:ss'));
+        $('#createLogForm').bootstrapValidator('revalidateField', 'log_happened_time');
+        $('.link-dialog .modal-dialog .modal-body .checkbox label').hide();
+        $('#recover_time').val(moment().format('YYYY-MM-DD HH:mm:ss'));
+        $('#closeAccidentForm').bootstrapValidator('revalidateField', 'recover_time');
+    });
+
+    //收件人
+    function closeDrop() {
+        $('.drop_box').hide();
+    }
+
+//点击空白关闭下拉框
+$(document).on('click', function (e) {
+    e.stopPropagation();
+    if ($(e.target).closest('.drop_select').length == 0) {
+        closeDrop();
+    }
+});
+
+//删除收件人
+$('.ld_pop_common').on('click', '.delete', function () {
+    $(this).parents('.people_name').remove();
+});
+
+//邮件通知输入自动补齐
+function inputAutocomplete(id_name){
+    $(id_name).typeahead({
+        source: emails,
+        // 限定只从填充列表选取收件人
+        afterSelect: function (item) {
+            var _iptVal = $(id_name).val();
+            var _html =
+                '<div class="people_name">' +
+                '<span>' + _iptVal + '</span>' +
+                '<a href="javascript:;" class="delete">&times;</a>' +
+                '</div>';
+            $(id_name).parents('.drop_select').before(_html);
+            $(id_name).val('');
+        }
+    });
+    $(id_name).keypress(function(e) {
+        // 回车键事件
+        if(e.which == 13) {
+            var _iptVal = $(id_name).val();
+            if(_iptVal.trim() != ''){
+                var _html =
+                    '<div class="people_name">' +
+                    '<span>' + _iptVal + '</span>' +
+                    '<a href="javascript:;" class="delete">&times;</a>' +
+                    '</div>';
+                $(id_name).parents('.drop_select').before(_html);
+                $(id_name).val('');
+            }
+
+        }
+    });
+}
+
+//发送邮件
+$('#send_mail').click(function () {
+    var rec = [];
+    $.each($("#mail_rec .people_name span"), function(i, val){
+        rec.push(val.innerHTML);
+    });
+    var cc = [];
+    $.each($("#mail_cc .people_name span"), function(i, val){
+        cc.push(val.innerHTML);
+    });
+    if(rec.length > 0){
+        $.ajax({
+            url: '{{ CMDBAPI_URL }}accident/log/sendmail/',
+            type: 'POST',
+            data: {
+                'receive': rec.join(','),
+                'cc': cc.join(',')
+            },
+            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+            success: function (res) {
+                if(JSON.parse(res)['success']){
+                    $('#insert_log_min').parents('.pop_head').addClass('pop_hd').next('.fade_cont').addClass('none');
+                    $('#insert_log_min').addClass('icon-fangda').removeClass('icon-zuixiaohua');
+                    $('.entry_btn_pop').show();
+                    toastr.success("邮件通知成功！");
+                }
+            },
+            error: function (json) {
+                swal("", '邮件通知失败，原因：' + JSON.stringify(JSON.parse(json.responseText)['detail']), "error");
+            }
+        });
+    }else{
+        swal("", "邮件通知收件人不能为空！", "warning");
+    }
+});
+
+//人工录入log
+$('#createLogForm')
+    .bootstrapValidator({
+        excluded: ':disabled',
+        fields: {
+            log_happened_time: {
+                validators: {
+                    callback: {
+                        message: '发生时间格式为YYYY-MM-DD HH:mm:ss',
+                        callback: function(value) {
+                            if(value != '') {
+                                var m = new moment(value, 'YYYY-MM-DD HH:mm:ss', true);
+                                if (!m.isValid()) {
+                                    return false;
+                                }
+                                return m.isAfter('2014-07-01 00:00:00');
+                            }else{
+                                return false;
+                            }
+                        }
+                    }
+                }
+            },
+        }
+    }).on('success.form.bv', function (e) {
+        e.preventDefault();
+        var code = '<div>' + $('#log_content').summernote('code') + '</div>';
+        var image_urls = [];
+        $.each($(code).find('img'), function (i, v) {
+            image_urls.push($(v).attr('src').replace('{{ media_url_reg | safe }}', ''))
+        })
+        code = code.replace(/<(?!a|\/a).*?>/g, ' ').replace('&nbsp;', ' ').replace('\<a', '\<a target="_blank"').trim();
+        if (code == '') {
+            swal("", "必须输入文字描述信息！", "warning");
+            $('#createLogForm').bootstrapValidator('resetForm', false);
+            $('#createLogForm').bootstrapValidator('revalidateField', 'log_happened_time');
+        } else {
+            var happened_time = $('#log_happened_time').val();
+            if(happened_time != ''){
+                happened_time = moment(happened_time, 'YYYY-MM-DD HH:mm:ss').format('X')
+            }else{
+                happened_time = 0
+            }
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/log/',
+                type: 'POST',
+{#                async: false,#}
+                data: {
+                    'source': 0,
+                    'accident_id': parseInt('{{ accident.accidentid }}'),
+                    'level_id': 5,
+                    'username': '{{ USER.username }}',
+                    'message': code,
+                    'image_urls': image_urls.join(','),
+                    'happened_time': happened_time
+                },
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (res) {
+                    toastr.success("录入log成功！");
+                    $('#insert_log_min').parents('.pop_head').addClass('pop_hd').next('.fade_cont').addClass('none');
+                    $('#insert_log_min').addClass('icon-fangda').removeClass('icon-zuixiaohua');
+                    $('.entry_btn_pop').show();
+                    $('#createLogForm').bootstrapValidator('resetForm', true);
+                    $('#log_content').summernote('reset');
+                },
+                error: function (json) {
+                    swal("", '录入log出现错误，原因：' + JSON.stringify(JSON.parse(json.responseText)['detail']), "error");
+                    $('#createLogForm').bootstrapValidator('resetForm', true);
+                    $('#createLogForm').bootstrapValidator('revalidateField', 'log_happened_time');
+                }
+            });
+        }
+
+    });
+
+//关闭事故
+$('#closeAccidentForm')
+    .bootstrapValidator({
+        excluded: ':disabled',
+        fields: {
+            recover_time: {
+                validators: {
+                    callback: {
+                        message: '恢复时间格式为YYYY-MM-DD HH:mm:ss',
+                        callback: function(value) {
+                            if(value != '') {
+                                var m = new moment(value, 'YYYY-MM-DD HH:mm:ss', true);
+                                if (!m.isValid()) {
+                                    return false;
+                                }
+                                return m.isAfter('2014-07-01 00:00:00');
+                            }else{
+                                return false;
+                            }
+                        }
+                    }
+                }
+            },
+        }
+    })
+    .on('success.form.bv', function(e) {
+        e.preventDefault();
+        swal({
+          title: "确认事故已恢复吗?",
+          type: "warning",
+          showCancelButton: true,
+          confirmButtonClass: 'btn-green',
+          closeOnConfirm: false,
+          closeOnCancel: true
+        },
+        function(isConfirm){
+          if (isConfirm){
+                var finish_time = $('#recover_time').val();
+                if(finish_time != ''){
+                    finish_time = moment(finish_time, 'YYYY-MM-DD HH:mm:ss').format('X')
+                }else{
+                    finish_time = 0
+                }
+                var rec = [];
+                $.each($("#recover_rec .people_name span"), function (i, val) {
+                    rec.push(val.innerHTML);
+                });
+                var cc = [];
+                $.each($("#recover_cc .people_name span"), function (i, val) {
+                    cc.push(val.innerHTML);
+                });
+                if(rec.length > 0){
+                    $.ajax({
+                        url: '{{ CMDBAPI_URL }}accident/accident/{{ accident.id }}/',
+                        type: 'PATCH',
+                        async: false,
+                        data: {
+                            'action': 'close',
+                            'receive': rec.join(','),
+                            'cc': cc.join(','),
+                            'finish_time': finish_time
+                        },
+                        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                        success: function () {
+                            $('#closeAccidentForm').bootstrapValidator('resetForm', true);
+                            location.reload();
+                        },
+                        error: function (json) {
+                            $('#closeAccidentForm').bootstrapValidator('resetForm', false);
+                            swal("", '关闭事故失败，原因：' + JSON.stringify(JSON.parse(json.responseText)['detail']), "error");
+                        }
+                    });
+                }else{
+                    swal("", "收件人不能为空！", "warning");
+                    $('#closeAccidentForm').bootstrapValidator('resetForm', false);
+                }
+            }else{
+                $('#closeAccidentForm').bootstrapValidator('resetForm', false);
+            }
+        });
+    });
+</script>
+<script src="{{ STATIC_URL }}accident/js/change_timeline.js"></script>
+<script src="{{ STATIC_URL }}accident/js/monitor_timeline.js"></script>
+{% endblock %}

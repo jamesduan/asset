@@ -1,0 +1,984 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+<style>
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+</style>
+
+<div id="alert"></div>
+
+<div id="toolbar">
+    <button id="create" data-toggle="modal" data-target="#addModal" class="btn btn-green">
+        <i class="glyphicon glyphicon-plus"></i> 新增
+    </button>
+
+    <button id="roll_back" class="btn btn-red">
+        <i class="glyphicon glyphicon-arrow-left"></i> 回滚
+    </button>
+
+    <button id="write_zone" class="btn btn-red">
+        <i class="glyphicon glyphicon-ok"></i> 生效
+    </button>
+
+    <button id="zone_download" class="btn btn-green">
+        <i class="glyphicon glyphicon-save"></i> 导出
+    </button>
+
+    <button id="save_multi" class="btn btn-green">
+        <i class="glyphicon glyphicon-menu-hamburger"></i> 批量新增
+    </button>
+
+    <button id="delete_multi" class="btn btn-red">
+        <i class="glyphicon glyphicon-menu-hamburger"></i> 批量删除
+    </button>
+</div>
+
+{# 回滚 toolbar#}
+<div id="toolbar_rollback">
+    <button id="do_rollback" class="btn btn-red">
+        <i class="glyphicon glyphicon-ok"></i> 执行回滚
+    </button>
+    <input type="number" id="history" onchange="history_on_change()"/>
+</div>
+
+<table id="record"></table>
+
+{#回滚模态框#}
+<div class="modal fade" id="rollbackModal" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document" style="width:auto">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">回滚</h4>
+      </div>
+      <div class="modal-body">
+        <table id="roll_back_table">
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+{#        <button type="button" class="btn btn-primary">Save changes</button>#}
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+{#批量新增模态框#}
+<div class="modal fade" id="savemultiModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="savemultiForm" method="POST" action="{{ API_HYBRID_SAVE }}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title">
+                        <label for="inputPassword3" class="col-sm-3 control-label">批量新增</label>
+                    <span style="color: red; font-size: medium">每行一条记录</span>
+                </h4>
+                </div>
+                <div class="modal-body">
+
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">域名所属</label>
+                        <div class='col-md-6'>
+                            <textarea placeholder="demo1.yihaodian.com   A   1.1.1.1" class="form-control" name="textarea_savemutli" id="textarea_savemutli" rows="15" style="width: 150%; resize: both"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">域名所属</label>
+                        <div class='col-sm-6'>
+                            <select name="owner_savemulti" id="owner_savemulti" class="form-control" >
+                                <option value="">请选择</option>
+                                <option value="0">SA</option>
+                                <option value="3">DBA</option>
+                                <option value="9">API</option>
+                            </select>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-green" id="submit1">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{#进度条#}
+<div class="modal fade" id="progress" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title">正在执行操作，请耐心等待...</h4>
+      </div>
+      <div class="modal-body">
+        <div class="progress">
+          <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100" style="width: 100%">
+            <span>正在执行操作，请耐心等待...</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+{#新增#}
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="addForm" method="POST" action="{{ API_HYBRID_SAVE }}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="myModalLabel">新增记录</h4>
+                </div>
+                <div class="modal-body">
+
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">域名</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="domain" id="domain" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">TTL</label>
+                        <div class='col-sm-6'>
+                            <input type='number' class="form-control" name="ttl" id="ttl" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">类型</label>
+                        <span style="color:red"><strong>*</strong></span>
+                        <div class='col-sm-6'>
+                            <select name="rrtype" id="rrtype" class="form-control" >
+                                <option value="">请选择</option>
+                                <option value="A">     A     </option>
+                                <option value="CNAME"> CNAME </option>
+                                <option value="NS">    NS    </option>
+                                <option value="MX">    MX    </option>
+                                <option value="TXT">   TXT   </option>
+                                <option value="SOA">   SOA   </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">值</label>
+                        <span style="color:red"><strong>*</strong></span>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="rrdata" id="rrdata" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">域名所属</label>
+                        <span style="color:red"><strong>*</strong></span>
+                        <div class='col-sm-6'>
+                            <select name="owner" id="owner" class="form-control" >
+                                <option value="">请选择</option>
+                                <option value="0">SA</option>
+                                <option value="3">DBA</option>
+                                <option value="9">API</option>
+                            </select>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-green" id="submit1">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{#修改#}
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="editForm" method="POST" action="{{ API_HYBRID_SAVE }}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="editzone">Zone修改</h4>
+                </div>
+                <div class="modal-body">
+
+                    <div class="form-group">
+                        <label for="inputEmail3" class="col-sm-3 control-label">ID</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_id" id="e_id" readonly />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">域名</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_domain" id="e_domain" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">TTL</label>
+                        <div class='col-sm-6'>
+                            <input type='number' class="form-control" name="e_ttl" id="e_ttl" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">类型</label>
+                        <span style="color:red"><strong>*</strong></span>
+                        <div class='col-sm-6'>
+                            <select name="e_rrtype" id="e_rrtype" class="form-control" >
+                                <option value="">请选择</option>
+                                <option value="A">     A     </option>
+                                <option value="CNAME"> CNAME </option>
+                                <option value="NS">    NS    </option>
+                                <option value="MX">    MX    </option>
+                                <option value="TXT">   TXT   </option>
+                                <option value="SOA">   SOA   </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">值</label>
+                        <span style="color:red"><strong>*</strong></span>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_rrdata" id="e_rrdata" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">域名所属</label>
+                        <span style="color:red"><strong>*</strong></span>
+                        <div class='col-sm-6'>
+                            <select name="e_owner" id="e_owner" class="form-control" >
+                                <option value="">请选择</option>
+                                <option value="0">SA</option>
+                                <option value="3">DBA</option>
+                                <option value="9">API</option>
+                            </select>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-green" id="submit2">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+
+function history_on_change() {
+    var new_url = '/api/dns/history/?dns_zone_id=' + {{ dns_zone_id }} + '&limit=' + $("#history").val() + '&format=json';
+    $('#roll_back_table').bootstrapTable('refresh', { silent: true, url: new_url});
+}
+
+// 新增时
+$("#create").click(function(){
+  $("#ttl").val({{ ttl }});
+});
+
+// 新增或修改之前判断是否已经存在
+var is_exist = function(data){
+    var ret;
+    $.ajax({
+        url: '/api/dns/record_exist/',
+{#        url: '/api/dns/test/',#}
+        type: 'POST',
+        async: false,
+        data: data,
+        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+        success: function (json) {
+            if(json){
+                console.log(json);
+                ret = 1;
+            }else {
+                console.log(json);
+                ret = 0;
+            }
+        },
+        error: function (json) {
+            console.log(json.responseText);
+            ret = -1;
+        }
+    });
+    return ret;
+};
+
+// 新增或修改
+var record_save = function (exist, data, t) {
+    if(exist==-1) {
+        alert("Zone文件不存在，可能已经删除");
+    }else {
+        var to_save = false;
+        if(exist==1){
+            if(confirm("重复域名已经存在，您确定要保存吗?")) {
+                to_save = true;
+            }
+        }else {
+            to_save = true;
+        }
+
+        if(to_save) {
+            $.ajax({
+                url:'/api/dns/record_save/',
+                type: 'POST',
+                async:  false,
+                data: data,
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    if (t) {
+                        $('#addModal').modal('hide');
+                    } else {
+                        $('#editModal').modal('hide');
+                    }
+
+                    $('#record').bootstrapTable('refresh', {
+                        silent: true
+                    });
+
+                    if (t) {
+                        $('#addForm').bootstrapValidator('resetForm', true);
+                    } else {
+                        $('#editForm').bootstrapValidator('resetForm', true);
+                    }
+
+                    alert('成功修改Zone记录！');
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加机房记录' + JSON.stringify(json.responseText) +'</div>');
+                    $('#editModal').modal('hide');
+                    $('#addModal').modal('hide');
+                    alert(json.responseText)
+                }
+            });
+        }else {
+            $('#editModal').modal('hide');
+            $('#addModal').modal('hide');
+        }
+    }
+};
+
+var $record = $('#record'),
+    $roll_back_table = $('#roll_back_table'),
+    $roll_back = $('#roll_back'),
+    $write_zone = $('#write_zone'),
+    $save_multi = $('#save_multi'),
+    $zone_download = $('#zone_download'),
+    $do_rollback = $('#do_rollback'),
+    $delete_multi = $('#delete_multi');
+
+$(document).ready(function(){
+    // 隐藏 回滚toolbar
+    $("#toolbar_rollback").hide();
+    $delete_multi.prop('disabled', true);
+
+    // 权限控制
+    if ({{ is_dba }}) {
+        $("#save_multi").hide();
+        $("#owner").val("3");
+        document.getElementById("owner").disabled=true;
+        document.getElementById("e_owner").disabled=true;
+    } else {
+        $("#save_multi").show();
+        $("#owner").val("");
+        document.getElementById("owner").disabled = false;
+        document.getElementById("e_owner").disabled = false;
+    }
+
+    // 操作
+    window.operateEvents = {
+        // 修改取原数据
+         'click .edit': function (e, value, row) {
+            $.ajax({
+{#                url: '/api/dns/record_list/?dns_zone_id={{ dns_zone_id }}&id=' + row.id + '&format=json',#}
+                url: '/api/dns/record/' + row.id +'/?dns_zone_id={{ dns_zone_id }}' + '&format=json',
+                type: 'GET',
+                async: false,
+                headers:{'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $("#e_id").val(json.id);
+                    $("#e_domain").val(json.domain);
+                    $("#e_ttl").val(json.ttl);
+					$("#e_rrtype").val(json.rrtype);
+                    $("#e_rrdata").val(json.rrdata);
+                    $("#e_status").val(json.status);
+                    $("#e_owner").val(json.owner);
+                }
+            });
+            $('#editModal').modal('show');
+        },
+
+        // 删除
+        'click .delete': function (e, value, row) {
+            if(confirm("确认删除？")){
+                $.ajax({
+{#                    url: '/api/dns/record/' + row.id + '/?format=json',#}
+                    url: '/api/dns/record/' + row.id +'/?dns_zone_id={{ dns_zone_id }}' + '&format=json',
+                    type: 'DELETE',
+                    async: false,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+
+                    success: function (json) {
+                        $('#record').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                        alert('成功删除record记录！');
+                    },
+                    error: function (json) {
+                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>删除失败!</strong>原因：' + JSON.stringify(json.responseText) + '</div>');
+                    }
+                });
+            }
+        }
+    };
+    // 加载
+    var columns = [];
+    if (true) {
+        columns.push(
+                {
+                    field: 'state',
+                    checkbox: true
+                },
+                {
+                    field: 'id',
+                    title: 'ID',
+                    align: 'center'
+                },
+                {
+                    field: 'domain',
+                    title: '域名',
+                    align: 'center'
+                },
+                {
+                    field: 'ttl',
+                    title: 'TTL',
+                    align: 'center',
+                    visible: false
+                },
+                {
+                    field: 'rrtype',
+                    title: '类型',
+                    align: 'center'
+                },
+                {
+                    field: 'rrdata',
+                    title: '值',
+                    align: 'center'
+                },
+                {
+                    field: 'status',
+                    title: '编辑状态',
+                    align: 'center',
+                    formatter: statusFormatter
+                });
+        if ({{ is_dba }}) {
+            columns.push(
+                    {
+                        field: 'operate',
+                        title: '操作',
+                        align: 'center',
+                        formatter: operateFormatter,
+                        events: operateEvents
+                    }
+                )}
+        else {
+            columns.push(
+                    {
+                        field: 'owner',
+                        title: '域名所属',
+                        align: 'center',
+                        formatter: ownerFormatter
+                    },
+                    {
+                        field: 'operate',
+                        title: '操作',
+                        align: 'center',
+                        formatter: operateFormatter,
+                        events: operateEvents
+                    }
+            )
+        }
+    }
+    $('#record').bootstrapTable({
+{#        url: '/api/dns/record_list/?dns_zone_id={{ dns_zone_id }}' + '&format=json',#}
+        url: '/api/dns/record/?dns_zone_id={{ dns_zone_id }}' + '&format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: columns,
+        responseHandler: function(res){
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [5,10,50],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        formatSearch: function () {
+            return '搜索[域名 值]';
+        },
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false,
+{#        clickToSelect: true,#}
+        striped: true
+    });
+
+    function statusFormatter(value, row, index) {
+        var v;
+        switch (value) {
+                    case 0: v = "正常"; break;
+                    case 1: v = "修改中"; break;
+                    case -1: v = "已删除"; break;
+                    default: v = "未知";
+                }
+        return v;
+    }
+
+    function ownerFormatter(value, row, index) {
+        var v;
+        switch (value) {
+                    case 0: v = 'SA'; break;
+                    case 3: v = 'DBA'; break;
+                    case 9: v = 'API'; break;
+                    default: v = '未知';
+                }
+        return v;
+    }
+
+    function operateFormatter(value, row, index) {
+        return [
+            '<a href="#" class="edit">',
+            '<span class="glyphicon glyphicon-pencil"></span>',
+            '</a>&nbsp;&nbsp;&nbsp;&nbsp; ',
+
+            '<a href="#" class="delete">',
+            '<span class="glyphicon glyphicon-remove"></span>',
+            '</a>&nbsp;&nbsp;&nbsp;&nbsp; '
+        ].join('');
+    }
+
+
+    $record.on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+        $delete_multi.prop('disabled', !$record.bootstrapTable('getSelections').length);
+    });
+
+
+    // 加载 回滚
+    var columns = [];
+    columns.push(
+        {
+            field: 'state',
+            checkbox: true
+        },
+        {
+            field: 'action',
+            title: '操作',
+            align: 'center',
+            formatter: operateFormatter2
+        },
+        {
+            field: 'id',
+            title: 'ID',
+            align: 'center'
+        },
+        {
+            field: 'old_domain',
+            title: '域名(变更前)',
+            align: 'center'
+        },
+        {
+            field: 'new_domain',
+            title: '域名(变更后)',
+            align: 'center'
+        },
+        {
+            field: 'ctime',
+            title: '变更时间',
+            align: 'center'
+        },
+        {
+            field: 'username',
+            title: '操作人',
+            align: 'center'
+        },
+        {
+            field: 'diff',
+            title: '详情',
+            align: 'center',
+            visible: false
+        });
+
+    $('#roll_back_table').bootstrapTable({
+        url: '/api/dns/history/?dns_zone_id=' + {{ dns_zone_id }} + '&limit=' + $("#history").val() + '&format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: columns,
+        responseHandler: function(res){
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+{#        pagination: true,#}
+{#        pageSize: 50,#}
+{#        pageList: [5,10,50],#}
+        sidePagination: 'server',
+        showRefresh: true,
+{#        search: true,#}
+        showColumns: true,
+        toolbar: "#toolbar_rollback",
+        cache: false,
+{#        clickToSelect: true,#}
+        detailView: true,
+        striped: true,
+        detailFormatter: detailFormatter,
+        rowStyle:
+                function rowStyle(row, index) {
+                    var action = row["action"];
+                    switch (action) {
+                        case 'C': return { classes: 'success' };
+                        case 'D': return { classes: 'danger' };
+                        case 'U': return { classes: 'info' };
+                    }
+        }
+    });
+
+    function operateFormatter2(value, row, index) {
+        var v;
+        switch (value) {
+            case 'C': v = '<div style="color:green background:blue">' + '新增' + '</div>'; break;
+            case 'D': v = '<div style="color:red">'   + '删除' + '</div>'; break;
+            case 'U': v = '修改'; break;
+        }
+        return v;
+    }
+
+    function detailFormatter(index, row) {
+        var v = row["diff"].split('\n');
+        var ret = "";
+        for(var i=0; i<v.length; i++) {
+            ret += '<div>' + v[i] + '</div>';
+        }
+        return ret;
+    }
+
+
+    $roll_back_table.on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+        $do_rollback.prop('disabled', !$roll_back_table.bootstrapTable('getSelections').length);
+    });
+
+    // 新增
+    $('#addForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+				rrtype: {
+                    validators: {
+                        notEmpty: {
+                            message: '类型不能为空。'
+                        }
+                    }
+                },
+                rrdata: {
+                    validators: {
+                        notEmpty: {
+                            message: '值不能为空。'
+                        }
+                    }
+                },
+                owner: {
+                    validators: {
+                        notEmpty: {
+                            message: '域名所属不能为空。'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var inputdata = {
+                'id'          : 0,
+                'dns_zone_id' : {{ dns_zone_id }},
+                'domain'      : $.trim($("input[name='domain']").val()),
+                'ttl'         : $.trim($("input[name='ttl']").val()),
+                'rrtype'      : $("#rrtype option:selected").val(),
+                'rrdata'      : $.trim($("input[name='rrdata']").val()),
+                'owner'       : $("#owner option:selected").val()
+            };
+
+            var exist = 0;
+            if ({{ is_dba }}) {
+                exist = is_exist(data);
+            }
+            record_save(exist, inputdata, 1);
+        });
+
+    // 修改
+    $('#editForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                e_rrtype: {
+                    validators: {
+                        notEmpty: {
+                            message: '类型不能为空。'
+                        }
+                    }
+                },
+                e_rrdata: {
+                    validators: {
+                        notEmpty: {
+                            message: '值不能为空。'
+                        }
+                    }
+                },
+                e_owner: {
+                    validators: {
+                        notEmpty: {
+                            message: '域名所属不能为空。'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var data = {
+                'id'          : $.trim($("input[name='e_id']").val()),
+                'dns_zone_id' : {{ dns_zone_id }},
+                'domain'      : $.trim($("input[name='e_domain']").val()),
+                'ttl'         : $.trim($("input[name='e_ttl']").val()),
+                'rrtype'      : $("#e_rrtype option:selected").val(),
+                'rrdata'      : $.trim($("input[name='e_rrdata']").val()),
+                'owner'       : $("#e_owner option:selected").val()
+            };
+
+            var exist = 0;
+            if ({{ is_dba }}) {
+                exist = is_exist(data);
+            }
+            record_save(exist, data, 0);
+        });
+
+    $write_zone.click(function () {
+        if (confirm("您确定要执行生成Zone文件操作吗?")) {
+            $("#progress").modal('show');
+            $.ajax({
+                url: '/api/dns/zone_write/',
+                type: 'POST',
+                data: {
+                    dns_zone_id: {{ dns_zone_id }},
+                    reload: 1,
+                    backup: 1,
+                },
+                async: false,
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+
+                success: function (json) {
+                    $('#record').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $("#progress").modal('hide');
+                    bootbox.alert('<span style="color:#3AC4AA; font-size:20px">' + json + '</span>');
+                },
+                error: function (json) {
+                    $('#record').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $("#progress").modal('hide');
+                    bootbox.alert('<span style="color:red; font-size:20px">' + json.responseText + '</span>');
+                }
+            });
+        };
+    });
+
+    $roll_back.click(function () {
+        $('#history').val(20);
+        history_on_change();
+        $("#toolbar_rollback").show();
+        $do_rollback.prop('disabled', true);
+        $("#rollbackModal").modal('show');
+    });
+
+    $do_rollback.click(function () {
+        if (confirm("您确定要执行回滚操作吗?")) {
+            var ids = '';
+            $.map($roll_back_table.bootstrapTable('getSelections'), function (row) {
+                if (ids) {
+                    ids += ',';
+                }
+                ids += row["id"];
+            });
+            {#            console.log(ids);#}
+            $("#rollbackModal").modal('hide');
+            $("#toolbar_rollback").hide();
+            $("#progress").modal('show');
+            $.ajax({
+                url: '/api/dns/zone_rollback/',
+                type: 'POST',
+                data: {
+                    dns_zone_id: {{ dns_zone_id }},
+                    ids: ids
+                },
+                async: false,
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+
+                success: function (json) {
+                    $('#record').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $("#progress").modal('hide');
+                    bootbox.alert('<span style="color:#3AC4AA; font-size:20px">' + json + '</span>');
+                },
+                error: function (json) {
+                    $('#record').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $("#progress").modal('hide');
+                    bootbox.alert('<span style="color:red; font-size:20px">' + json.responseText + '</span>');
+                }
+            });
+        };
+    });
+
+    $save_multi.click(function () {
+        $("#savemultiModal").modal('show');
+        $('#savemultiForm')
+            .bootstrapValidator({
+                excluded: ':disabled',
+                fields: {
+                    textarea_savemutli: {
+                        validators: {
+                            notEmpty: {
+                                message: '不能为空。'
+                            }
+                        }
+                    },
+                    owner_savemulti: {
+                        validators: {
+                            notEmpty: {
+                                message: '不能为空。'
+                            }
+                        }
+                    }
+                }
+            })
+            .on('success.form.bv', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: '/api/dns/record_save_multi/',
+                    type: 'POST',
+                    data: {
+                        dns_zone_id: {{ dns_zone_id }},
+                        lists: $.trim($("textarea[name='textarea_savemutli']").val()),
+                        owner: $("#owner_savemulti option:selected").val(),
+                    },
+                    async: false,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+
+                    success: function (json) {
+                        $('#record').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $("#savemultiModal").modal('hide');
+                        $('#savemultiForm').bootstrapValidator('resetForm', true);
+{#                        bootbox.alert(JSON.stringify(json));#}
+                        bootbox.alert(json);
+                    },
+                    error: function (json) {
+                        $('#record').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $("#savemultiModal").modal('hide');
+                        bootbox.alert(json.responseText);
+                    }
+                });
+            });
+    });
+
+    $delete_multi.click(function () {
+        $.map($record.bootstrapTable('getSelections'), function (row) {
+            $.ajax({
+                url: '/api/dns/record/' + row.id +'/?dns_zone_id={{ dns_zone_id }}' + '&format=json',
+                type: 'DELETE',
+                async: false,
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+
+                success: function( json ) {
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>' + row.id + ' 成功</strong>删除</div>');
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>' + row.id + '失败!</strong>原因：' + JSON.stringify(json.responseText) +'</div>');
+                }
+            });
+        });
+
+        $('#record').bootstrapTable('refresh', {
+            silent: true
+        });
+    });
+
+    $zone_download.click(function () {
+        $.ajax({
+                url: '/api/dns/zone_download/',
+                type: 'POST',
+                data: {
+                    dns_zone_id: {{ dns_zone_id }}
+                },
+                async: false,
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+
+                success: function (json) {
+{#                    console.log(json.key);#}
+                    var download_url = '../../../api/dns/download?key=' + json.key;
+{#                    console.log(download_url);#}
+                    window.open(download_url);
+                },
+                error: function (json) {
+                    bootbox.alert('<span style="color:red; font-size:20px">' + json.responseText + '</span>');
+                }
+            });
+    })
+});
+
+</script>
+{% endblock %}

@@ -1,0 +1,180 @@
+{% extends "common/bootstrap3.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+ <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+
+<div class="page-header">
+  <h1>第三方云主机管理 </h1>
+</div>
+
+<div id="alert">
+</div>
+
+<div id="toolbar">
+<div class="form-inline" role="form">
+    <button id="check" class="btn btn-primary change_status" disabled>
+        确认
+    </button>
+    <button id="white" class="btn btn-primary change_status" disabled>
+        加白名单
+    </button>
+    <button id="import" class="btn btn-primary change_status" disabled>
+        导入
+    </button>
+
+    &nbsp;&nbsp;&nbsp;&nbsp;
+    <select name="params_status" id="params_status" class="form-control control_api_url">
+        <option value="">服务器状态</option>
+        <option value="1">申请成功</option>
+        <option value="2">已确认</option>
+        <option value="3">确认失败</option>
+        <option value="4">已加白名单</option>
+        <option value="5">已导入</option>
+        <option value="6">已废弃</option>
+    </select>
+    <select name="params_requirement_id" id="params_requirement_id" class="form-control control_api_url">
+        <option value="">筛选申请单</option>
+        {%  for item in requirement %}
+            <option value="{{ item.id }}">{{ item.cname }}</option>
+        {%  endfor %}
+    </select>
+</div>
+</div>
+
+<table id="asset">
+</table>
+
+
+<script>
+$(document).ready(function() {
+    $("#params_status").val('');
+    $("#params_requirement_id").val('');
+    $(".control_api_url").change(function() {
+        var params_requirement_id = $("#params_requirement_id option:selected").val();
+        var params_status = $("#params_status option:selected").val();
+        var api_url_base = '{{ CMDBAPI_URL }}hybrid/requirementdetail/?';
+        var params = ['format=json'];
+        if (params_requirement_id !="") {
+            params.push('requirement__id='+params_requirement_id)
+        }
+        if (params_status !="") {
+            params.push('status=' + params_status)
+        }
+        var api_url = api_url_base + params.join('&')
+        $('#asset').bootstrapTable('refresh', {
+            url: api_url
+        });
+    });
+
+    $('#asset').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}hybrid/requirementdetail/?format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'state',
+                checkbox: true
+            },
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'requirement_id',
+                visible: false
+            },
+            {
+                field: 'requirement_name',
+                title: '申请单'
+            },
+            {
+                field: 'requirement_type_name',
+                title: '期限'
+            },
+            {
+                field: 'ip',
+                title: 'IP'
+            },
+            {
+                field: 'status_name',
+                title: '状态'
+            }
+        ],
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 20,
+        pageList: [50,100,500],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false,
+        showExport: true,
+        exportDataType: "selected"
+    });
+
+    $('#asset').on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+        $('#check').prop('disabled', !$("#asset").bootstrapTable('getSelections').length);
+        $('#white').prop('disabled', !$("#asset").bootstrapTable('getSelections').length);
+        $('#import').prop('disabled', !$("#asset").bootstrapTable('getSelections').length);
+    })
+
+    $('.change_status').click(function () {
+        var id_v = $(this).attr("id");
+        var status = 1;
+        if(id_v=='check') {
+            status = 2;
+        }else if(id_v=='white') {
+            status = 4;
+        }else if(id_v=='import') {
+            status = 5;
+        }
+        $.map($('#asset').bootstrapTable('getSelections'), function (row) {
+            if (status > row.status) {
+                $.ajax({
+                    url:'{{ CMDBAPI_URL }}hybrid/requirementdetail/' + row.id + '/',
+                    type: 'PATCH',
+                    async:  false,
+                    data: {
+                        'status': status
+                    },
+                    headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                    success: function( json ) {
+                        $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>修改状态' + json.ip +'</div>');
+                        $('#asset').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                    },
+                    error: function( json ) {
+                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>修改状态' + JSON.stringify(json.responseText) +'</div>');
+                    }
+                });
+            }else {
+                alert("状态不允许反向修改。");
+            }
+
+
+        });
+    });
+});
+</script>
+{% endblock %}

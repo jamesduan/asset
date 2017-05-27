@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+    <title>{% block title %} CMDB {% endblock %}</title>
+    <!-- Bootstrap -->
+    <link href="{{ STATIC_URL }}libs/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="http://oms.yihaodian.com.cn/static/css/common.css" rel="stylesheet">
+    <link href="http://oms.yihaodian.com.cn/static/css/dan.css" rel="stylesheet">
+    <!--[if lt IE 9]>
+      <script src="//cdn.bootcss.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="//cdn.bootcss.com/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <script src="http://oms.yihaodian.com.cn/static/js/jquery-1.11.3.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap/js/bootstrap.min.js"></script>
+    <script src="http://oms.yihaodian.com.cn/static/js/ticket_reset.js"></script>
+
+</head>
+
+<body>
+<header class="navbar-fixed-top">
+    <!--菜单-->
+     <div class="navbar navbar-default com-nav-sty dan-nav-sty">
+       <!--logo和小屏菜单按钮-->
+        <div class="navbar-header">
+          <a class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-navbar" aria-controls="bs-navbar" aria-expanded="false" >
+          <span class="icon-bar"> </span>
+          <span class="icon-bar"> </span>
+          <span class="icon-bar"> </span>
+          </a>
+          <a href="http://oms.yihaodian.com.cn/home/" class="navbar-brand"><img alt="云平台" src="http://oms.yihaodian.com.cn/static/images/logo2.png"/></a>
+        </div>
+      <!--分类菜单-->
+      <nav id="bs-navbar" class="collapse navbar-collapse">
+        <ul class="nav navbar-nav">
+            <li class="dropdown">
+               <a class="dropdown-toggle" data-toggle="dropdown" href="#">产品与服务<b class="caret"></b></a>
+               <!--产品下拉begin-->
+               <section class="dropdown-menu full-menu" role="menu">
+                <ul class="item">
+                <li class="title">监控服务</li>
+                <li><a href="http://oms.yihaodian.com.cn/itil/view/?id=1"><i class="glyphicon glyphicon-signal"></i>基础监控</a></li>
+                <li><a href="http://oms.yihaodian.com.cn/itil/?action=order"><i class="glyphicon glyphicon-credit-card"></i>业务监控</a></li>
+                <li><a href="http://oms.yihaodian.com.cn/log/"><i class="glyphicon glyphicon-duplicate"></i>日志监控</a></li>
+                <li><a href="http://oms.yihaodian.com.cn/itil/view/?id=13"><i class="glyphicon glyphicon-blackboard"></i>大屏监控</a></li>
+                </ul>
+                <ul class="item">
+                <li class="title">排障服务</li>
+                <li><a href="http://oms.yihaodian.com.cn/itil/view/monitor/warning/zabbix_events.html"><i class="glyphicon glyphicon-list"></i>事件管理</a></li>
+                <li><a href="http://oms.yihaodian.com.cn/itil/view/monitor/warning/warninglist.html"><i class="glyphicon glyphicon-exclamation-sign"></i>告警管理</a></li>
+                </ul>
+                <ul class="item">
+                <li class="title">配置服务</li>
+                <li><a href="http://oms.yihaodian.com.cn/cmdbv2/cmdb/appcontact/"><i class="glyphicon glyphicon-cog"></i>基础信息</a></li>
+                <li><a href="http://oms.yihaodian.com.cn/cmdbv2/asset/"><i class="glyphicon glyphicon-hdd"></i>IDC</a></li>
+                <li><a href="http://oms.yihaodian.com.cn/cmdbv2/server/server/"><i class="glyphicon glyphicon-wrench"></i>部署</a></li>
+                <li><a href="http://oms.yihaodian.com.cn/deploy/center/"><i class="glyphicon glyphicon-plane"></i>发布</a></li>
+                <li><a href="http://oms.yihaodian.com.cn/cmdb/dns/view/main/"><i class="glyphicon glyphicon-search"></i>DNS</a></li>
+                </ul>
+                <ul class="item">
+                <li class="title">分析服务</li>
+                <li><a href="http://oms.yihaodian.com.cn/itil/?action=NewAccident"><i class="glyphicon glyphicon-question-sign"></i>QA</a></li>
+                <li><a href="http://oms.yihaodian.com.cn/itil/view/?id=8"><i class="glyphicon glyphicon-oil"></i>容量分析</a></li>
+                <li><a href="http://oms.yihaodian.com.cn/itil/?action=NewCost"><i class="glyphicon glyphicon-usd"></i>cost</a></li>
+                </ul>
+                <ul class="item">
+                <li class="title">其他服务</li>
+                <li><a href="http://oms.yihaodian.com.cn/itil/view/?id=3"><i class="glyphicon glyphicon-cutlery"></i>小工具</a></li>
+                <li><a href="http://oms.yihaodian.com.cn/itil/view/?id=2"><i class="glyphicon glyphicon-book"></i>PMS</a></li>
+                <li><a href="http://oms.yihaodian.com.cn/itil/view/?id=17"><i class="glyphicon glyphicon-fire"></i>安全</a></li>
+                <li><a href="http://oms.yihaodian.com.cn/itil/?action=NewKpi"><i class="glyphicon glyphicon-flag"></i>KPI</a></li>
+                </ul>
+                </section>
+                <!--产品下拉end-->
+                <!--end dropdown-menu-->
+            </li>
+            {% block my_li %}  {% endblock %}
+
+       </ul>
+       <!--菜单右侧-->
+        <ul class="navbar-form navbar-right">
+         <li class="dropdown"><a href="#" data-toggle="dropdown"><em>{{ USER.username }}</em><b class="caret"></b></a>
+               <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
+                 <li><a href="http://oms.yihaodian.com.cn/home/sys/feedback.action">反馈中心</a></li>
+	             <li><a href="http://oms.yihaodian.com.cn/home/sys/notice.action">平台公告</a></li>
+                 <li><a target="_blank" href="http://oms.yihaodian.com.cn/cmdbv2/change/exception_report/">异常报表中心</a></li>
+                 <li><a target="_blank" href="http://oms.yihaodian.com.cn/home/myInfo.action">个人中心</a></li>
+                 <li><a href="http://oms.yihaodian.com.cn/home/login/doOut.action">退出</a></li>
+               </ul>
+           </li>
+
+        <li><a href="/cmdbv2/change/changelist/"  target="_blank">变更系统</a></li>
+        <li class="dropdown"><a href="#" class="color1" data-toggle="dropdown">流程管理<b class="caret">&nbsp;</b></a>
+             <ul class="dropdown-menu" role="menu" aria-labelledby="dLabel">
+                <li><a target="_blank" tabindex="-1" href="http://oms.yihaodian.com.cn/ticket/?action=ticket&method=addNewTicketResetSmarty">重启流程</a></li>
+                <li><a target="_blank" tabindex="-1" href="http://oms.yihaodian.com.cn/ticket/?action=ticket&method=addTicketExpandSmarty">扩容流程</a></li>
+                 <li><a target="_blank" tabindex="-1" href="http://oms.yihaodian.com.cn/ticket/?action=ticket&method=newGetMyticketSmarty">已发流程</a></li>
+                <li><a target="_blank" tabindex="-1" href="http://oms.yihaodian.com.cn/ticket/?action=ticket&method=newGetHandleticketSmarty">待办流程</a></li>
+                <li><a target="_blank" tabindex="-1" href="http://oms.yihaodian.com.cn/ticket/?action=ticket&method=newGetDoneticketSmarty">已办流程</a></li>
+             </ul>
+       </li>
+        <li><a href="http://oms.yihaodian.com.cn/docs/"  target="_blank">文档中心</a></li>
+        <li>
+           <form class="bs-example bs-example-form" role="form">
+              <div class="input-group top-search-box">
+                 <input type="text" class="form-control top-btn" id="globalKey">
+                 <span class="input-group-btn">
+                   <button class="btn btn-default top-btn" type="button" id="search-keyword">
+                   <i class="glyphicon glyphicon-search"></i>
+                    </button>
+                 </span>
+              </div><!-- /input-group -->
+           </form>
+           </li>
+
+         </ul>
+         <!--菜单右侧end-->
+      </nav>
+      <!-- end 主菜单-->
+    </div>
+</header>
+
+<!--右侧菜单2开始-->
+<div class="mod-scroll" id="mod-scroll">
+     <a href="#" class="hide-show" id="toggle-menu"><i class="glyphicon glyphicon-chevron-down"></i><p>收<br/>藏<br/>反<br/>馈</p></a>
+     <div id="scoll-dropdown" class="popover-menu">
+      <a href="#" class="love" id="loveicon" data-toggle="modal" data-target="#collect-Modal"><i class="glyphicon glyphicon-heart-empty" ></i>
+      </a>
+      <a href="#" class="fan" data-toggle="modal" data-target="#reguest-Modal">反<br/>馈</a>
+      </div>
+</div>
+
+<!--置顶按钮-->
+<div class="mod-scroll-btn" style="bottom:50px;">
+  <a href="#" id="back-to-top"><i class="glyphicon glyphicon-arrow-up"></i></a>
+</div>
+<!--右侧菜单2结束-->
+
+
+<!-- 模态框（Modal）-->
+<div class="modal fade" id="reguest-Modal" tabindex="-1" role="dialog"
+   aria-labelledby="myModalLabel" aria-hidden="true">
+   <div class="modal-dialog">
+      <div class="modal-content">
+         <div class="modal-header">
+            <button type="button" class="close"
+               data-dismiss="modal" aria-hidden="true">
+                  &times;
+            </button>
+            <h4 class="modal-title" id="myModalLabel">
+              反馈中心
+            </h4>
+         </div>
+         <div class="modal-body">
+           <div class="form-group"><textarea class="form-control texTarea" placeholder="请填写反馈内容" id="feedback"></textarea></div>
+         </div>
+         <div class="modal-footer">
+            <button type="button" class="btn btn-default"  data-dismiss="modal">
+                取消
+            </button>
+            <button type="button" class="btn btn-warning" id="add_feedback">
+                提交
+            </button>
+         </div>
+       </div><!-- /.modal-content -->
+   </div><!-- /.modal-dialog -->
+ </div><!--.modal-->
+
+ <div class="modal fade" id="collect-Modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+   <div class="modal-dialog">
+      <div class="modal-content">
+         <div class="modal-header">
+            <button type="button" class="close"
+               data-dismiss="modal" aria-hidden="true">
+                  &times;
+            </button>
+            <h4 class="modal-title" id="myModalLabel">
+              自定义收藏
+            </h4>
+         </div>
+         <div class="modal-body">
+         	<div class="form-group">
+            	<div class="row">
+        			<div class="col-sm-3">
+         				<input class="form-control" placeholder="自定义菜单名" type="text" id="menu_name">
+         			</div>
+        		<div class="col-sm-9">
+         			<input class="form-control" placeholder="自定义URL" type="text" id="menu_url" value="">
+         		</div>
+         	</div>
+         </div>
+
+         <div class="modal-footer">
+          	<button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+          	<button type="button" class="btn btn-success" id="menu-add">提交</button>
+         </div>
+       </div><!-- /.modal-content -->
+   </div><!-- /.modal-dialog -->
+</div><!--.modal end-->
+</div>
+<!--右侧菜单栏end-->
+
+<div class="dancontainer">
+        {% block content %}内页内容{% endblock %}
+</div>
+<footer class="footer">
+    <div class="container">
+        <p class="link"><a target="_blank"  href="http://it.asset.yihaodian.com.cn/">IT管理平台</a><span>|</span><a target="_blank"  href="http://oms.yihaodian.com.cn/opswiki/doku.php">基础平台WIKI</a><span>|</span><a target="_blank"  href="http://wiki.yihaodian.cn/mediawiki/index.php/%E9%A6%96%E9%A1%B5">1号店WIKI</a> </p>
+        <p class="texinfor">产品反馈：<span>蔡佳颖</span> RTX：<span>caijiaying</span> 邮箱：<span><a href="mailto:IT_OPS_DEVfeedback@yhd.com" style="color:#999;">IT_OPS_DEVfeedback@yhd.com</a></span> </p>
+    </div>
+</footer>
+<script>
+$(document).ready(function() {
+    $("#search-keyword").click(function(){
+        var global_key = $('#globalKey').val().trim();
+        var re = /^([\u4E00-\u9FA5a-zA-Z0-9]+)([\u4E00-\u9FA5a-zA-Z0-9_.\-])*([\u4E00-\u9FA5a-zA-Z0-9.])+$/;
+        if(global_key == ''){
+            alert('请输入关键词！');
+        }else if(re.test(global_key) == false){
+            alert('请输入合法的搜索关键词！');
+        }else{
+            window.open('http://oms.yihaodian.com.cn/cmdbv2/cmdb/searchlist/' + global_key + '/');
+        }
+    });
+
+    $('#globalKey').bind('keypress',function(event){
+        if(event.keyCode == "13")
+        {
+            event.preventDefault();
+            $('#search-keyword').click();
+        }
+    });
+
+    //鼠标划过就展开子菜单，免得需要点击才能展开
+    $('li.dropdown').mouseover(function () {
+        $(this).addClass('open');
+    }).mouseout(function () {
+        $(this).removeClass('open');
+    });
+
+    var BaseDomain = "http://oms.yihaodian.com.cn/home/";
+
+    $("#menu_name").val('');
+    $("#menu_url").val(window.location.href);
+    $("#feedback").val('');
+    $("#add_feedback").bind('click', function () {
+        var feedback = $("#feedback").val();
+        if (feedback == '') {
+            $("#feedback").focus();
+            // $("#feedback").parent().addClass('has-error');
+
+            return false;
+        }
+
+        $.post(BaseDomain + 'sys/addFeedBack.action', {feedback: feedback}, function (data) {
+            if (data) {
+                // $('.modal fade').css('display','none');
+                //$('.modal-dialog').css('display','none');
+                //$('.modal-content').css('display','none');
+                window.location.reload();//刷新当前页面.
+            } else {
+                alert('添加失败');
+                return false;
+            }
+        });
+    });
+
+    $("#menu-add").on("click", function () {
+        var custom_name = $("#menu_name").val();
+        var custom_url = $("#menu_url").val();
+
+        if (!custom_name) {
+            $("#menu_name").focus();
+            return false;
+        }
+
+        if (!custom_url) {
+            $("#menu_url").focus();
+            return false;
+        }
+
+
+        $.post(BaseDomain + "/index/addCustomMenu.action", {
+            custom_name: custom_name,
+            custom_url: custom_url
+        }, function (result) {
+            data = $.parseJSON(result);
+            if (!data.succ) {
+                alert(data.msg);
+                return false;
+            } else {
+                alert("收藏成功");
+                window.location.reload();//刷新当前页面
+            }
+        });
+    });
+});
+</script>
+
+</body>
+</html>

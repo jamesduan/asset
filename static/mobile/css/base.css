@@ -1,0 +1,38 @@
+@charset "utf-8";
+/* CSS Document */
+*{font-family: 'Microsoft YaHei','Helvetica Neue', Helvetica, sans-serif;}
+em,i{ font-style:normal;}
+a{color:#14C9B3}
+.color1{color:#14C9B3;}
+.color2{ color:#ff9900;}
+.btn-blue{color:#fff; background-color:#14C9B3; border-color:#14C9B3;}
+.mui-bar-tab .mui-tab-item .glyphicon {top:3px; width:24px; height:24px; padding-top:0; padding-bottom:0;}
+.mui-bar .glyphicon {font-size:24px; position:relative; z-index:20; padding-top:10px; padding-bottom:10px;}
+.mui-bar-tab .mui-tab-item .glyphicon~.mui-tab-label{font-size:11px; display:block; overflow:hidden; text-overflow:ellipsis;}
+.mui-bar .mui-icon:active{opacity:1;}
+
+/**ios状态栏的高度*/
+/*.mui-ios .mui-bar-nav{background:#00D9BE; padding-top:20px; height:64px;}
+.mui-ios .mui-bar-nav~.mui-content{padding-top:64px;}
+*/
+/**android状态栏的高度*/
+/*.mui-android .mui-bar-nav{background:#00D9BE; padding-top:0px; height:44px;}
+.mui-android .mui-bar-nav~.mui-content{padding-top:44px;}
+*/
+
+.mui-bar{ background-color:#fff;}
+/*title*/
+.mui-bar-nav{background:#00D9BE;}
+.mui-bar-nav.mui-bar .mui-icon{ color:#fff;}
+.mui-bar .mui-title{ color:#fff;}
+
+.mui-bar-tab .mui-tab-item.mui-active { color:#14C9B3;}
+.mui-segmented-control{font-size:14px; border:none; background-color:#fff; border-bottom:1px solid #ccc;}
+.mui-segmented-control.mui-scroll-wrapper {height:37px;}
+.mui-segmented-control .mui-control-item{color:#000; line-height:36px; border:none; display:inline-block; width:auto; margin:2px 8px 0px;border-bottom:2px solid #fff; }
+.mui-segmented-control.mui-scroll-wrapper .mui-control-item{padding:0px 2px;border-bottom:2px solid #fff;}
+.mui-segmented-control .mui-control-item.mui-active{background-color:transparent; }
+.mui-segmented-control.mui-segmented-control-inverted .mui-control-item.mui-active {color: #14C9B3;border-bottom: 2px solid #14C9B3;}
+.mui-slider .mui-segmented-control.mui-segmented-control-inverted .mui-control-item.mui-active {border-bottom: 2px solid #14C9B3;}	
+.mui-slider .mui-segmented-control.mui-segmented-control-inverted~.mui-slider-group .mui-slider-item{ border-bottom:none;}	
+.mui-segmented-control~.mui-control-content{ text-align:center; line-height:60px;}

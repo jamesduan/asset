@@ -1,0 +1,541 @@
+{% extends "common/base.html" %}
+{% block title %} 主机详情 {% endblock %}
+{% block content %}
+
+<style type="text/css">
+    .mynav li a{
+        background-color: #65A8E3;
+        color: #FFFFFF;
+    }
+    .mynav li a:hover{
+        background-color: #5c9ccc;
+        color: #FFFFFF;
+    }
+    .contentPanel{background-color: #5c9ccc;}
+    .hostTitle{text-align: center; background-color: #C2D3E7;}
+</style>
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-treeview/css/bootstrap-treeview.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-treeview/js/bootstrap-treeview.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+
+
+<div class="inner-h1">
+<h3 class="page-title">
+    主机{{ server.assetid }} 详细信息
+</h3>
+</div>
+
+<div class="inner-box inner-list-box clearfix">
+    <div class="panel-group col-md-2" >
+        <div>
+            <ul class="nav nav-pills nav-stacked mynav" id="main_tab">
+                <li class="active" id="host_info"><a href="#hosts" data-toggle="tab">主机信息</a></li>
+{#                <li><a href="#network" data-toggle="tab">网络信息</a></li>#}
+                <li id="other_virtual"><a href="#allvirtual" data-toggle="tab">兄弟虚拟机</a></li>
+                <li id="same_pool_host"><a href="#allpool_host" data-toggle="tab">同Pool主机</a></li>
+                <li id="same_rack_host"><a href="#allrack_host" data-toggle="tab">同机柜主机</a></li>
+{#                <li id="same_rack_pool"><a href="#allrack_pool" data-toggle="tab">同机柜Pool</a></li>#}
+            </ul>
+        </div>
+    </div>
+
+    <div class="panel-group col-md-10" >
+        <div id="mainContent" class="tab-content">
+            <div class="tab-pane fade in active" id="hosts">
+                <div  class="panel contentPanel">
+                    <div class="panel-heading">
+                         <h4 class="panel-title">
+                               主机信息
+                         </h4>
+                    </div>
+                    <div class="panel panel-default">
+                        {% if id != null and server %}
+                            <table class="table table-bordered">
+                            <tr>
+                                <tr>
+                                    <th rowspan="14" class="hostTitle" style="vertical-align: middle">基础信息</th>
+                                    <th>应用</th>
+                                    <td>{% if server.site.name and server.app.name %}
+                                        <a href="{{ ROOT_URL }}cmdb/app/?id={{ server.app_id }}" target="_blank"  title="点击查看Pool详情">{{ server.site.name }}/{{ server.app.name }}</a>
+                                        {% else %}{% endif %}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th>IP</th><td><a href="{{ ROOT_URL }}server/server/?ip={{ server.ip }}" target="_blank"  title="进入主机管理">{{ server.ip }}</a></td>
+                                </tr>
+                                <tr>
+                                    <th>设备编号</th><td>{{ server.assetid }}</td>
+                                </tr>
+                                <tr>
+                                    <th>序列号</th><td>{{ server.sn }}</td>
+                                </tr>
+                                <tr>
+                                    <th>物理机/虚拟机</th><td>{{ server.server_type.comment }}</td>
+                                </tr>
+                                <tr>
+                                    <th>主机状态</th><td>{{ server.server_status.comment }}</td>
+                                </tr>
+                                <tr>
+                                    {% if server.parent_ip %}
+                                        <th>宿主机IP</th><td>{{ server.parent_ip }}</td>
+                                    {% else %}
+                                        <th>宿主机IP</th><td></td>
+                                    {% endif %}
+                                </tr>
+                                <tr>
+                                    <th>管理IP</th><td>{{ server.mgmt_ip }}</td>
+                                </tr>
+                                <tr>
+                                    <th>主机名</th><td>{{ server.hostname }}</td>
+                                </tr>
+                                <tr>
+                                    <th>机房</th><td>{% if server.rack %}{{ server.rack.room.name }}{% else %}{% endif %}</td>
+                                </tr>
+                                <tr>
+                                    <th>机架</th><td>{% if server.rack %}{{ server.rack.name }}{% else %}{% endif %}</td>
+                                </tr>
+                                <tr>
+                                    <th>主机型号</th><td>{{ server.asset.asset_model.name }}</td>
+                                </tr>
+                                <tr>
+                                    <th>过保日期</th><td>{{ expiration_time }}</td>
+                                </tr>
+                                <tr>
+                                    <th>备注信息</th><td>{{ server.comment }}</td>
+                                </tr>
+                            </tr>
+
+                            <tr>
+                                <tr>
+                                    <th rowspan="11" class="hostTitle" style="vertical-align: middle">硬件信息</th>
+                                    {% if server.server_detail.manufacturer %}
+                                        <th>服务器制造商</th><td>{{ server.server_detail.manufacturer }}</td>
+                                    {% else %}
+                                        <th>服务器制造商</th><td></td>
+                                    {% endif %}
+                                </tr>
+                                <tr>
+                                    {% if server.server_detail.productname %}
+                                        <th>主机产品型号</th><td>{{ server.server_detail.productname }}</td>
+                                    {% else %}
+                                        <th>主机产品型号</th><td></td>
+                                    {% endif %}
+                                </tr>
+                                <tr>
+                                    {% if server.server_detail.serialnumber %}
+                                        <th>主机硬件序列号</th><td>{{ server.server_detail.serialnumber }}</td>
+                                    {% else %}
+                                        <th>主机硬件序列号</th><td></td>
+                                    {% endif %}
+                                </tr>
+                                <tr>
+                                    {% if server.server_detail.boardmanufacturer %}
+                                        <th>主板制造商</th><td>{{ server.server_detail.boardmanufacturer }}</td>
+                                    {% else %}
+                                        <th>主板制造商</th><td></td>
+                                    {% endif %}
+                                </tr>
+                                <tr>
+                                    <th>硬件处理器类型</th><td>{{ server.server_detail.hardwareisa }}</td>
+                                </tr>
+                                <tr>
+                                    <th>CPU硬件架构</th><td>{{ server.server_detail.architecture }}</td>
+                                </tr>
+                                <tr>
+                                    <th>处理器的核数</th><td>{{ server.server_detail.processorcount }}</td>
+                                </tr>
+                                <tr>
+                                    <th>物理CPU个数</th><td>{{ server.server_detail.physicalprocessorcount }}</td>
+                                </tr>
+                                <tr>
+                                    <th>内存容量</th><td>{{ server.server_detail.memorysize }}</td>
+                                </tr>
+                                <tr>
+                                    <th>主网卡mac地址</th><td>{{ server.server_detail.macaddress }}</td>
+                                </tr>
+                                <tr>
+                                    <th>主网卡子网掩码</th><td>{{ server.server_detail.netmask }}</td>
+                                </tr>
+                            </tr>
+                            <tr>
+                                <tr>
+                                    <th rowspan="15" class="hostTitle" style="vertical-align: middle">软件信息</th>
+                                    <th>IP地址</th><td>{{ server.server_detail.ipaddress }}</td>
+                                </tr>
+                                <tr>
+                                    <th>主机名</th><td>{{ server.server_detail.hostname }}</td>
+                                </tr>
+                                <tr>
+                                    <th>内核版本号</th><td>{{ server.server_detail.kernelversion }}</td>
+                                </tr>
+                                <tr>
+                                    <th>操作系统版本全称</th><td>{{ server.server_detail.kernelrelease }}</td>
+                                </tr>
+                                <tr>
+                                    <th>是否虚拟机</th><td>{{ server.server_detail.is_virtual }}</td>
+                                </tr>
+                                <tr>
+                                    <th>操作系统全称</th><td>{{ server.server_detail.lsbdistdescription }}</td>
+                                </tr>
+                                <tr>
+                                    <th>操作系统名称</th><td>{{ server.server_detail.operatingsystem }}</td>
+                                </tr>
+                                <tr>
+                                    <th>操作系统ID</th><td>{{ server.server_detail.lsbdistid }}</td>
+                                </tr>
+                                <tr>
+                                    <th>操作系统版本号</th><td>{{ server.server_detail.lsbdistrelease }}</td>
+                                </tr>
+                                <tr>
+                                    <th>虚拟内存大小</th><td>{{ server.server_detail.swapsize }}</td>
+                                </tr>
+                                <tr>
+                                    <th>服务器运行时间</th><td>{{ server.server_detail.uptime }}</td>
+                                </tr>
+                                <tr>
+                                    <th>服务器时区设置</th><td>{{ server.server_detail.timezone }}</td>
+                                </tr>
+                                <tr>
+                                    <th>puppet版本</th><td>{{ server.server_detail.puppetversion }}</td>
+                                </tr>
+                                <tr>
+                                    <th>facter版本号</th><td>{{ server.server_detail.facterversion }}</td>
+                                </tr>
+                                <tr>
+                                    <th>ruby版本号</th><td>{{ server.server_detail.rubyversion }}</td>
+                                </tr>
+                            </tr>
+                        </table>
+                        {% else %}
+                            <p>&nbsp;&nbsp;&nbsp;&nbsp;URL的参数不正确或主机不存在！</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="allvirtual">
+                <div  class="panel contentPanel">
+                    <div class="panel-heading">
+                         <h4 class="panel-title">
+                               兄弟虚拟机
+                         </h4>
+                    </div>
+                    <div class="panel panel-default" id="virtual_content">
+                        {% if server.server_type_id != 1 and server.parent_ip %}
+                            <table class="table table-bordered" id="virtual"></table>
+                        {% else %}
+                            <p>&nbsp;&nbsp;&nbsp;&nbsp;无兄弟虚拟机！</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="allpool_host">
+                <div class="panel contentPanel">
+                   <div class="panel-heading" id="pool_title">
+                       同Pool主机
+                   </div>
+                    <div class="panel panel-default">
+                        {% if server.server_status_id != 100 and server.app_id %}
+                            <table class="table table-bordered" id="pool"></table>
+                        {% else %}
+                            <p>&nbsp;&nbsp;&nbsp;&nbsp;无同Pool主机！</p>
+                        {% endif %}
+                    </div>
+               </div>
+            </div>
+
+            <div class="tab-pane fade" id="allrack_host">
+                <div class="panel contentPanel">
+                   <div class="panel-heading" >
+                       <h4 class="panel-title">
+                           同机柜主机
+                       </h4>
+                   </div>
+                    <div class="panel panel-default">
+                        {% if server.rack_id %}
+                            <table class="table table-bordered" id="rack"></table>
+                        {% else %}
+                            <p>&nbsp;&nbsp;&nbsp;&nbsp;无同机柜主机！</p>
+                        {% endif %}
+                    </div>
+               </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+$(document).ready(function() {
+{% if server.server_type_id != 1 and server.parent_ip %}
+    $('#virtual').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}server/serverdetail/?format=json&parent_ip={{ server.parent_ip }}',
+        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'app.name',
+                title: '应用',
+                formatter: get_app_detail
+            },
+            {
+                field: 'ip',
+                title: 'IP',
+                formatter: get_server_detail
+            },
+            {
+                field: 'sn',
+                title: '序列号',
+            },
+
+            {
+                field: 'hostname',
+                title: '主机名',
+            },
+            {
+                field: 'room',
+                title: '机房'
+            },
+            {
+                field: 'rack_name',
+                title: '机架'
+            },
+            {
+                field: 'server_env_name',
+                title: '环境'
+            },
+            {
+                field: 'server_type_name',
+                title: '类型'
+            },
+            {
+                field: 'server_status_name',
+                title: '状态'
+            },
+            {
+                field: 'app.domain_name',
+                title: '所属Domain'
+            },
+            {
+                field: 'app.DL',
+                title: 'Domain负责人'
+            },
+
+        ],
+        responseHandler: function (res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset / p.limit + 1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 20,
+        pageList: [10, 20, 50, 100, 500],
+        clickToSelect: true,
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        showExport: true,
+        cache: false
+    });
+{% else %}
+{% endif %}
+
+{% if server.server_status_id != 100 and server.app_id %}
+    $('#pool').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}server/serverdetail/?format=json&app_id={{ server.app_id }}',
+        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'app.name',
+                title: '应用',
+                formatter: get_app_detail
+            },
+            {
+                field: 'ip',
+                title: 'IP',
+                formatter: get_server_detail
+            },
+            {
+                field: 'sn',
+                title: '序列号',
+            },
+
+            {
+                field: 'hostname',
+                title: '主机名',
+            },
+            {
+                field: 'room',
+                title: '机房'
+            },
+            {
+                field: 'rack_name',
+                title: '机架'
+            },
+            {
+                field: 'server_env_name',
+                title: '环境'
+            },
+            {
+                field: 'server_type_name',
+                title: '类型'
+            },
+            {
+                field: 'server_status_name',
+                title: '状态'
+            },
+            {
+                field: 'app.domain_name',
+                title: '所属Domain'
+            },
+            {
+                field: 'app.DL',
+                title: 'Domain负责人'
+            },
+        ],
+        responseHandler: function (res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset / p.limit + 1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 20,
+        pageList: [10, 20, 50, 100, 500],
+        clickToSelect: true,
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        showExport: true,
+        cache: false
+    });
+{% else %}
+{% endif %}
+
+{% if server.rack_id %}
+    $('#rack').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}server/serverdetail/?format=json&rack_id={{ server.rack_id }}',
+        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'app.name',
+                title: '应用',
+                formatter: get_app_detail
+            },
+            {
+                field: 'ip',
+                title: 'IP',
+                formatter: get_server_detail
+            },
+            {
+                field: 'sn',
+                title: '序列号',
+            },
+
+            {
+                field: 'hostname',
+                title: '主机名',
+            },
+            {
+                field: 'room',
+                title: '机房'
+            },
+            {
+                field: 'rack_name',
+                title: '机架'
+            },
+            {
+                field: 'server_env_name',
+                title: '环境'
+            },
+            {
+                field: 'server_type_name',
+                title: '类型'
+            },
+            {
+                field: 'server_status_name',
+                title: '状态'
+            },
+            {
+                field: 'app.domain_name',
+                title: '所属Domain'
+            },
+            {
+                field: 'app.DL',
+                title: 'Domain负责人'
+            },
+        ],
+        responseHandler: function (res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset / p.limit + 1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 20,
+        pageList: [10, 20, 50, 100, 500],
+        clickToSelect: true,
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        showExport: true,
+        cache: false
+    });
+{% else %}
+{% endif %}
+
+    function get_server_detail(value, row, index) {
+        return '<a href="{{ ROOT_URL }}server/detail/?id=' + row.id +'" target="_blank"  title="点击查看主机详情">' + row.ip + '</a>';
+    }
+    function get_app_detail(value, row, index) {
+        if (row.app_id != 0 && row.app_id != null) {
+            return '<a href="{{ ROOT_URL }}cmdb/app/?id=' + row.app_id +'" target="_blank"  title="点击查看Pool详情">' + row.app.site_name + '/' + row.app.name + '</a>';
+        } else {
+            return "";
+        }
+    }
+
+});
+</script>
+{% endblock %}

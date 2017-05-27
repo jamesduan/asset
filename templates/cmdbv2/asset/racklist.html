@@ -1,0 +1,361 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<style>
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+</style>
+<!-- <div class="inner-h1">机柜管理</div> -->
+
+<div id="alert">
+</div>
+
+<div class="modal fade" id="addValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="attributeForm" method="POST">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="myModalLabel">新增机柜</h4>
+  </div>
+  <div class="modal-body">
+      <div class="form-group">
+        <label for="inputEmail3" class="col-sm-3 control-label">机房</label>
+        <div class='col-sm-6'>
+            <select name="room" id="room" class="form-control">
+                {% for item in room %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">机柜名称</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="cname" id="cname" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">机柜类型</label>
+        <div class='col-sm-6'>
+            <select name="valid" id="valid" class="form-control">
+                <option value="1">真实机柜</option>
+                <option value="0">刀片笼子</option>
+            </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">机架高度</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="height" id="height" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">分配IP最小值</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="ip_min" id="ip_min" value="0" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">分配IP最大值</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="ip_max" id="ip_max" value="0" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">备注</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="comment" id="comment" placeholder="可留空" />
+        </div>
+      </div>
+
+  </div>
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn btn-green" id="submit1">保存</button>
+  </div>
+</form>
+</div>
+</div>
+</div>
+
+
+<div class="modal fade" id="editValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="attributeForm1" method="POST">
+  <input type="hidden" name="id" id="id">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="myModalLabel">修改机柜</h4>
+  </div>
+  <div class="modal-body">
+      <div class="form-group">
+        <label for="inputEmail3" class="col-sm-3 control-label">机房</label>
+        <div class='col-sm-6'>
+            <select name="eroom" id="eroom" class="form-control">
+                {% for item in room %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">机柜名称</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="ecname" id="ecname" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">分配IP最小值</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="eip_min" id="eip_min" value="0" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">分配IP最大值</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="eip_max" id="eip_max" value="0" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">备注</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="ecomment" id="ecomment" placeholder="可留空" />
+        </div>
+      </div>
+
+  </div>
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn btn-green" id="submit1">保存</button>
+  </div>
+</form>
+</div>
+</div>
+</div>
+
+
+<div id="toolbar">
+    <button id="create" data-toggle="modal" data-target="#addValue" class="btn btn-green">
+        <i class="glyphicon glyphicon-plus"></i> 新增
+    </button>
+</div>
+
+<table id="asset">
+</table>
+
+
+<script>
+$(document).ready(function() {
+    window.operateEvents = {
+        'click .edit': function (e, value, row, index) {
+            $('#editValue').modal('show');
+        }
+    };
+    $('#asset').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}asset/rack/?format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'name',
+                title: '机柜名',
+                align: 'center'
+            },
+            {
+                field: 'real_name',
+                title: '机柜名（真实）',
+                align: 'center'
+            },
+            {
+                field: 'room_name',
+                title: 'IDC',
+                align: 'center'
+            },
+            {
+                field: 'type_name',
+                title: '机柜类型',
+                align: 'center'
+            },
+            {
+                field: 'comment',
+                title: '备注',
+                align: 'center'
+            },
+            {
+                field: 'ip_min',
+                title: '最小IP分配',
+                align: 'center'
+            },
+            {
+                field: 'ip_max',
+                title: '最大IP分配',
+                align: 'center'
+            },
+            {
+                field: 'operate',
+                title: '操作',
+                align: 'center',
+                formatter: operateFormatter,
+                events: operateEvents
+            }
+        ],
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [10,20,100],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false
+    });
+
+    function operateFormatter(value, row, index) {
+        return [
+            '<a href="#" class="edit">',
+            '<span class="glyphicon glyphicon-pencil"></span>',
+            '</a>'
+        ].join('');
+    };
+
+    $('#asset').on('click-row.bs.table', function (e, row, $element) {
+        $("#id").val(row.id);
+        $("#ecname").val(row.name);
+        $("#eroom option[value="+row.room+"]").attr("selected","selected");
+        $("#eip_min").val(row.ip_min);
+        $("#eip_max").val(row.ip_max);
+        $("#ecomment").val(row.comment);
+    });
+
+    $('#attributeForm')
+        .bootstrapValidator({
+            fields: {
+                cname: {
+                    validators: {
+                        notEmpty: {
+                            message: '机柜名不能为空。'
+                        }
+                    }
+                },
+                height: {
+                    validators: {
+                        notEmpty: {
+                            message: '机柜高度不能为空。'
+                        }
+                    }
+                }
+            }
+            })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var inputdata = {
+                'name': $("#cname").val(),
+                'room': $("#room option:selected").val(),
+                'valid': $("#valid option:selected").val(),
+                'height': $("#height").val(),
+                'ip_min': $("#ip_min").val(),
+                'ip_max': $("#ip_max").val(),
+                'comment': $("#comment").val()
+            };
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/rack/',
+                type: 'POST',
+                async:  false,
+                data: inputdata,
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>添加机柜' + json.name +'</div>');
+                    $('#addValue').modal('hide');
+                    $('#attributeForm').bootstrapValidator('resetForm', true);
+                    $('#asset').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加机柜' + JSON.stringify(json.responseText) +'</div>');
+                    $('#addValue').modal('hide');
+                }
+            });
+        });
+
+    $('#attributeForm1')
+        .bootstrapValidator({
+            fields: {
+                ecname: {
+                    validators: {
+                        notEmpty: {
+                            message: '机柜名不能为空。'
+                        }
+                    }
+                }
+            }
+            })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var id = $("#id").val();
+            var inputdata = {
+                'name': $("#ecname").val(),
+                'room': $("#eroom option:selected").val(),
+                'ip_min': $("#eip_min").val(),
+                'ip_max': $("#eip_max").val(),
+                'comment': $("#ecomment").val()
+            };
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/rack/' + id + '/',
+                type: 'PATCH',
+                async:  false,
+                data: inputdata,
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>修改机柜' + json.name +'</div>');
+                    $('#editValue').modal('hide');
+                    $('#attributeForm1').bootstrapValidator('resetForm', true);
+                    $('#asset').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>修改机柜' + JSON.stringify(json.responseText) +'</div>');
+                    $('#editValue').modal('hide');
+                }
+            });
+        });
+});
+</script>
+{% endblock %}

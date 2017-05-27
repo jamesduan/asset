@@ -1,0 +1,613 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %}
+    YCC无人发布系统 - 1号店运维平台{% endblock %}
+{% block content %}
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/jquery-treetable-v3.2.0/css/jquery.treetable.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/extensions/group-by/bootstrap-table-group-by.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-slider-v7.1.1/css/bootstrap-slider.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker-v2/css/bootstrap-datetimepicker.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-multiselect/css/bootstrap-multiselect.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-select-1.10.0/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+
+    <style>
+        div.slide {
+            padding-top: 7px;
+        }
+    </style>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/queryParser/jquery-queryParser.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/date-format/js/date.format.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-treetable-v3.2.0/jquery.treetable.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/extensions/group-by/bootstrap-table-group-by.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-timer-v1.0.1/js/jquery.timer.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-slider-v7.1.1/js/bootstrap-slider.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-json/js/jquery.json.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-select-1.10.0/dist/js/bootstrap-select.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-multiselect/js/bootstrap-multiselect.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker-v2/js/bootstrap-datetimepicker.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-slider-v7.1.1/js/bootstrap-slider.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/queryParser/jquery-queryParser.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-select-1.10.0/dist/js/bootstrap-select.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/extensions/export/bootstrap-table-export.js"></script>
+
+
+{#    <div class="inner-h1" style="margin-bottom: 0px">#}
+{#        <h1>#}
+{#            Production发布详情#}
+{#        </h1>#}
+{#    </div>#}
+    <!-- 回滚 -->
+    <div class="modal fade" id="modal_rollback" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:800px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="form_rollback">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel" >选择回滚模式</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="verifier" class="col-sm-2 control-label">确认人</label>
+                            <div class='col-sm-9'>
+                                <select id="verifier" name="verifier" class="form-control selectpicker">
+                                    <option value="">请选择确认人</option>
+                                    {% for dd_users in dd_users_queryset %}
+                                        <option value="{{ dd_users.username }}">{{ dd_users.username }} - {{ dd_users.display_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="rollback_reason" class="col-sm-2 control-label">回滚理由</label>
+                            <div class='col-sm-9'>
+                                <textarea class="form-control" rows="3" name="rollback_reason" id="rollback_reason"
+                                          class="resizable"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="rollback_category" class="col-sm-2 control-label">回滚分类</label>
+                            <div class='col-sm-9'>
+                                <select id="rollback_category" name="rollback_category" class="form-control selectpicker">
+                                    <option value="">请选择回滚分类</option>
+                                    {% for rollback_category in rollback_category_list %}
+                                        <option value="{{ rollback_category.0 }}">{{ rollback_category.1 }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green">回滚</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div id="toolbar_deploy_main">
+        <label>发布信息</label>
+    </div>
+    <div id="toolbar_deploy_detail">
+        <label>发布/重启列表</label>
+    </div>
+    <div id="toolbar_log">
+        <label>发布日志</label>
+    </div>
+    <table id="table_deploy_main"></table>
+    <table id="table_deploy_detail"></table>
+    <table id="table_log" style="table-layout: fixed"></table>
+
+    <script>
+        $(document).ready(function () {
+            var query = $.getQuery(), depid = query.depid, button_target;
+
+            $('#verifier').selectpicker({
+                'liveSearch': true,
+                'liveSearchPlaceholder': '搜索',
+                'width': 'fit'
+            }).on('change', function () {
+            });
+
+            $('.selectpicker').not('.width-false').selectpicker({
+                'width': 'auto'
+            });
+
+            $('select.selectpicker').selectpicker();
+
+            function from_unixtime(timestamp) {
+                if (!timestamp) return null;
+                var date = new Date(parseInt(timestamp) * 1000);
+                return date.format("yyyy-mm-dd HH:MM:ss");
+            }
+
+            function operateFormatter(value, row, index) {
+                var button_group = $('<div>').attr({
+                    class: 'btn-group',
+                    role: 'group'
+                });
+                switch (row.status) {
+                    case 1:
+                        button_group.append($('<button>').text('YCC发布').attr('class', 'btn btn-green deploy'));
+                        break;
+                    case 2:
+                        button_group.append($('<button>').text('回滚').attr('class', 'btn btn-green rollback'));
+                        break;
+                }
+                return button_group[0].outerHTML;
+            }
+
+
+            function ajax(url, method, data, error) {
+                var result = null;
+                $.ajax({
+                    url: url,
+                    async: false,
+                    method: method,
+                    data: data,
+                    headers: {
+                        Authorization: 'Token {{ API_TOKEN }}'
+                    },
+                    success: function (json) {
+                        result = json
+                    },
+                    error: function (json) {
+                        if (error)
+                            bootbox.alert('操作失败，原因为' + json.responseText);
+                    }
+                });
+                return result;
+            }
+
+            function update_row(index, result) {
+                $('#table_deploy_main').bootstrapTable('refresh', {
+                    silent: true
+                });
+                $('#table_deploy_detail').bootstrapTable('refresh', {
+                    silent: true
+                });
+                $('#table_log').bootstrapTable('refresh', {
+                    silent: true
+                })
+            }
+
+            function page_init(index) {
+                var timer = $.timer(1000, function () {
+                    var result = ajax('/api/deploy/main/config/list/', 'get', {depid: depid, format: 'json'}, false);
+                    update_row(index, result);
+                    if (result == null || $.inArray(result.results[0].status, [3, 4, 5, 7, 10, 12]) != -1) {
+                        timer.stop();
+                        // $('button.cancel').prop('disabled', false);
+                    }
+                    if (($.inArray(result.results[0].status, [1, 2]) != -1 && !result.results[0].in_progress)) {
+                        timer.stop();
+                        $('button.pre_deploy').prop('disabled', false);
+                        // $('button.cancel').prop('disabled', false);
+                    }
+                });
+            }
+
+            function deploy(index, from_scratch, row) {
+                var now = Date.parse(new Date())/1000;
+                var msg = (row.publishdatetimefrom == 0 || (now > row.publishdatetimefrom && now < row.publishdatetimeto) ? '' : '不在发布时间范围内，') + '是否发布？';
+                bootbox.confirm(msg, function (result) {
+                    if (!result)
+                        return;
+                    var result = ajax('/api/deploy/config_auto_publish/', 'post', {
+                        depid: depid,
+                        from_scratch: from_scratch
+                    }, true);
+                    if (result == null)
+                        return;
+                    var timer = $.timer(1000, function () {
+                        var result = ajax('/api/deploy/main/config/list/', 'get', {depid: depid, format: 'json'}, false);
+                        update_row(index, result);
+                        if (result == null || $.inArray(result.results[0].status, [4, 5, 10, 11, 12]) != -1)
+                            timer.stop();
+                    });
+                });
+            }
+
+            function rollback(index, rollback_type) {
+                var result = ajax('/api/deploy/config_rollback/', 'post', {
+                    depid: depid,
+                    rollback_type: $.toJSON(rollback_type)
+                }, true);
+                if (result == null)
+                    return;
+                var timer = $.timer(1000, function () {
+                    var result = ajax('/api/deploy/main/config/list/', 'get', {depid: depid, format: 'json'}, false);
+                    update_row(index, result);
+                    if (result == null || $.inArray(result.results[0].status, [5, 12]) != -1)
+                        timer.stop();
+                });
+            }
+
+            window.operateEvents = {
+                'click .deploy': function (e, value, row, index) {
+                    button_target = $(e.target);
+                    deploy(index, true, row);
+                },
+
+                'click .rollback': function (e, value, row, index) {
+                    button_target = $(e.target);
+                    $('#modal_rollback').modal('show');
+                    $('#modal_rollback').val('')
+                },
+
+            };
+
+            $('#table_deploy_main').bootstrapTable({
+                url: '/api/deploy/main/config/list/',
+                ajaxOptions: {
+                    'headers': {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    }
+                },
+                columns: [
+                    <!-- 公共字段 -->
+                    {
+                        field: 'depid',
+                        title: '发布号',
+                        align: 'center',
+                        width: '15%',
+{#                        visible: false#}
+                    },
+                    {
+                        title: 'Pool',
+                        align: 'center',
+                        formatter: function (value, row, index) {
+                            return row.site_name + '/' + row.app_name;
+                        }
+                    },
+                    {
+                        field: 'idc_name',
+                        align: 'center',
+                        title: '机房'
+                    },
+                    {
+                        field: 'jiraid',
+                        title: 'Trident ID',
+                        align: 'center',
+{#                        visible: false#}
+                    },
+                    {
+                        title: '是否重启',
+                        align: 'center',
+                        formatter: function (value, row, index) {
+                            return row.restart ? '是' : '否';
+                        },
+                    },
+                    {
+                        field: 'status_name',
+                        title: '当前状态',
+                        align: 'center',
+                    },
+                    <!-- 灰度字段 -->
+                    {
+                        field: 'gray_release_info',
+                        title: '灰度策略(%)',
+                        align: 'center',
+                        visible: false
+                    },
+                    {
+                        field: 'gray_stage_interval',
+                        title: '阶段间歇(分钟)',
+                        align: 'center',
+{#                        formatter: function (value, row, index) {#}
+{#                            return row.gray_stage_interval + ' min'#}
+{#                        },#}
+                        visible: false
+                    },
+                    {
+                        field: 'recover_time',
+                        title: '应用恢复时长(秒/每台)',
+                        align: 'center',
+{#                        formatter: function (value, row, index) {#}
+{#                            return row.recover_time + ' s'#}
+{#                        },#}
+                        visible: false
+                    },
+                    {
+                        field: 'colony_surplus',
+                        title: '集群剩余容量下限(%)',
+                        align: 'center',
+{#                        formatter: function (value, row, index) {#}
+{#                            return row.colony_surplus + ' %'#}
+{#                        },#}
+                        visible: false
+                    },
+                    {
+                        field: 'gray_rollback_type',
+                        title: '阶段回滚判断方式',
+                        align: 'center',
+                        formatter: function (value,row, index) {
+                            return row.gray_rollback_type == null ? null : (row.gray_rollback_type == 1 ? '人工判断回滚' : '自动判断回滚')
+                        },
+                        visible: false
+                    },
+                    {
+                        title: '进行中',
+                        align: 'center',
+                        formatter: function (value, row, index) {
+                            return row.in_progress ? '是' : '否';
+                        }
+                    },
+                    {
+                        title: '操作',
+                        align: 'center',
+                        formatter: operateFormatter,
+                        events: operateEvents,
+                        width: '15%'
+                    },
+                    {
+                        field: 'comment',
+                        title: '备注',
+                        align: 'center',
+                        visible: false
+                    },
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        depid: depid,
+                        format: 'json',
+                    };
+                },
+                pagination: false,
+                sidePagination: 'server',
+                showColumns: true,
+                toolbar: '#toolbar_deploy_main',
+                cache: false,
+            });
+            $('#table_deploy_main').on('load-success.bs.table', function () {
+                var is_gray_release = $(this).bootstrapTable('getData')[0].is_gray_release;
+                switch (is_gray_release) {
+                    case 0:
+                        $(this).bootstrapTable('showColumn', 'restart_interval');
+                        break;
+                    case 1:
+                        $(this).bootstrapTable('showColumn', 'gray_release_info');
+                        $(this).bootstrapTable('showColumn', 'gray_stage_interval');
+                        $('#table_deploy_detail').bootstrapTable('showColumn', 'gray_stage')
+                }
+            });
+            $('#table_deploy_detail').bootstrapTable({
+                url: '/api/deploy/detail/config/list/',
+                ajaxOptions: {
+                    'headers': {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    }
+                },
+                columns: [
+                    {
+                        field: 'room_name',
+                        title: '所属机房',
+                        formatter: function (value, row, index) {
+                            return row.room_name ? row.room_name.substring(0, 4) : '未知机房';
+                        },
+                        width: '10%'
+                    },
+                    {
+                        field: 'ip',
+                        title: '主机ip',
+                        width: '15%'
+                    },
+                    {
+                        title: '发布/重启时间',
+                        formatter: function (value, row, index) {
+                            return (row.real_time);
+                        },
+                        width: '15%'
+                    },
+                    {
+                        title: '回滚时间',
+                        formatter: function (value, row, index) {
+                            return (row.rollback_time);
+                        },
+                        width: '15%'
+                    }
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.reverse();
+                    result.total = res.length;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        depid: depid,
+                        is_source: 0,
+                        format: 'json'
+                    };
+                },
+                pagination: false,
+                sidePagination: 'server',
+                showColumns: false,
+                toolbar: '#toolbar_deploy_detail',
+                cache: false,
+                groupBy: true,
+                groupByField: ['room_name'],
+                groupByInitExpanded: 'all'
+            });
+            $('#table_log').bootstrapTable({
+                url: '/api/deploy/log/',
+                ajaxOptions: {
+                    'headers': {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    }
+                },
+                columns: [
+                    {
+                        title: '日志时间',
+                        formatter: function (value, row, index) {
+                            return from_unixtime(row.create_time);
+                        },
+                        width: '15%'
+                    },
+                    {
+                        field: 'log',
+                        title: '日志内容',
+                        cellStyle: function cellStyle(value, row, index) {
+                            return {
+                                css: {
+                                    color: row.error ? 'red' : 'black'
+                                }
+                            }
+                        }
+                    },
+                    {
+                        field: 'error',
+                        title: '是否错误',
+                        visible: false
+                    }
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.reverse();
+                    result.total = res.length;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        depid: depid,
+                        format: 'json'
+                    };
+                },
+                pagination: false,
+                sidePagination: 'server',
+                showColumns: false,
+                toolbar: '#toolbar_log',
+                cache: false
+            });
+            $('#form_rollback').bootstrapValidator({
+                        excluded: [":disabled"],
+                        fields: {
+                            verifier: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '确认人不能为空'
+                                    }
+                                }
+                            },
+                            rollback_reason: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '回滚理由不能为空'
+                                    }
+                                }
+                            },
+                            rollback_category: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '回滚分类不能为空'
+                                    }
+                                }
+                            },
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        ajax('/api/deploy/rollback/reason/list/', 'post', {
+                            uid: '{{ UID }}',
+                            depid: depid,
+                            verifier: $('#verifier').val(),
+                            reason: $('#rollback_reason').val(),
+                            category: $('#rollback_category').val()
+                        }, true)
+                        var rollback_type;
+                        switch ($('input[name="pattern"]:checked').val()) {
+                            case "0":
+                                rollback_type = {
+                                    type: 0,
+                                    interval: parseInt($('#interval').val())
+                                };
+                                break;
+                            case "1":
+                                rollback_type = {
+                                    type: 1
+                                };
+                                break;
+                            case "2":
+                                rollback_type = {
+                                    type: 2,
+                                    interval: parseInt($('#interval').val()),
+                                    group_interval: parseInt($('#group_interval').val()),
+                                };
+                        }
+                        rollback(0, rollback_type)
+                        $('#modal_rollback').modal('hide');
+                    });
+            <!-- 所有slide事件 -->
+            $("#interval").slider({
+                tooltip: 'always',
+                formatter: function (value) {
+                    return value + '秒';
+                }
+            });
+            $("#group_interval").slider({
+                tooltip: 'always',
+                formatter: function (value) {
+                    return value + '分钟';
+                }
+            });
+
+            $('input[name="pattern"]').change(function () {
+                switch ($(this).val()) {
+                    case "0":
+                        $('#form_rollback div.serial').show();
+                        $('#form_rollback div.group').hide();
+                        break;
+                    case "1":
+                        $('#form_rollback div.serial').hide();
+                        $('#form_rollback div.group').hide();
+                        break
+                    case "2":
+                        $('#form_rollback div.serial').show();
+                        $('#form_rollback div.group').show();
+                }
+            });
+
+            $('#verifier').change(function () {
+                $(this).parents('form')
+                        .data('bootstrapValidator')
+                        .revalidateField($(this).attr('id'));
+            });
+
+            $('#rollback_category').change(function () {
+                $(this).parents('form')
+                        .data('bootstrapValidator')
+                        .revalidateField($(this).attr('id'));
+            });
+
+            <!-- 模态框关闭事件 -->
+            $('#modal_rollback').on('hidden.bs.modal', function (e) {
+                <!-- 重置表单 -->
+                $('#form_rollback').bootstrapValidator('resetForm', true);
+                $(this).find('.selectpicker').selectpicker('val', '');
+            });
+            <!-- 预发布刷新-->
+            page_init(0);
+        })
+    </script>
+{% endblock %}

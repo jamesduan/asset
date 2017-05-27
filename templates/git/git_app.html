@@ -1,0 +1,689 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %}线上文件管理系统{% endblock %}
+{% block content %}
+
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css"/>
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/fancytree/css/skin-win7/ui.fancytree.min.css"/>
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/jsdifflib/diffview.css"/>
+    <link rel="stylesheet" href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css"/>
+    <link rel="stylesheet"
+          href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"/>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/jquery-ui/ui/jquery.ui.core.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/jquery-ui/ui/jquery.ui.widget.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+    <script type="text/javascript"
+            src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/fancytree/js/jquery.fancytree-all.min.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/jquery-json/js/jquery.json.min.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/jsdifflib/difflib.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/jsdifflib/diffview.js"></script>
+    <script type="text/javascript"
+            src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+    <script type="text/javascript"
+            src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+
+    <!-- 新建文件 -->
+    <div class="modal fade" id="modal_create" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:800px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="form_create">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span
+                                aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">新建文件</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="app_create" class="col-sm-2 control-label">Pool</label>
+                            <div class='col-sm-10'>
+                                <select id="app_create" name="app_create"
+                                        class="form-control combobox">
+                                    <option value="">-</option>
+                                    {% for app in app_queryset %}
+                                        <option value="{{ app.id }}">{{ app.site.name }}/{{ app.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="type_create" class="col-sm-2 control-label">类型</label>
+                            <div class='col-sm-10'>
+                                <select id="type_create" name="type_create"
+                                        class="form-control">
+                                    {% for job_type in type_list %}
+                                        <option value="{{ job_type.id }}"
+                                                room_property="{{ job_type.room_property }}">{{ job_type.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="room_create" class="col-sm-2 control-label">IDC</label>
+                            <div class='col-sm-10'>
+                                <select id="room_create" name="room_create"
+                                        class="form-control" disabled="disabled">
+                                    {% for room in room_queryset %}
+                                        <option value="{{ room.id }}">{{ room.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="content_create" class="col-sm-2 control-label">内容</label>
+                            <div class='col-sm-10'>
+                            <textarea class="form-control" rows="10" id="content_create"
+                                      name="content_create"></textarea>
+                            </div>
+                        </div>
+
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹出框(历史信息) -->
+    <div class="modal fade" id="modal_log" tabindex="-1" role="dialog" aria-labelledby="myModalLabel_log"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width: 800px">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="myModalLabel_log">查看历史</h4>
+                </div>
+                <div class="modal-body">
+                    <table id="table_log"></table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹出框(对比信息) -->
+    <div class="modal fade" id="modal_diff" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width: 1000px">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title"></h4>
+                </div>
+                <div class="modal-body">
+                    <div></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default suppressible" id="button_theirs">Accept Theirs</button>
+                    <button type="button" class="btn btn-default suppressible" id="button_yours">Accept Yours</button>
+                    {#                    <button type="button" class="btn btn-default" id="button_merge">Merge...</button>#}
+                    <button type="button" class="btn btn-default suppressible" id="button_reset">还原</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 左侧 -->
+            <div class="col-md-3">
+                <div class="panel panel-default">
+                    <div class="panel-heading">新增的文件</div>
+                    <div class="panel-body">
+                        <div class="tree" type="A"></div>
+                    </div>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">修改的文件</div>
+                    <div class="panel-body">
+                        <div class="tree" type="M"></div>
+                    </div>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">刪除的文件</div>
+                    <div class="panel-body">
+                        <div class="tree" type="D"></div>
+                    </div>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">冲突的文件</div>
+                    <div class="panel-body">
+                        <div class="tree" type="U"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- 右侧 -->
+            <div class="col-md-9">
+                <div id="toolbar">
+                    <button type="button" class="btn btn-green" id="add">新增</button>
+                    <button type="button" class="btn btn-green" id="commit">提交</button>
+                    <div class="btn-group" role="group" aria-label="...">
+                        <button type="button" class="btn btn-green" id="public_file">公共文件</button>
+                        <button type="button" class="btn btn-green" id="all_file">所有文件</button>
+                    </div>
+                </div>
+                <table id="main"></table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            var id = null, current_path = null;
+
+            function success_normal_event(obj, alert, json) {
+                if (obj)
+                    obj.val(json.detail);
+                if (alert)
+                    bootbox.alert('操作成功');
+            }
+
+            function success_conflict_event(obj, alert, json) {
+                obj.html(diff(json[2], json[3], "Theirs", "Yours"));
+            }
+
+            function success_commit_event(obj, alert, json) {
+                obj.html(diff(json.commit, json.last_commit, "当前提交的版本", "最近一次提交的版本"));
+            }
+
+            function success_reset_event(obj, alert, json) {
+                $('#button_reset').attr('disabled', json.commit == null ? true : false);
+                obj.html(diff(json.index, json.commit || '', "待提交的版本", "最近一次提交的版本"));
+            }
+
+            function success_puppet_result(obj, alert, json) {
+                var result_array = new Array();
+                $.each(json.puppet, function (index, value) {
+                    if (value.success)
+                        result_array.push(index + '更新module成功');
+                    else
+                        result_array.push(index + '更新module失败，原因为' + value.output);
+                });
+                bootbox.alert(result_array.join(';'));
+            }
+
+            function ajax(url, method, data, obj, alert, event) {
+                $.ajax({
+                    url: url,
+                    async: false,
+                    method: method,
+                    data: data,
+                    headers: {
+                        Authorization: 'Token {{ API_TOKEN }}'
+                    },
+                    success: function (json) {
+                        event(obj, alert, json);
+                    },
+                    error: function (json) {
+                        bootbox.alert('操作失败，原因为：' + json.responseText);
+                    }
+                });
+            }
+
+            function operateFormatter(value, row, index) {
+                var operate_array = new Array();
+                var edit = $('<a>').attr('class', 'edit').append(
+                        $('<span>').attr({
+                            class: 'glyphicon glyphicon-pencil',
+                            title: ' 编辑',
+                        }).css({
+                            cursor: 'pointer',
+                        }))
+                var remove = $('<a>').attr('class', 'remove').append(
+                        $('<span>').attr({
+                            class: 'glyphicon glyphicon-remove',
+                            title: ' 删除',
+                        }).css({
+                            cursor: 'pointer',
+                        }))
+                var log = $('<a>').attr('class', 'log').append(
+                        $('<span>').attr({
+                            class: 'glyphicon glyphicon-globe',
+                            title: ' 历史',
+                        }).css({
+                            cursor: 'pointer',
+                        }))
+                operate_array.push(edit[0].outerHTML);
+                if (row.app)
+                    operate_array.push(remove[0].outerHTML);
+                operate_array.push(log[0].outerHTML);
+                return operate_array.join('&nbsp&nbsp&nbsp');
+            };
+            function operateLogFormatter(value, row, index) {
+                var operate_array = new Array();
+                var diff = $('<a>').attr('class', 'diff').append(
+                        $('<span>').attr({
+                            class: 'glyphicon glyphicon-transfer',
+                            title: ' 对比',
+                        }).css({
+                            cursor: 'pointer',
+                        }))
+                var puppet = $('<a>').attr('class', 'puppet').append(
+                        $('<span>').attr({
+                            class: 'glyphicon glyphicon-search',
+                            title: ' Puppet执行结果',
+                        }).css({
+                            cursor: 'pointer',
+                        }))
+                operate_array.push(diff[0].outerHTML);
+                operate_array.push(puppet[0].outerHTML);
+                return operate_array.join('&nbsp&nbsp&nbsp');
+            };
+            function refresh() {
+                $('#main').bootstrapTable('refresh', {
+                    silent: false,
+                });
+                $(".tree").each(function () {
+                    $(this).fancytree("getTree").reload();
+                })
+            };
+            function checkout(stage) {
+                ajax('/api/git/checkout/v2/', 'put', {
+                    path: current_path,
+                    stage: stage
+                }, null, true, success_normal_event);
+                refresh();
+            };
+            function reset(git_app) {
+                ajax('/api/git/reset/v2/', 'put', git_app ? {
+                    path: current_path,
+                    git_app: 1
+                } : {
+                    path: current_path,
+                }, null, true, success_normal_event);
+                refresh();
+            }
+
+            function diff(baseTextLines, newTextLines, baseTextName, newTextName) {
+                var baseTextLines = difflib.stringAsLines(baseTextLines);
+                var newTextLines = difflib.stringAsLines(newTextLines);
+                var sm = new difflib.SequenceMatcher(baseTextLines, newTextLines);
+                var opcodes = sm.get_opcodes();
+                var diffoutput = diffview.buildView({
+                    baseTextLines: baseTextLines,
+                    newTextLines: newTextLines,
+                    opcodes: opcodes,
+                    baseTextName: baseTextName,
+                    newTextName: newTextName,
+                    contextSize: null,
+                    viewType: 0
+                });
+                return diffoutput.outerHTML;
+            };
+
+            window.operateEvents = {
+                'click .edit': function (e, value, row, index) {
+                    id = row.id;
+                    $('#app_create').val(row.app).combobox('disable').data('combobox').refresh();
+                    $("#type_create").val(row.type).attr('disabled', true);
+                    $('#room_create').val(row.room);
+                    ajax('/api/git/tools/file/' + row.id + '/', 'get', null, $('#content_create'), false, success_normal_event);
+                    $('#modal_create div.modal-footer button').removeClass('create').addClass('update');
+                    $('#modal_create').modal('show');
+                },
+                'click .remove': function (e, value, row, index) {
+                    bootbox.confirm('是否删除？', function (result) {
+                        if (result) {
+                            ajax('/api/git/git_app/' + row.id + '/', 'delete', null, null, true, success_normal_event)
+                            refresh();
+                        }
+                    })
+                },
+                'click .log': function (e, value, row, index) {
+                    var file_name = (row.room_name == null ? row.type_name : row.room_name + '_' + row.type_name);
+                    $('#table_log').bootstrapTable('refresh', {
+                        silent: false,
+                        url: '/api/git/log/v2/?path=' + (row.app ? [row.site_name, row.app_name, file_name].join('/') : file_name),
+                    });
+                    $('#modal_log').modal('show');
+                }
+            };
+            window.operateLogEvents = {
+                'click .diff': function (e, value, row, index) {
+                    $('#modal_diff div.modal-footer button.suppressible').hide();
+                    $('#modal_diff .modal-title').text('当前提交 VS 上一次提交');
+                    ajax('/api/git/diff/v2/', 'get', {
+                        path: row.path,
+                        revision: row.hash,
+                        format: 'json'
+                    }, $('#modal_diff .modal-body div'), false, success_commit_event);
+                    $('#modal_diff').modal('show');
+                },
+                'click .puppet': function (e, value, row, index) {
+                    ajax('/api/git/boot_sh/puppet/result/', 'get', {
+                        hash: row.hash,
+                        format: 'json'
+                    }, null, false, success_puppet_result);
+                }
+            };
+            $('.modal>div.modal-dialog').width($(document).width());
+            $('select.combobox').combobox({});
+            $('#main').bootstrapTable({
+                url: '/api/git/git_app/',
+                ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                columns: [
+                    {
+                        field: 'id',
+                        title: 'id',
+                        visible: false
+                    },
+                    {
+                        field: 'app_id',
+                        title: 'app_id',
+                        visible: false
+                    },
+                    {
+                        field: 'pool',
+                        title: 'Pool',
+                        formatter: function (value, row, index) {
+                            return row.app ? row.site_name + '/' + row.app_name : '-';
+                        }
+                    },
+                    {
+                        field: 'type_name',
+                        title: '类型'
+                    },
+                    {
+                        field: 'room_name',
+                        title: 'IDC'
+                    },
+                    {
+                        field: 'created_by_name',
+                        title: '创建人'
+                    },
+                    {
+                        field: 'valid',
+                        title: '是否有效'
+                    },
+                    {
+                        field: 'operate',
+                        title: '操作',
+                        align: 'left',
+                        formatter: operateFormatter,
+                        events: operateEvents
+                    }
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search,
+                        format: 'json',
+                    };
+                },
+                pagination: true,
+                pageSize: 10,
+                pageList: [10, 20, 50, 100],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: true,
+                showColumns: true,
+                toolbar: "#toolbar",
+                cache: false
+            });
+            $('#table_log').bootstrapTable({
+                url: '/api/git/log/v2/',
+                ajaxOptions: {
+                    'headers': {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    }
+                },
+                columns: [
+                    {
+                        field: 'path',
+                        visible: false
+                    },
+                    {
+                        field: 'hash',
+                        visible: false
+                    },
+                    {
+                        field: 'author',
+                        title: 'Author',
+                        width: '20%'
+                    },
+                    {
+                        field: 'message',
+                        title: 'Commit Message',
+                        width: '50%'
+                    },
+                    {
+                        field: 'date',
+                        title: 'Date',
+                        width: '20%'
+                    },
+                    {
+                        field: 'operate',
+                        title: '操作',
+                        width: '10%',
+                        formatter: operateLogFormatter,
+                        events: operateLogEvents
+                    }
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search,
+                        format: 'json'
+                    };
+                },
+                pagination: true,
+                pageSize: 5,
+                pageList: [5, 10, 25, 50, 100, 'ALL'],
+                sidePagination: 'server',
+                showRefresh: false,
+                search: false,
+                showColumns: false,
+                cache: false
+            });
+            $('#add').bind('click', function () {
+                $('#app_create').combobox('enable');
+                $('#type_create').attr('disabled', false);
+                $('#modal_create div.modal-footer button').removeClass('update').addClass('create');
+                $('#modal_create').modal('show')
+            })
+            $('#commit').bind('click', function () {
+                bootbox.prompt('请输入提交信息：', function (result) {
+                    if (result == null)
+                        return;
+                    if ($.trim(result)) {
+                        ajax('/api/git/commit/v2/', 'post', {'msg': $.trim(result)}, null, true, success_normal_event)
+                        refresh();
+                    }
+                    else {
+                        bootbox.alert('请输入提交信息');
+                    }
+                })
+            })
+            $('#public_file').bind('click', function () {
+                $('#main').bootstrapTable('resetSearch');
+                $('#main').bootstrapTable('refresh', {
+                    silent: false,
+                    url: '/api/git/git_app/',
+                    query: {
+                        app__isnull: 'True'
+                    }
+                })
+            })
+            $('#all_file').bind('click', function () {
+                $('#main').bootstrapTable('resetSearch')
+                $('#main').bootstrapTable('refresh', {
+                    silent: false,
+                    url: '/api/git/git_app/',
+                })
+            })
+            $("#app_create").change(function () {
+                $(this).parents('form')
+                        .data('bootstrapValidator')
+                        .revalidateField($(this).attr('id'));
+            });
+            $("#type_create").change(function () {
+                $('#room_create').attr('disabled', $(this).find('option:selected').attr('room_property') == "True" ? false : true);
+            });
+            $('#modal_create').on('hidden.bs.modal', function (e) {
+                $("#app_create").data('combobox').clearElement();
+                $('#form_create').bootstrapValidator('resetForm', true);
+            });
+            $('.tree').each(function () {
+                $(this).fancytree({
+                    source: {
+                        url: "/api/git/tools/tree/",
+                        data: {
+                            letter: $(this).attr('type')
+                        },
+                        cache: false,
+                        headers: {
+                            Authorization: 'Token {{ API_TOKEN }}'
+                        }
+                    },
+                    checkbox: false,
+                    selectMode: 3,
+                    click: function (event, data) {
+                        var node = data.node, path = [node.title], parent = null;
+                        if (node.folder)
+                            return;
+                        while (true) {
+                            node = node.parent;
+                            if (node) {
+                                path.unshift(node.title);
+                            } else {
+                                path.shift();
+                                break;
+                            }
+                        }
+                        current_path = path.join('/');
+                        switch ($(this).attr('type')) {
+                            case 'U':
+                                $('#modal_diff div.modal-footer button.suppressible').hide();
+                                $('#button_theirs').show();
+                                $('#button_yours').show();
+                                $('#modal_diff .modal-title').text('冲突的文件');
+                                ajax('/api/git/unmerged_blobs/v2/', 'get', {
+                                    path: current_path,
+                                    format: 'json'
+                                }, $('#modal_diff .modal-body div'), false, success_conflict_event);
+                                $('#modal_diff').modal('show');
+                                break;
+                            case 'M':
+                                $('#modal_diff div.modal-footer button.suppressible').hide();
+                                $('#button_reset').show();
+                                $('#modal_diff .modal-title').text('修改的文件');
+                                ajax('/api/git/diff/cached/v2/', 'get', {
+                                    path: current_path,
+                                    format: 'json'
+                                }, $('#modal_diff .modal-body div'), false, success_reset_event);
+                                $('#modal_diff').modal('show');
+                                break;
+                            case 'D':
+                                bootbox.confirm('是否还原？', function (result) {
+                                    if (result) {
+                                        reset(true);
+                                    }
+                                })
+                                break;
+                        }
+                    }
+                });
+            })
+            $('#button_theirs').bind('click', function () {
+                bootbox.confirm('确认？', function (result) {
+                    if (result) {
+                        $('#modal_diff').modal('hide');
+                        checkout("2");
+                    }
+                })
+            });
+            $('#button_yours').bind('click', function () {
+                bootbox.confirm('确认？', function (result) {
+                    if (result) {
+                        $('#modal_diff').modal('hide');
+                        checkout("3");
+                    }
+                })
+            });
+            {#            $('#button_merge').bind('click', function () {#}
+            {#                $('#modal_conflict').modal('hide');#}
+            {#            });#}
+            $('#button_reset').bind('click', function () {
+                bootbox.confirm('确认？', function (result) {
+                    if (result) {
+                        $('#modal_diff').modal('hide');
+                        reset(false);
+                    }
+                })
+            })
+            $('#form_create')
+                    .bootstrapValidator({
+                        excluded: ':disabled',
+                        fields: {
+                            app_create: {
+                                validators: {
+                                    {#                                    notEmpty: {#}
+                                    {#                                        message: 'Pool不能为空'#}
+                                    {#                                    }#}
+                                }
+                            },
+                            content_create: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '内容不能为空'
+                                    }
+                                }
+                            },
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        var $form = $(e.target), $button = $form.data('bootstrapValidator').getSubmitButton();
+                        if ($button.hasClass('create'))
+                            ajax(
+                                    '/api/git/git_app/', 'post',
+                                    {
+                                        app: $('#app_create').val(),
+                                        type: $('#type_create').val(),
+                                        room: $('#room_create').attr('disabled') ? null : $('#room_create').val(),
+                                        content: $('#content_create').val()
+                                    },
+                                    null, true, success_normal_event
+                            );
+                        else if ($button.hasClass('update'))
+                            ajax('/api/git/tools/file/' + id + '/', 'put',
+                                    {
+                                        content: $('#content_create').val()
+                                    },
+                                    null, true, success_normal_event
+                            )
+                        refresh();
+                        $('#modal_create').modal('hide');
+                    });
+        })
+    </script>
+{% endblock %}

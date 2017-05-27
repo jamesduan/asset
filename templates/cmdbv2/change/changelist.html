@@ -1,0 +1,359 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %} 变更系统 {% endblock %}
+{% block content %}
+
+<!-- additional css style -->
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<!-- <link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/> -->
+<link href="{{ STATIC_URL }}libs/bootstrap-select-1.10.0/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+
+<!-- additional js -->
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<!-- <script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script> -->
+<script src="{{ STATIC_URL }}libs/bootstrap-select-1.10.0/dist/js/bootstrap-select.min.js"></script>
+
+
+<!-- <div class="inner-h1">变更列表</div> -->
+
+<style type="text/css">
+
+.bootstrap-select > .dropdown-toggle {
+    width: 179px;
+}
+
+.form-group {
+    float: right;
+}
+
+</style>
+
+<div class="form-inline" role="form" style="margin-top: 20px">
+   <input type="text" name="user" id="user" class="form-control filter"  placeholder="操作人">
+   <select name="type" id="type" class="form-control" >
+        <option value="">选择类型</option>
+        {% for type in type_list %}
+            <option value={{ type.id }}>{{ type.key }}{% if type.name %}<{{type.name}}>{% endif %}</option>
+        {% endfor %}
+   </select>
+   <select name="action" id="action" class="form-control" >
+        <option value="">选择动作</option>
+   </select>
+   <input type="text" name="index"  id="index" class="form-control filter" placeholder="索引值">
+   <input type="text" name="start_time"  id="start_time" class="form-control  selectTime" placeholder="开始时间">
+   <input type="text" name="end_time"  id="end_time" class="form-control  selectTime" placeholder="结束时间">
+   <div class="form-group">
+        <button id="filt_result" class="btn btn-green">过滤</button>
+        <button id="clear" class="btn btn-green">重置</button>
+   </div>
+</div>
+
+<table id="change" class="table table-striped">
+</table>
+
+<script>
+
+
+(function($) {
+    $.extend({
+        myTime: {
+            /**
+             * 当前时间戳
+             * @return <int>        unix时间戳(秒)  
+             */
+            CurTime: function(){
+                return Date.parse(new Date())/1000;
+            },
+            /**              
+             * 日期 转换为 Unix时间戳
+             * @param <string> 2014-01-01 20:20:20  日期格式              
+             * @return <int>        unix时间戳(秒)              
+             */
+            DateToUnix: function(string) {
+                var f = string.split(' ', 2);
+                var d = (f[0] ? f[0] : '').split('-', 3);
+                var t = (f[1] ? f[1] : '').split(':', 3);
+                return (new Date(
+                        parseInt(d[0], 10) || null,
+                        (parseInt(d[1], 10) || 1) - 1,
+                        parseInt(d[2], 10) || null,
+                        parseInt(t[0], 10) || null,
+                        parseInt(t[1], 10) || null,
+                        parseInt(t[2], 10) || null
+                        )).getTime() / 1000;
+            },
+            /**              
+             * 时间戳转换日期              
+             * @param <int> unixTime    待时间戳(秒)              
+             * @param <bool> isFull    返回完整时间(Y-m-d 或者 Y-m-d H:i:s)              
+             * @param <int>  timeZone   时区              
+             */
+            UnixToDate: function(unixTime, isFull, timeZone) {
+                if (typeof (timeZone) == 'number')
+                {
+                    unixTime = parseInt(unixTime) + parseInt(timeZone) * 60 * 60;
+                }
+                var time = new Date(unixTime * 1000);
+                var ymdhis = "";
+                ymdhis += time.getUTCFullYear() + "-";
+                ymdhis += (time.getUTCMonth()+1) + "-";
+                ymdhis += time.getUTCDate();
+                if (isFull === true)
+                {
+                    ymdhis += " " + time.getUTCHours() + ":";
+                    ymdhis += time.getUTCMinutes() + ":";
+                    ymdhis += time.getUTCSeconds();
+                }
+                return ymdhis;
+            }
+        }
+    });
+})(jQuery);
+
+    $('#filt_result').click(function(event) {
+        /* Act on the event */
+        refresh_by_url();
+    });
+  
+    $(".filter").change(function() {
+        refresh_by_url();
+    });
+
+    function refresh_by_url(){
+
+        var user = $("#user").val();
+        var type_id = $("#type option:selected").val();
+        var action_id = $("#action option:selected").val();
+        var index = $("#index").val();
+
+        var start_time = $("#start_time").val();
+        if(start_time) {
+            var start_time_unix = $.myTime.DateToUnix(start_time + ':00');
+        }
+        var end_time = $("#end_time").val();
+        if (end_time) {
+            var end_time_unix = $.myTime.DateToUnix(end_time + ':00');
+        }
+
+        var api_url_base = '{{ CMDBAPI_URL }}change/changelist/?';
+
+        var params = ['format=json'];
+        if (user !="") {
+            params.push('user='+user)
+        }
+        if(type !="") {
+            params.push('type_id=' + type_id)
+        }
+        if(action != "") {
+            params.push('action_id='+ action_id)
+        }
+
+        if (index !="") {
+            params.push('index='+ index)
+        }
+        if (start_time !="") {
+            params.push('start_time=' + start_time_unix)
+        }
+        if (end_time !="") {
+            params.push('end_time='+ end_time_unix)
+        }
+        var api_url = api_url_base + params.join('&');
+        $('#change').bootstrapTable('refresh', {
+            url: api_url
+        });
+    };
+
+    $("#clear").click(function() {
+        var type = $("#type").val("");
+        // var action = $("#action").val("");
+        var user = $("#user").val("");
+        var index = $("#index").val("");
+        var start_time = $("#start_time").val("");
+        var end_time = $("#end_time").val("");
+        refresh_action();
+        $('#type').selectpicker('refresh');
+
+        // $("#type").data('combobox').clearTarget();
+        // $("#type").combobox('clearElement');
+        // $("#action").data('combobox').clearTarget();
+        // $("#action").combobox('clearElement');
+        $('#change').bootstrapTable('refresh', {
+              url: '{{ CMDBAPI_URL }}change/changelist/?format=json'
+        });
+    });
+
+function refresh_action() {
+    // body...
+    $("#action").find("option").remove();
+    $('#action').append($('<option>').text('选择动作').attr('value', ''));
+    $('#action').selectpicker('refresh');
+}
+
+$(document).ready(function(){
+
+    // console.log(timestamp);
+    $("#type").val('');
+    $("#action").val('');
+    $("#user").val('');
+    $("#index").val('');
+    $("#start_time").val('');
+    $("#end_time").val('');
+
+    $("#action").selectpicker({
+                'liveSearch': true,
+                'liveSearchPlaceholder': '搜索',
+                'width': 'fit',
+    });
+    // $("#type,#action").combobox({});
+    $("#type").selectpicker({
+        'liveSearch': true,
+        'liveSearchPlaceholder': '搜索',
+        'width': 'fit',
+    }).on('change', function() {
+        // console.log("...");
+        var type_id = $(this).val();
+
+        if (!type_id || type_id == '' || type_id == undefined) {
+            refresh_action();
+        } else {
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}change/action/?format=json&page_size=10000',
+                type: 'GET',
+                async: 'true',
+                headers: {'Authorization':'Token {{ API_TOKEN }}'},
+                data: {type_id: type_id},
+            }).success(function(response) {
+                // $('#action').selectpicker('destroy');
+                // $('#action').selectpicker('refresh');
+                $("#action").find("option").remove();
+                $('#action').append($('<option>').text('选择动作').attr('value', ''));
+                $('#action').selectpicker('refresh');
+                $.each(response.results, function(index, val) {
+                     /* iterate through array or object */
+                     var display_name = val.key;
+                     if (val.name) {
+                        display_name += '<' + val.name + '>';
+                     }
+                     $('#action').append("<option value='"+val.id+"'>"+display_name+"</option>");
+                     $('#action').selectpicker('refresh');
+                });
+            });
+        }
+    });
+
+    $('.selectTime').datetimepicker({
+        autoclose: true,
+        pickTime: true,
+        showToday: true
+    });
+
+    var actions  = new Array;
+    {% if action_list %}
+            {% for action in action_list %}
+                var tmp = {
+                    id: {{action.id}},
+                    key: "{{action.key}}",
+                    type_id: {{action.type_id}}
+                };           
+                actions.push(tmp);
+                delete tmp;
+            {% endfor %}
+    {% endif %}
+
+    var boottable_url = '{{ CMDBAPI_URL }}change/changelist/?format=json';
+    {% if change_id %}
+        boottable_url += "&id=" + '{{change_id}}';
+    {% endif %}
+    $('#change').bootstrapTable({
+        url: boottable_url,
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'user',
+                title: '操作人',
+                align: 'center'
+            },
+            {
+                field: 'type',
+                title: '类型',
+                align: 'center',
+            },
+            {
+                field: 'action_type_name',
+                title: '类型名',
+                align: 'center',
+            },
+             {
+                field: 'action_type_desc',
+                title: '类型描述',
+                align: 'center',
+                visible: false,
+            },
+            {
+                field: 'action',
+                title: '动作',
+                align: 'center'
+            },
+            {
+                field: 'action_name',
+                title: '动作名',
+                align: 'center',
+             
+            },
+            {
+                field: 'action_desc',
+                title: '动作描述',
+                align: 'center',
+                visible: false,
+            },
+            {
+                field: 'index',
+                title: '索引值',
+                align: 'center'
+            },
+            {
+                field: 'message',
+                title: '内容',
+                align: 'left',
+            },
+            {
+                field: 'happen_time_str',
+                title: '时间',
+                align: 'center'
+            }
+        ],
+        responseHandler: function(res){
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 10,
+        pageList: [10,20,50,100],
+        sidePagination: 'server',
+        toolbar: "#toolbar",
+        cache: false,
+        showColumns: true,
+        showRefresh: true,
+    });
+    $("[data-toggle='popover']").popover();
+
+});
+
+</script>
+{% endblock %}

@@ -1,0 +1,261 @@
+{% extends "mobile/base/return_base.html" %}
+
+{% block title %}用户查询-详情{% endblock %}
+
+{% block content %}
+    <style>
+        .mui-table-view-cell.mui-collapse .mui-table-view.mui-table-view-chevron{margin-right: -15px;}
+        .mui-table-view-cell.mui-collapse .mui-table-view .mui-table-view-cell{padding: 11px 15px;}
+        .mui-table-view-cell.mui-collapse .mui-table-view .mui-table-view-cell:after{left:15px;}
+    </style>
+<div id="user_content">
+
+</div>
+
+<script src="{{ STATIC_URL }}mobile/libs/mui/js/arttmpl.js"></script>
+
+<script type="text/templete" id="user_result">
+    <% if(user.username){ %>
+        <h4 style="margin-top: 10px; margin-left:5px;">个人信息</h4>
+        <ul class="mui-table-view" >
+            <li class="mui-table-view-cell">
+                <ul class="mui-list-inline">
+                    <li class="mui-pull-left">姓名</li>
+                    <li class="mui-pull-right"><p><%=user.username_ch%></p></li>
+                </ul>
+            </li>
+            <li class="mui-table-view-cell">
+                <ul class="mui-list-inline">
+                    <li class="mui-pull-left">账号</li>
+                    <li class="mui-pull-right"><p><%=user.username%></p></li>
+                </ul>
+            </li>
+            <li class="mui-table-view-cell">
+                <div class="mui-slider-right mui-disabled">
+                    <a class="mui-btn mui-btn-green mui-icon mui-icon-phone" id="call_phone"></a>
+{#                    <a class="mui-btn mui-btn-yellow mui-icon mui-icon-personadd" href="wtai://wp/ap;<%=user.telephone%>"></a>#}
+                </div>
+                <div class="mui-slider-handle">
+                    <ul class="mui-list-inline">
+                        <li class="mui-pull-left">电话</li>
+                        <li class="mui-pull-right"><p id="telephone"><%=user.telephone%></p></li>
+                    </ul>
+                </div>
+            </li>
+        </ul>
+        <h4 style="margin-top: 10px;margin-left:5px;">组织关系</h4>
+        <ul class="mui-table-view">
+            <li class="mui-table-view-cell">
+                <ul class="mui-list-inline">
+                    <li class="mui-pull-left">所属部门</li>
+                    <li class="mui-pull-right"><p><%=user.deptname%></p></li>
+                </ul>
+            </li>
+            <li class="mui-table-view-cell">
+                <% if (user.deptleaderdetail != null){ %>
+                    <div class="mui-slider-right mui-disabled">
+                        <a class="mui-btn mui-btn-green mui-icon mui-icon-phone" id="call_phone"></a>
+                        <a class="mui-btn  mui-btn-blue look_user_detail" href="/yellow/find/user/?username=<%=user.deptleader%>">查看</a>
+                    </div>
+                    <div class="mui-slider-handle">
+                        <ul class="mui-list-inline">
+                            <li class="mui-pull-left">部门Head</li>
+                            <li class="mui-pull-right">
+                                <p>
+                                    <%=user.deptleaderdetail.username_ch%>
+                                </p>
+                            </li>
+                        </ul>
+                    </div>
+                <% }else{ %>
+                    <ul class="mui-list-inline">
+                        <li class="mui-pull-left">部门Head</li>
+                        <li class="mui-pull-right">
+                            <p></p>
+                        </li>
+                    </ul>
+                <% } %>
+            </li>
+            <% if (user.domains.length > 0){ %>
+                <% if (user.domains.length > 1){ %>
+                    <li class="mui-table-view-cell mui-collapse mui-active"><a class="mui-navigate-right" href="#">所属Domain</a>
+                        <ul class="mui-table-view mui-table-view-chevron">
+                            <% for (var i in user.domains){ var dm = user.domains[i]; %>
+                                <li class="mui-table-view-cell">
+                                    <% if (dm.leaderdetail != null){ %>
+                                        <div class="mui-slider-right mui-disabled">
+                                            <a class="mui-btn mui-btn-green mui-icon mui-icon-phone" id="call_phone"></a>
+                                            <a class="mui-btn  mui-btn-blue look_user_detail" href="/yellow/find/user/?username=<%=dm.domainleader%>">查看</a>
+                                        </div>
+                                        <div class="mui-slider-handle">
+                                            <ul class="mui-list-inline">
+                                                <li class="mui-pull-left"><%=dm.domainname%></li>
+                                                <li class="mui-pull-right">
+                                                    <p>DL：
+                                                        <%=dm.leaderdetail.username_ch%>
+                                                    </p>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    <% }else{ %>
+                                        <ul class="mui-list-inline">
+                                            <li class="mui-pull-left"><%=dm.domainname%></li>
+                                            <li class="mui-pull-right">
+                                                <p></p>
+                                            </li>
+                                        </ul>
+                                    <% } %>
+                                </li>
+                            <% } %>
+                        </ul>
+                    </li>
+                <% }else{ %>
+                    <li class="mui-table-view-cell">
+                        <ul class="mui-list-inline">
+                            <li class="mui-pull-left">所属Domain</li>
+                            <li class="mui-pull-right"><p><%=user.domains[0].domainname%></p></li>
+                        </ul>
+                    </li>
+                    <li class="mui-table-view-cell">
+                        <div class="mui-slider-right mui-disabled">
+                            <a class="mui-btn mui-btn-green mui-icon mui-icon-phone" id="call_phone"></a>
+                            <a class="mui-btn  mui-btn-blue look_user_detail" href="/yellow/find/user/?username=<%=user.domains[0].domainleader%>">查看</a>
+                        </div>
+                        <div class="mui-slider-handle">
+                            <ul class="mui-list-inline">
+                                <li class="mui-pull-left">DomainLeader</li>
+                                <li class="mui-pull-right">
+                                    <p><% if (user.domains[0] != null && user.domains[0].leaderdetail != null){ %>
+                                        <%=user.domains[0].leaderdetail.username_ch%>
+                                        <% }else{ %><% } %>
+                                    </p>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                <% } %>
+            <% } %>
+        </ul>
+    <% }else{ %>
+        <ul class="mui-table-view" style="margin-top: 25px;">
+            <li class="mui-table-view-cell"><p>无匹配用户</p></li>
+        </ul>
+    <% } %>
+
+
+{#    <div class="mui-card">#}
+{#        <% if(user.username){ %>#}
+{#            <div class="mui-card-header"><%=user.username_ch%></div>#}
+{#            <div class="mui-card-content">#}
+{#                <div class="mui-card-content-inner">#}
+{#                    <ul class="mui-table-view">#}
+{#                        <li class="mui-table-view-cell">#}
+{#                            <ul class="mui-list-inline">#}
+{#                                <li class="mui-pull-left">账号</li>#}
+{#                                <li class="mui-pull-right"><p><%=user.username%></p></li>#}
+{#                            </ul>#}
+{#                        </li>#}
+{#                        <li class="mui-table-view-cell">#}
+{#                            <div class="mui-slider-right mui-disabled">#}
+{#                                <a class="mui-btn mui-btn-green mui-icon mui-icon-phone" id="call_phone"></a>#}
+{#                                <a class="mui-btn mui-btn-yellow mui-icon mui-icon-personadd" href="wtai://wp/ap;<%=user.telephone%>"></a>#}
+{#                            </div>#}
+{#                            <div class="mui-slider-handle">#}
+{#                                <ul class="mui-list-inline">#}
+{#                                    <li class="mui-pull-left">电话</li>#}
+{#                                    <li class="mui-pull-right"><p id="telephone"><%=user.telephone%></p></li>#}
+{#                                </ul>#}
+{#                            </div>#}
+{#                        </li>#}
+{#                        <li class="mui-table-view-cell">#}
+{#                            <ul class="mui-list-inline">#}
+{#                                <li class="mui-pull-left">部门</li>#}
+{#                                <li class="mui-pull-right"><p><%=user.deptname%></p></li>#}
+{#                            </ul>#}
+{#                        </li>#}
+{#                        <li class="mui-table-view-cell">#}
+{#                            <ul class="mui-list-inline">#}
+{#                                <li class="mui-pull-left">Head</li>#}
+{#                                <li class="mui-pull-right"><p><%=user.deptleader%></p></li>#}
+{#                            </ul>#}
+{#                        </li>#}
+{#                        <% if (user.domains.length > 0){ %>#}
+{#                            <% if (user.domains.length > 1){ %>#}
+{#                                <li class="mui-table-view-cell mui-collapse mui-active"><a class="mui-navigate-right" href="#">所属Domain</a>#}
+{#                                    <ul class="mui-table-view mui-table-view-chevron">#}
+{#                                        <% for (var i in user.domains){ var dm = user.domains[i]; %>#}
+{#                                            <li class="mui-table-view-cell">#}
+{#                                                <ul class="mui-list-inline">#}
+{#                                                    <li class="mui-pull-left"><%=dm.domainname%></li>#}
+{#                                                    <li class="mui-pull-right"><p>DL：<%=dm.domainleader%></p></li>#}
+{#                                                </ul>#}
+{#                                            </li>#}
+{#                                        <% } %>#}
+{#                                    </ul>#}
+{#                                </li>#}
+{#                            <% }else{ %>#}
+{#                                <li class="mui-table-view-cell">#}
+{#                                    <ul class="mui-list-inline">#}
+{#                                        <li class="mui-pull-left">Domain</li>#}
+{#                                        <li class="mui-pull-right"><p><%=user.domains[0].domainname%></p></li>#}
+{#                                    </ul>#}
+{#                                </li>#}
+{#                                <li class="mui-table-view-cell">#}
+{#                                    <ul class="mui-list-inline">#}
+{#                                        <li class="mui-pull-left">DL</li>#}
+{#                                        <li class="mui-pull-right"><p><%=user.domains[0].domainleader%></p></li>#}
+{#                                    </ul>#}
+{#                                </li>#}
+{#                            <% } %>#}
+{#                        <% } %>#}
+{#                    </ul>#}
+{#                </div>#}
+{#            </div>#}
+{#        <% }else{ %>#}
+{#            <div class="mui-card-header"><p>无匹配用户</p></div>#}
+{#        <% } %>#}
+{#    </div>#}
+</script>
+<script>
+    mui.ajax('{{ ROOT_URL }}api/yellow/user/?username={{ username }}', {
+        dataType: 'json',
+        type: 'get',
+        timeout: 3000,
+        headers: {'Content-Type': 'application/json'},
+        success: function (user) {
+            template.config('escape', false);
+            document.getElementById('user_content').innerHTML = template('user_result', {'user': user});
+            //提示拨打电话
+            mui(".mui-table-view-cell").on('tap', '.mui-icon-phone', function () {
+                var u = navigator.userAgent;
+                var isAndroid = u.indexOf('Android') > -1 || u.indexOf('Adr') > -1;
+                if(isAndroid){
+                    var btnArray = ['拨打', '取消'];
+                    var phone = mui('.mui-table-view-cell #telephone')[0].innerHTML;
+                    mui.confirm('是否拨打' + phone + '?', '提示', btnArray, function (e) {
+                        if (e.index == 0) {
+                            //Android拨打
+                            window.location.href='tel:'+user.telephone;
+                        }
+                    });
+                }else{
+                    //IOS拨打
+                    window.location.href='tel:'+user.telephone;
+                }
+
+            });
+
+            mui(".mui-table-view-cell").on('tap', '.look_user_detail', function () {
+                var url = this.getAttribute('href');
+                mui.openWindow({
+                    url: url,
+                    id: url
+                });
+            });
+        },
+        error:function(xhr,type,errorThrown){
+            console.log(type);
+        }
+    });
+</script>
+{% endblock %}

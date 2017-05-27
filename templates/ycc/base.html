@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="http://oms.yihaodian.com.cn/zUI/res/css/z.main.css" rel="stylesheet" />
+    <link href="{{ STATIC_URL }}libs/font-awesome-4.1.0/css/font-awesome.min.css" rel="stylesheet"  />
+    <link href="{{ STATIC_URL }}libs/jsdifflib/diffview.css" rel="stylesheet"  />
+    <link href="{{ STATIC_URL }}ycc/css/ycc.css" rel="stylesheet"/>
+
+    <script src="{{ STATIC_URL }}libs/jquery/jquery-1.11.2.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap/js/bootstrap.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-confirmation/bootstrap-confirmation.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-ui/ui/jquery.ui.core.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-ui/ui/jquery.ui.widget.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-ui/ui/jquery.ui.datepicker.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/difflib.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/diffview.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/jsdiff.js"></script>
+    <script src="http://oms.yihaodian.com.cn/zUI/src/z.core.js"></script>
+    <script src="http://oms.yihaodian.com.cn/zUI/src/z.dialog.js"></script>
+    <script src="http://oms.yihaodian.com.cn/zUI/src/z.autoComplete.js"></script>
+    <script src="{{ STATIC_URL }}ycc/js/base.js"></script>
+
+
+    <style>
+        body {
+            padding-top: 30px;
+            padding-bottom: 30px;
+        }
+        table { table-layout: auto; }
+        table th, table td { overflow: hidden; }
+    </style>
+
+    <title>CMDB</title>
+
+</head>
+<body>
+
+<nav class="navbar navbar-inverse navbar-fixed-top">
+  <div class="container">
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="#">1号店云平台</a>
+    </div>
+    <div id="navbar" class="collapse navbar-collapse">
+      <ul class="nav navbar-nav">
+        <li class="dropdown active">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">IDC管理 <span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li class="dropdown-header">基础</li>
+            <li><a href="{{ ROOT_URL }}asset/model/">设备型号管理</a></li>
+            <li><a href="{{ ROOT_URL }}asset/rack/">机柜管理</a></li>
+            <li><a href="{{ ROOT_URL }}asset/ipsegment/">IP段管理</a></li>
+            <li role="separator" class="divider"></li>
+            <li class="dropdown-header">核心</li>
+            <li><a href="{{ ROOT_URL }}asset/">设备管理</a></li>
+          </ul>
+        </li>
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">装机管理 <span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="{{ ROOT_URL }}server/virtual/">宿主机/虚拟机管理</a></li>
+            <li><a href="{{ ROOT_URL }}server/install/">装机管理</a></li>
+          </ul>
+        </li>
+        <li class="dropdown">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">YCC <span class="caret"></span></a>
+          <ul class="dropdown-menu">
+            <li><a href="{{ ROOT_URL }}deploy/group/">配置组</a></li>
+            <li><a href="{{ ROOT_URL }}deploy/configinfo/">配置文件</a></li>
+            <li><a href="{{ ROOT_URL }}deploy/status/">配置组状态</a></li>
+            <li><a href="{{ ROOT_URL }}deploy/import/">导入配置文件</a></li>
+            <li><a href="{{ ROOT_URL }}deploy/copy/">复制配置</a></li>
+          </ul>
+        </li>
+      </ul>
+    </div><!--/.nav-collapse -->
+  </div>
+</nav>
+
+<div class="container">
+
+    {% block content %}Empty page{% endblock %}
+
+<div id="alert">
+</div>
+
+<div class="modal fade" id="listdataidstatus" tabindex="-1" role="dialog" aria-labelledby="listdataidstatusTitle" aria-hidden="true">
+<div class="modal-dialog" style="width:1000px;">
+<div class="modal-content">
+
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">
+        <span aria-hidden="true">&times;</span>
+        <span class="sr-only">Close</span>
+    </button>
+    <h4 class="modal-title" id="listdataidstatusTitle"></h4>
+  </div>
+  <div class="modal-body">
+
+    <table id="configinfo2">
+    </table>
+
+  </div>
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn btn-primary" id="submit3">提交</button>
+  </div>
+
+</div>
+</div>
+</div>
+
+
+<div class="modal fade" id="diff" tabindex="-1" role="dialog" aria-labelledby="diffTitle" aria-hidden="true">
+<div class="modal-dialog" style="width:1000px;">
+<div class="modal-content">
+
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">
+        <span aria-hidden="true">&times;</span>
+        <span class="sr-only">Close</span>
+    </button>
+    <h4 class="modal-title" id="diffTitle"></h4>
+  </div>
+  <div class="modal-body">
+
+  <div id="diffoutput" style="clear:both;width:100%;">
+  </div>
+
+  </div>
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">关闭</button>
+  </div>
+
+</div>
+</div>
+</div>
+
+
+</div>
+
+<p><hr></p>
+<div class="row">
+<p class="text-center">系统反馈：李志刚 RTX：lizhigang 邮箱：lizhigang@yihaodian.com </p>
+</div>
+
+</body>
+</html>

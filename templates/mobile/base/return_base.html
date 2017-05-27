@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!-- 内页右滑页的通用模板 -->
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>乐道App</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link href="{{ STATIC_URL }}mobile/libs/mui/css/mui.min.css" rel="stylesheet" />
+    <script src="{{ STATIC_URL }}mobile/js/app.js"></script>
+    <script src="{{ STATIC_URL }}mobile/libs/mui/js/mui.min.js"></script>
+</head>
+<body>
+    <!--header-->
+    <header class="mui-bar mui-bar-nav">
+        <a class="mui-action-back mui-icon mui-icon-left-nav mui-pull-left"></a>
+        <h1 class="mui-title">{% block title %}右滑菜单标题{% endblock %}</h1>
+    </header>
+    <!--content-->
+    <div class="mui-content">{% block content %}内页内容{% endblock %}</div>
+
+
+</body>
+<script type="text/javascript">
+    //MUI初始化与内页跳转
+    mui.init({
+        swipeBack:true //启用右滑关闭功能
+    });
+    mui(".mui-bar-tab").on("tap","a",function(e){
+		var newpage = this.getAttribute("href");
+		mui.openWindow({
+			url: newpage,
+			id:newpage
+		});
+	})
+
+</script>
+</html>

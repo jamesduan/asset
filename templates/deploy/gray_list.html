@@ -1,0 +1,704 @@
+{% extends "deploy/base.html" %}
+
+{% block title %}
+    <title>发布系统 - 1号店运维平台</title>
+{% endblock %}
+
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}deploy/css/global.css" />
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}deploy/css/deploy.css" />
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/jquery-ui/themes/base/jquery.ui.all.css" />
+    <link rel="stylesheet" type="text/css" href="http://oms.yihaodian.com.cn/itil/js/zUI/resources/css/zui.css" />
+{% endblock %}
+
+{% block js %}
+    <script src="{{ STATIC_URL }}deploy/js/date.format.js"></script>
+    <script src="http://oms.yihaodian.com.cn/itil/js/zUI/src/zUI.core.js"></script>
+    <script src="http://oms.yihaodian.com.cn/itil/js/zUI/src/zUI.dialog.js"></script>
+    <script src="http://oms.yihaodian.com.cn/itil/js/zUI/src/zUI.msgBox.js"></script>
+    <script src="http://oms.yihaodian.com.cn/itil/js/zUI/src/zUI.autocomplete.js"></script>
+    <script src="http://oms.yihaodian.com.cn/itil/js/zUI/src/zUI.page.js"></script>
+    <script src="{{ STATIC_URL }}deploy/js/jquery.json.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            //全局 app id 及错误提示框
+            var app_id = -1, msgBox, PagesExist;
+            //日期选择器默认，8:30分前为昨天，否则为今天，后台直接返回
+            var show_date = '';
+            //loading状态
+            var loading_ico = $('<div><img src="{{ STATIC_URL }}deploy/img/loading.gif" /></div>').css({
+                position: 'absolute',
+                zIndex: 9999,
+                top: '50%',
+                left: '50%'
+            });
+            var loading_mask = $('<div></div>').css({
+                height: Math.max($(window).height(), $('body').height()),
+                width: '100%',
+                position: 'absolute',
+                zIndex: 9999,
+                top: 0,
+                left: 0
+            });
+            var showLoading = function() {
+                endLoading();
+                loading_mask.appendTo('body');
+                loading_ico.appendTo('body');
+            };
+            var endLoading = function() {
+                loading_mask.remove();
+                loading_ico.remove();
+            };
+            var getValues = function(page) {
+                var o = {};
+                o.app_id = $('#s_app').find('option:selected').val();
+                o.deptype = $('#s_dept_type').find('option:selected').val();
+                o.depid = $('#s_depid').val();
+                o.status = $('#s_status').find('option:selected').val();
+                o.page = page;
+                o.uid = $('#s_trident').is(':checked') ? '523' : '';
+                o.format = 'json';
+                o.is_gray_release = 1;
+                return o;
+            };
+            //时间转换
+            var from_unixtime = function(timestamp) {
+                if (!timestamp) return '';
+                var date = new Date(parseInt(timestamp)*1000);
+                return date.format("yyyy-mm-dd HH:MM:ss")
+            }
+            var getListPages = function(o) {
+                if(PagesExist) PagesExist._destroy();
+                var e = $('#error_tips');
+                if(e.length) e.remove();
+                $.ajax({
+                    url: '/api/deploy/main/list/',
+                    type: 'get',
+                    async: false,
+                    data: o,
+                    headers: {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    },
+                    success: function(json) {
+                        showLoading();
+                        var opts = {
+                            renderTo: '#dept_pages',
+                            limit: 20,
+                            total: json.count,
+                            showPages: 5,
+                            callback: function(i) {
+                                getSearchResult(getValues(i));
+                            }
+                        };
+                        PagesExist = new zUI.page.Page(opts);
+                    },
+                    error: function(jqXHR) {
+                        alert(jqXHR.responseText);
+                    }
+                })
+            };
+            //加载搜索结果
+            var getSearchResult = function(o) {
+                $.ajax({
+                    url: '/api/deploy/main/list/',
+                    type: 'get',
+                    async: false,
+                    data: o,
+                    headers: {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    },
+                    success: function (json) {
+                        $('#dept_result').empty();
+                        if (!json.results.length) {
+                            errorTips('查询结果为空！请重新核实查询条件！');
+                        }
+                        endLoading();
+                        $.each(json.results, function (i, n) {
+                            var tr = $('<tr></tr>'), tds;
+                            tds = [
+                                '<td><a href="../detail?depid=' + n.depid + '" target="_blank">' + n.depid + '</a></td>',
+                                '<td><a href="http://trident.yihaodian.com.cn/secure/queryDeployRequestForm.jspa?issueKey=' + n.jiraid + '" target="_blank">' + n.jiraid + '</a></td>',
+                                '<td>' + (n.username ? n.username : '') + '</td>',
+                                '<td>' + n.site_name + '</td>',
+                                '<td>' + n.app_name + '</td>',
+                                '<td>' + n.deptype_name + '</td>',
+                                '<td>' + n.packtype_name + '</td>',
+                                '<td>' + (n.restart ? '是' : '否') + '</td>',
+                                '<td>' + (n.status != 6 ? n.status_name : '灰度 Step'+ n.gray_status) + '</td>',
+                                '<td class="action"></td>',
+                                '<td>' + from_unixtime(n.last_modified) + '</td>',
+                                '<td>' + from_unixtime(n.publishdatetimefrom) + '</td>',
+                                '<td>' + from_unixtime(n.publishdatetimeto) + '</td>',
+                                '<td>' + n.comment + '</td>',
+                            ].join('');
+                            tr.html(tds).appendTo('#dept_result');
+                            if($.inArray(n.status, [4, 6]) != -1){
+                                tr.find('.action').append('<button class="btn rollback" depid="'+ n.depid+'">回滚</button>');
+                                tr.find('.rollback').bind('click', function(){
+                                    var tpl = [
+                                        '<div class="rollback-check">',
+                                        '<p>',
+                                        '<label for="r_person">确认人</label>',
+                                        '<input type="text" class="input-text" id="r_person" /> <span style="color:#f00;">*</span>',
+                                        '</p>',
+                                        '<p>',
+                                        '<label for="r_reason">回滚原因</label>',
+                                        '<textarea id="r_reason" class="textarea"></textarea> <span style="color:#f00;">*</span>',
+                                        '</p>',
+                                        '<p>',
+                                        '<label for="r_category">回滚分类</label>',
+                                        '<select id="r_category">' +
+                                        '<option></option>' +
+                                        '<option value="0">Domain自身问题</option>' +
+                                        '<option value="1">发布系统问题</option>' +
+                                        '<option value="2">其他</option>' +
+                                        '</select> <span style="color:#f00;">*</span>',
+                                        '</p>',
+                                        '</div>'
+                                    ].join('');
+                                    new zUI.dialog.Dialog({
+                                        title:'回滚',
+                                        html:tpl,
+                                        height: 250,
+                                        width: 320,
+                                        button:{
+                                            ok: '回滚'
+                                        },
+                                        ok: function() {
+                                            var verifier = $.trim($('#r_person').val());
+                                            var reason = $.trim($('#r_reason').val());
+                                            var category = $.trim($('#r_category').val());
+                                            if(!verifier) {
+                                                alert('请输入确认人');
+                                                return false;
+                                            } else if(!reason) {
+                                                alert('请输入回滚原因');
+                                                return false;
+                                            } else if(!category) {
+                                                alert('请选择回滚分类');
+                                                return false;
+                                            } else {
+                                                $.ajax({
+                                                    url: '/api/deploy/rollback/reason/list/',
+                                                    type: 'post',
+                                                    async: false,
+                                                    data: {uid: "{{ UID }}", depid: n.depid, verifier: verifier, reason: reason, category: category},
+                                                    headers: {
+                                                        'Authorization': 'Token {{ API_TOKEN }}'
+                                                    },
+                                                    success: function(json) {
+                                                        $.ajax({
+                                                            url: '/api/deploy/rollback/',
+                                                            type: 'post',
+                                                            async: false,
+                                                            data: {depid: n.depid},
+                                                            headers: {
+                                                                'Authorization': 'Token {{ API_TOKEN }}'
+                                                            }
+                                                        });
+                                                        $('#dept_search').click();
+                                                    },
+                                                    error: function(jqXHR) {
+                                                        alert(jqXHR.responseText);
+                                                    }
+                                                });
+                                                return true;
+                                            }
+                                        }
+                                    });
+                                })
+                            };
+                            if(n.in_progress){
+                                tr.find('.action').append('<button class="btn lock_it" depid="'+ n.depid+'">解锁</button>');
+                                tr.find('.lock_it').bind('click', function(){
+                                    new zUI.dialog.Dialog({
+                                        title: '解锁',
+                                        html: '是否对 ' + n.depid + ' 进行解锁？',
+                                        button: {
+                                            ok: '解锁'
+                                        },
+                                        ok: function () {
+                                            $.ajax({
+                                                url: '/api/deploy/in_progress/'+ n.depid+'/',
+                                                type: 'put',
+                                                async: false,
+                                                data: {in_progress: false},
+                                                headers: {
+                                                    'Authorization': 'Token {{ API_TOKEN }}'
+                                                },
+                                                success: function(json) {
+                                                    $('#dept_search').click();
+                                                },
+                                                error: function(jqXHR) {
+                                                    alert(jqXHR.responseText);
+                                                }
+                                            })
+                                            return true;
+                                        }
+                                    })
+                                })
+                            };
+                        });
+                    },
+                    error: function(jqXHR) {
+                        alert(jqXHR.responseText);
+                    }
+                })
+            };
+            //判断发布时候出现错误
+            var hasError = function(id) {
+                var isError = 0;
+                $.post(_host + '/deploy/json/deploy_log/', {depid:id}, function(data) {
+                    var json = $.parseJSON(data);
+                    $.each(json.logs, function(i, n) {
+                        if(n.error == 1) {
+                            isError = 1;
+                        }
+                    });
+                    return isError;
+                });
+            };
+
+            //新建发布
+            var addNewSubmit = function() {
+                var tpl = [
+                    '<dl><dt>选择POOL</dt>',
+                    '<dd><select id="choose_pool_1"></select>',
+                    '<select id="choose_pool_2" style="width:200px;"></select></dd>',
+                    '</dl>',
+                    '<dl class="dl-pk-type"><dt>发布包类型</dt>',
+                    '<dd><select id="package"><option value="0">webapps</option></select></dd>',
+                    '</dl>',
+                    '<dl class="dl-sub"><dt>选择发布类型</dt>',
+                    '<dd><input type="radio" id="sub_type_1" name="sub_type" checked="checked" value="1" /><label for="sub_type_1">Stag2Product</label>',
+                    '<input type="radio" id="sub_type_2" name="sub_type" value="2" /><label for="sub_type_2">FTP2Product</label></dd>',
+                    '</dl>',
+                    '<dl class="dl-stag dl-show"><dt>Stag主机</dt>',
+                    '<select id="stag_host"></select></dd>',
+                    '</dl>',
+                    '<dl class="dl-ftp"><dt>FTP文件</dt>',
+                    '<dd><input type="text" id="datepicker" class="input-text" />',
+                    '<select id="ftp_file"></select></dd>',
+                    '</dl>',
+                    '<dl><dt>灰度策略</dt><dd><input type="text" id="gray_way" class="input-text" placeholder="如：10,50,80,100" /></dd></dl>',
+                    '<dl><dt>阶段间歇(分钟)</dt><dd><input type="text" id="gray_stage_interval" class="input-text" value="20" /></dd></dl>',
+                    '<dl><dt>应用恢复时长(秒/每台)</dt><dd><input type="text" id="recover_time" class="input-text" value="30" /></dd></dl>',
+                    '<dl><dt>集群剩余容量下限(%)</dt><dd><input type="text" id="colony_surplus" class="input-text" value="80" /></dd></dl>',
+                    '<dl class="dl-pk-type"><dt>阶段回滚判断方式</dt>',
+                    '<dd><select id="gray_rollback_type"><option value="1">人工判断回滚</option><option value="0">自动判断回滚</option></select></dd>',
+                    '</dl>',
+                    '<dl><dt>是否重启</dt>',
+                    '<dd><input type="checkbox" id="restart" checked="checked" /><label for="restart">重启</label></dd>',
+                    '</dl>',
+                    '<dl><dt>选择目标主机</dt>',
+                    //@new 2013-08-13 增加全选北京、上海
+                    '<dd><div id="target_list" class="target-list"></div>' +
+                    '<input type="checkbox" id="select_all" /><label for="select_all">全选</label><br />' +
+                    '<input type="checkbox" id="select_nh" /><label for="select_nh">南汇</label><br />' +
+                    '<input type="checkbox" id="select_jq" /><label for="select_jq">金桥</label></dd>',
+                    '</dl>',
+                    '<dl><dt>jiraid</dt><dd><input type="text" id="jira_id" class="input-text" /></dd></dl>',
+                    '<dl><dt>备注</dt><dd><input type="text" id="comment" class="input-text" /></dd></dl>',
+                    '<div id="msg_area"></div>'
+                ].join('');
+                var options = {
+                    cls: 'new-submit',
+                    title: '新建灰度发布',
+                    html: tpl,
+                    height: 530,
+                    width: 500,
+                    button: {
+                        ok: '新建'
+                    },
+                    ok: submitDeploy,
+                    unload: function() {
+                        app_id = -1;
+                    }
+                };
+                new zUI.dialog.Dialog(options);
+                select_binding('/api/cmdb/site/?format=json', 'choose_pool_1');
+                select_binding('/api/cmdb/app/?format=json&page_size=1000&site_id='+$('#choose_pool_1').val(), 'choose_pool_2');
+                $('#choose_pool_1').change(function(){
+                    select_binding('/api/cmdb/app/?format=json&page_size=1000&site_id='+$('#choose_pool_1').val(), 'choose_pool_2');
+                })
+                $('#choose_pool_2').change(function(){
+                    app_id = parseInt($('#choose_pool_2').val());
+                    getHosts();
+                    getFTPFiles();
+                })
+                //加入日期控件
+                $('#datepicker').datepicker({
+                    dateFormat: 'yy-mm-dd',
+                    onSelect: function() {
+                        getFTPFiles();
+                    }
+                }).datepicker('setDate', show_date);
+                //发布类型切换
+                $('.dl-sub').find('input').each(function(i) {
+                    $(this).click(function() {
+                        if(!i) {
+                            $('.dl-ftp').removeClass('dl-show');
+                            $('.dl-stag').addClass('dl-show');
+                        } else {
+                            $('.dl-stag').removeClass('dl-show');
+                            $('.dl-ftp').addClass('dl-show');
+                            getFTPFiles();
+                        }
+                    });
+                });
+                //发布包类型选择
+                $('.dl-pk-type').bind('change', function() {
+                    //var pt = $('.dl-pk-type').find('option:selected').val();
+                    //if(pt==3) {
+                    //    getHosts(551);
+                    //}else{
+                    //    getHosts(app_id);
+                    //}
+                    getHosts();
+                    getFTPFiles();
+
+                });
+                //全选 & 取消全选
+                $('#select_all').bind('click', function() {
+                    var _this = $(this);
+                    $('#target_list').find('input').each(function() {
+                        if(!_this.prop('checked')) {
+                            $(this).removeAttr('checked');
+                        } else {
+                            $(this).prop('checked', 'checked');
+                        }
+                    });
+                });
+                //@new 2013-08-13 全选北京/上海
+                $('#select_nh').bind('click', function() {
+                    var _this = $(this);
+                    $('#target_list').find('input[data-idc="DCB"]').each(function() {
+                        if(!_this.prop('checked')) {
+                            $(this).removeAttr('checked');
+                        } else {
+                            $(this).prop('checked', 'checked');
+                        }
+                    });
+                });
+                $('#select_jq').bind('click', function() {
+                    var _this = $(this);
+                    $('#target_list').find('input[data-idc="DCD"]').each(function() {
+                        if(!_this.prop('checked')) {
+                            $(this).removeAttr('checked');
+                        } else {
+                            $(this).prop('checked', 'checked');
+                        }
+                    });
+                });
+            };
+            //加载服务器列表
+            var getHosts = function() {
+                var pt = $('.dl-pk-type').find('option:selected').val();
+                var new_app_id = (pt==3) ? 551 : app_id
+                if(msgBox) {
+                    msgBox._destroy();
+                }
+                var s = $('#select_all');
+                if(s.prop('checked')) {
+                    s.removeAttr('checked');
+                }
+                $.ajax({
+                    url: '/api/server/',
+                    type: 'get',
+                    async: false,
+                    data: {format: 'json', app_id: new_app_id, page_size: 1000},
+                    headers: {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    },
+                    success: function(json) {
+                        var ul = $('<ul></ul>');
+                        $('#stag_host').empty();
+                        $.each(json.results, function(index, value) {
+                            if (value.server_env_id==2)
+                                $('<li><input type="checkbox" data-idc="' + value.room + '" value="' + value.ip + '" /><label>' + value.ip + '</label></li>').appendTo(ul);
+                            else if(value.server_env_id==1 && $.inArray(value.room, ['DCB', 'DCD']) != -1){
+                                var network_segment = value.ip.split('.').slice(0, 2).join('.');
+                                if(network_segment == '{{ STAGING_NETWORK_SEGMENT.DCB }}')
+                                    $('<option value="' + value.ip + '">' + value.ip + '</option>').appendTo('#stag_host');
+                            }
+                        });
+                        $('#target_list').html(ul);
+                    },
+                    error: function(jqXHR) {
+                        alert(jqXHR.responseText);
+                    }
+                })
+            };
+            //加载FTP文件列表
+            var getFTPFiles = function() {
+                if(msgBox) {
+                    msgBox._destroy();
+                }
+                var packtype = $('.dl-pk-type').find('option:selected').val();
+                var fdate = parseInt($('#datepicker').val().replace(/-/g, ''));
+                if(app_id != -1 && $('#sub_type_2').prop('checked')) {
+                    $.ajax({
+                        url: '/api/deploy/ftp/list/',
+                        type: 'get',
+                        async: false,
+                        data: {format: 'json', app_id: app_id, packtype: packtype, date: fdate},
+                        headers: {
+                            'Authorization': 'Token {{ API_TOKEN }}'
+                        },
+                        success: function(json) {
+                            $('#ftp_file').empty();
+                            $('<option> </option>').appendTo('#ftp_file');
+                            $.each(json, function(index, value) {
+                                $('<option value="' + value + '">' + value + '</option>').attr('title', value).appendTo('#ftp_file');
+                            });
+                        },
+                        error: function(jqXHR) {
+                            //alert(jqXHR.responseText);
+                        }
+                    })
+                }
+            };
+            //错误提示框
+            var showErrorMsg = function(msg) {
+                if(msgBox) {
+                    msgBox._destroy();
+                }
+                var opts = {
+                    renderTo: '#msg_area',
+                    msgType: 'error',
+                    text: msg
+                };
+                msgBox = new zUI.msgBox.MsgBox(opts);
+            };
+            var errorTips = function(msg) {
+                var e = $('#error_tips');
+                if(e.length) {
+                    e.remove();
+                }
+                endLoading();
+                $('<section id="error_tips"></section>').insertAfter('.search-condition').css('margin-bottom', '15px');
+                var opts = {
+                    renderTo: '#error_tips',
+                    msgType: 'error',
+                    text: msg,
+                    closable: true,
+                    unload: function() {
+                        e.remove();
+                    }
+                };
+                new zUI.msgBox.MsgBox(opts);
+            };
+            //提交表单
+            var submitDeploy = function() {
+                //提交验证
+                var _switch = true;
+                var pack_type = $('.dl-pk-type').find('option:selected').val();
+                var dept_type = $('.dl-sub').find('input:checked').val();
+                var stag_host = $('#stag_host').find('option:selected').val();
+                var ftp_file = $('#ftp_file').find('option:selected').val();
+                var restart = $('#restart').prop('checked') ? 1 : 0;
+                var gray_val = $('#gray_way').val();
+                var gray_stage_interval = $('#gray_stage_interval').val();
+                var colony_surplus = $('#colony_surplus').val();
+                var recover_time = $('#recover_time').val();
+                var gray_rollback_type = $('#gray_rollback_type').find('option:selected').val();
+                var target_list = $('#target_list'), target_arr = [], targets;
+                //@new 2014-04-30 增加直接输入主机
+                var input_ip = $.trim($('#input_ip').val());
+                target_list.find('input').each(function() {
+                    if($(this).prop('checked')) {
+                        target_arr.push($(this).val());
+                    }
+                });
+                if(input_ip) target_arr.push(input_ip);
+                targets = target_arr.join(',');
+                var jiraid = $.trim($('#jira_id').val());
+                var comment = $.trim($('#comment').val());
+                if(!$('#choose_pool_1').val()) {
+                    showErrorMsg('请选择POOL！');
+                    _switch = false;
+                } else if(app_id == -1) {
+                    showErrorMsg('请选择App！');
+                    _switch = false;
+                } else if(!target_list.find('input:checked').length && !input_ip) {
+                    showErrorMsg('请选择或输入目标主机！');
+                    _switch = false;
+                } else if(!stag_host && !ftp_file) {
+                    if(dept_type == 1) {
+                        showErrorMsg('该POOL下没有Stag主机！');
+                    }
+                    _switch = false;
+                } else if(!/^(\d+,)+100$/.test(gray_val)) {
+                    showErrorMsg('灰度策略格式有误！（用英文逗号隔开数字，且最后一个数字必须是100）');
+                    _switch = false;
+                } else if(!/^\d+$/.test(gray_stage_interval)) {
+                    showErrorMsg('阶段间歇必须是数字！');
+                    _switch = false;
+                } else if(!/^\d+$/.test(colony_surplus)) {
+                    showErrorMsg('集群剩余容量下限必须是数字！');
+                    _switch = false;
+                } else if(!/^\d+$/.test(recover_time)) {
+                    showErrorMsg('应用恢复时长必须是数字！');
+                    _switch = false;
+                } else {
+                    var o = [{
+                        'uid': "{{ UID }}",
+                        'pubtype': 1,
+                        'app_id': app_id,
+                        'packtype': parseInt(pack_type),
+                        'deptype': parseInt(dept_type),
+                        'comment': comment,
+                        'ftpath': ftp_file ? ftp_file : '',
+                        'jiraid': jiraid,
+                        'restart': restart,
+                        'publishDateTimeFrom': 0,
+                        'publishDateTimeTo': 0,
+                        'taskid': 12345,
+                        'srcs': stag_host,
+                        'dets': targets,
+                        'grayDeployFlag': 1,
+                        'grayDetailInfo': {
+                            grayPercent: gray_val,
+                            stageInterval: gray_stage_interval,
+                            colonySurplus: colony_surplus,
+                            recoverTime: recover_time,
+                            rollbackType: gray_rollback_type
+                        }
+                    }];
+                    $.ajax({
+                        url: '/api/deploy/muti_save_deploy_v2/',
+                        type: 'post',
+                        async: false,
+                        headers: {
+                            'Authorization': 'Token {{ API_TOKEN }}'
+                        },
+                        data: {data: $.toJSON(o)},
+                        success: function(json) {
+                            msg = '新建灰度发布成功';
+                            var opts = {
+                                msgType: 'success',
+                                text: msg,
+                                width: msg.length * 12 + 60,
+                                autoShow: false,
+                                fade: {
+                                    disabled: false,
+                                    delay: 2500
+                                },
+                                float: true,
+                                unload: function() {
+                                    $('#dept_search').click();
+                                }
+                            };
+                            new zUI.msgBox.MsgBox(opts);
+                        },
+                        error: function(jqXHR) {
+                            alert(jqXHR.responseText);
+                        }
+                    })
+                }
+                return _switch;
+            };
+
+            var select_binding = function(url, id) {
+                $.ajax({
+                    url: url,
+                    type: 'get',
+                    async: false,
+                    headers: {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    },
+                    success: function(json) {
+                        $('#' + id).html('<option value=""></option>')
+                        $.each(json.results, function(index, value) {
+                            $("<option></option>")
+                                    .val(value.id)
+                                    .text(value.name)
+                                    .appendTo($('#' + id));
+                        })
+                    },
+                    error: function(jqXHR) {
+                        alert(jqXHR.responseText);
+                    }
+                })
+            }
+
+            $(function() {
+                //清空value值
+                $('#s_depid').val('');
+                //强制默认状态为待发布（修复firefox）
+                var default_status = $('#s_status');
+                default_status.find('option:selected').removeAttr();
+                default_status.find('option').eq(1).attr('selected', 'selected');
+                select_binding('/api/cmdb/site/?format=json', 's_site');
+                select_binding('/api/cmdb/app/?format=json&page_size=1000&site_id='+$('#s_site').val(), 's_app');
+                $('#s_site').change(function(){
+                    select_binding('/api/cmdb/app/?format=json&page_size=1000&site_id='+$('#s_site').val(), 's_app');
+                })
+
+                $('#add_submit').bind('click', function() {
+                    addNewSubmit();
+                });
+                $('#dept_search').bind('click', function() {
+                    //var start = 0, limit = 20;//list起始数，每页显示list条数
+                    //getListPages(getValues(start, limit));
+                    getListPages(getValues(1));
+                }).click();
+            });
+        })
+    </script>
+{% endblock %}
+
+{% block body %}
+    <section class="wrapper">
+        <header><button id="add_submit" class="btn" >+ 新建发布</button> <!--<a id="add_batch" href="javascript:void(0);">批量发布</a> <a id="rollback_batch" href="javascript:void(0);">批量回滚</a>--></header>
+        <section class="search-condition">
+            <label for="s_site">站点</label>
+            <select id="s_site"></select>
+            <label for="s_app">应用</label>
+            <select id="s_app"></select>
+            <label for="s_dept_type">发布类型</label>
+            <select id="s_dept_type">
+                <option selected="selected"></option>
+                <option value="1">Stag2Product</option>
+                <option value="2">Ftp2Product</option>
+            </select>
+            <label for="s_depid">发布号</label>
+            <input type="text" id="s_depid" class="zui-input-text" />
+            <label for="s_status">状态</label>
+            <select id="s_status">
+                <option></option>
+                <option value="1,2,3" selected="selected">待发布</option>
+                <option value="4">发布成功</option>
+                <option value="5">已回滚</option>
+                <option value="7">已作废</option>
+            </select>
+            <input id="s_trident" type="checkbox" />
+            <label for="s_trident">是否trident</label>
+            <button id="dept_search" class="btn">查询</button>
+        </section>
+        <table class="commons-grid" style="width: 120%">
+            <thead>
+            <tr>
+                <!--<th style="width:15px;"><label for="check_all"><input id="check_all" type="checkbox" /></label></th>-->
+                <th style="width:150px;">发布号</th>
+                <th style="width:100px;">Trident ID</th>
+                <th style="width:80px;">操作者</th>
+                <th style="width:90px;">站点</th>
+                <th style="width:120px;">应用</th>
+                <th style="width:100px;">发布类型</th>
+                <th style="width:60px;">包类型</th>
+                <th style="width:60px;">是否重启</th>
+                <th style="width:100px;">发布状态</th>
+                <th style="width:120px;">操作</th>
+                <th style="width:140px;">最后操作时间</th>
+                <th style="width:140px;">发布开始时间</th>
+                <th style="width:140px;">发布结束时间</th>
+                <th style="width:50px;">备注</th>
+            </tr>
+            </thead>
+            <tbody id="dept_result">
+            </tbody>
+        </table>
+        <section id="dept_pages" class="dept-pages"></section>
+    </section>
+{% endblock %}

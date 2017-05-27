@@ -1,0 +1,147 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block title %} 配置组订阅列表 {% endblock %}
+
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+
+<div class="inner-h1">配置组订阅列表</div>
+
+<div class="inner-box inner-list-box">
+<div id="toolbar">
+    <div class="form-inline" role="form">
+        <form id="multi_select">
+            <select name="status_code" id="status_code_id" class="form-control update_api_url">
+                <option value="">选择状态</option>
+                <option value=" ">所有状态</option>
+                {% for status in statuscode_list %}
+                    <option value="{{ status.status_code }}">{{ status.status_code }}</option>
+                {% endfor %}
+            </select>
+            <select name="update_time" id="update_time_id" class="form-control update_api_url">
+                <option value="">选择时间</option>
+                <option value=" ">-------</option>
+                {% for time in updatetime_list %}
+                    <option value="{{ time.id }}">{{ time.value }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+</div>
+<table id="subscribelog_list">
+</table>
+</div>
+<script type="application/javascript">
+var form = $("#multi_select");
+$(".update_api_url").change(function() {
+    var api_url = '{{ CMDBAPI_URL }}ycc/subscribelog/?';
+    var params = ['format=json'];
+    if(typeof form != 'undefined') {
+        var arr = form.serializeArray();
+        $.each(arr, function(i, field){
+            if (field.value !="" && field.value != " ") {
+                params.push(field.name + '=' + field.value)
+            }
+        });
+    }
+    api_url = api_url + params.join('&');
+
+    $('#subscribelog_list').bootstrapTable('refresh', {
+        url: api_url
+    });
+});
+$(document).ready(function() {
+$('#status_code_id, #update_time_id').combobox();
+
+$('#subscribelog_list').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}ycc/subscribelog/?format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'ip',
+                title: '主机IP'
+            },
+            {
+                field: 'app_name',
+                title: '站点/Pool',
+                formatter: GetSiteAndPoolFormatter
+            },
+            {
+                field: 'group_id',
+                title: '配置组ID'
+            },
+            {
+                field: 'config_file',
+                title: '配置文件',
+            },
+            {
+                field: 'status_code',
+                title: '状态码'
+            },
+            {
+                field: 'update_time',
+                title: '更新时间',
+                formatter: updateTimeFormatter
+            }
+{#            {#}
+{#                field: 'operate',#}
+{#                title: '操作',#}
+{#                align: 'center',#}
+{#                formatter: operateFormatter#}
+{#            }#}
+        ],
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 20,
+        pageList: [10,20,50,100,500],
+        clickToSelect: true,
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        showExport: true,
+        cache: false
+    });
+
+    function updateTimeFormatter(value, row, index) {
+        var time = value.toString();
+        return time.substring(0,4)+ '-' + time.substring(4,6) + '-' + time.substring(6,8);
+    };
+
+    function GetSiteAndPoolFormatter(value, row, index) {
+        if(row.app_name!=null && row.site_name !=null){
+            return row.site_name + '/' + row.app_name;
+        }else{
+            return ' / ';
+        }
+
+    };
+
+});
+</script>
+{% endblock %}

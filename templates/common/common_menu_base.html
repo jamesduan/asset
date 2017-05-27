@@ -1,0 +1,104 @@
+{% extends "common/base.html" %}
+
+{% block title %} {{ WEB_MENU.function_menu.title}} {% endblock %}
+
+{% block my_li %}
+
+    {%  for menu_name,menu_content in WEB_MENU.function_menu.body.items %}
+{#            <p>{{menu_name}}":"{{ menu_content.flag }}:{{ menu_content.value }}</p>#}
+        {% if menu_content.flag  %}
+            <li class="dropdown">
+                <a class="dropdown-toggle" data-toggle="dropdown" href="#">{{menu_name}}</a>
+                <section class="dropdown-menu menu3" role="menu">
+                   <ul class="item">
+                       {% for child_mn,child_mc in  menu_content.value.items %}
+                           {% if child_mc.flag %}
+                               <li>
+                                   <ul>
+                                       <li class="title">{{ child_mn }}</li>
+                                       {% for cc_mn, cc_mc in  child_mc.value.items %}
+                                           <li><a href="{{ cc_mc.value }}"
+                                           {% if cc_mc.new_tab == 0 %}
+                                               >
+                                           {% else %}
+                                                target="_blank">
+                                           {% endif %}
+                                           {{cc_mn}}</a></li>
+                                       {% endfor %}
+                                   </ul>
+                                </li>
+                           {% else %}
+                                <li><a href="{{ child_mc.value }}"
+                               {% if child_mc.new_tab == 0 %}
+                                    >
+                               {% else %}
+                                    target="_blank">
+                               {% endif %}
+                               {{ child_mn }}</a></li>
+                           {% endif %}
+                       {% endfor %}
+                   </ul>
+                </section>
+            </li>
+        {% else %}
+            <li><a href="{{ menu_content.value }}"
+            {% if menu_content.new_tab == 0 %}
+                 >
+            {% else %}
+                target="_blank">
+            {% endif %}
+            {{ menu_name }}</a></li>
+       {% endif %}
+    {%  endfor %}
+
+{% endblock %}
+
+
+{% block breadcrumb %}
+  {% if breadcrumb %}
+    <script>
+  	  var breadcrumb_arr = new Array();
+  	  
+  	  {% for b in breadcrumb %}
+        // console.log("{{b}}")
+
+  	  	var b_o = new Object();
+  	 	 b_o.name = "{{ b.name }}";
+  		 {% if b.url == "" %}
+  		    b_o.url = "";
+  		 {% else %}
+  	 	    b_o.url = "{{b.url}}";
+  		 {% endif %}
+       {% if b.doc_url %}
+          b_o.doc_url = "{{b.doc_url}}";
+       {% endif %}
+  	 	 breadcrumb_arr.push(b_o);
+  	  {% endfor %}
+
+  	  var tpl = "";
+  	  for(var i=0; i < breadcrumb_arr.length-1 ; i++) {
+  		  if(breadcrumb_arr[i].url == "") {
+  			  tpl += '<span>' + breadcrumb_arr[i].name + '</span>>';
+  		  } else {
+  			  tpl += "<a href="+ breadcrumb_arr[i].url+">" + breadcrumb_arr[i].name + "</a>>";
+  		  }
+  	  }
+      var current_nav = breadcrumb_arr.pop();
+
+  	  tpl += '<span class="act">' + current_nav.name + '</span>';
+      // console.log(current_nav);
+      var doc_str = '';
+      if (current_nav.doc_url) {
+        doc_str = '<div class="pull-right"><a href="' + current_nav.doc_url + '"><i class="glyphicon glyphicon-link"></i>帮助文档</a></div>';
+      }
+  	  var html = '<div class="pull-left">' + tpl + '</div>' + doc_str;
+
+  	  window.onload = function() {
+  	  	document.getElementById('breadcrumb').innerHTML = html;
+  	  };
+    </script>
+    <!--内页的标题-->
+    <div class="inner-h2 clearfix" id="breadcrumb">
+    </div>
+  {% endif %}
+{% endblock %}

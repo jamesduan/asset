@@ -1,0 +1,1698 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %} 事故详情 {% endblock %}
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/jquery-ui/themes/base/minified/jquery-ui.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap3-editable/css/bootstrap-editable.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-sweetalert/sweetalert.css" rel="stylesheet"/>
+
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery-json/js/jquery.json.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery-ui/ui/jquery-ui.custom.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap3-editable/js/bootstrap-editable.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/extensions/editable/bootstrap-table-editable.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-sweetalert/sweetalert.min.js"></script>
+
+<style>
+    .red{ color:#ff0000;}
+    .form-tips{background-color:#EFEFE9;border: solid #E3E3E3; margin-top: -20px;}
+    .form-tips {line-height:22px; font-size:12px;}
+    .form-tips span{color:#EDA400;}
+    .panel-head{height:20px;}
+    .glyphicon-remove{color:red;}
+    .fixed-table-container tbody .selected td {
+        background-color: #C7CCD5;
+    }
+
+    .fixed-table-container tbody tr:hover td{
+        background-color: #C7CCD5;
+    }
+    .ui-autocomplete {
+        display:block;
+        z-index:99999;
+    }
+    .dancontainer{ padding:0px;}
+    .red{ color:#ff0000;}
+    .panel-body{min-height:200px;}
+    .scroll-nav li a{color:#000; border-radius:0px;cursor:pointer;}
+    .scroll-nav li.active a,.scroll-nav li.active a:hover,.scroll-nav li a:focus{ background-color:#666; color:#fff;  }
+    .scroll-nav ul{ position:fixed; top:300px; left:0px; border:1px solid #ccc; border-radius:4px;}
+
+    .sa-confirm-button-container .btn-primary{
+        background-color: #01a992;
+    }
+    .form-tips{padding:5px;background-color:#EFEFE9;border:1px solid #E3E3E3;margin-top: 5px;}
+    .form-tips p{line-height:15px; font-size:12px;}
+    .form-tips p span{color:#EDA400;}
+</style>
+
+<div id="content">
+<nav id="myScrollspy" class="scroll-nav">
+    <ul class="nav nav-pills nav-stacked">
+        <li class="active"><a>基本信息</a></li>
+        <li><a>详情信息</a></li>
+        <li><a>改进措施</a></li>
+        <li><a>处罚信息</a></li>
+   </ul>
+</nav>
+
+<div class="panel-group" id="accordion"  style="padding-left:126px;padding-right: 40px; margin-top: 10px;">
+
+    <div class="panel panel-info" id="basicinfo">
+        <div class="panel-heading">
+            <div class="row panel-head">
+                <div class="panel-title col-sm-11 chevron_control">
+                    <a data-toggle="collapse" data-target="#collapseOne">
+                        <i class="glyphicon glyphicon-chevron-up"></i><strong>基本信息</strong>
+                    </a>
+                </div>
+                <div class="col-sm-1"><div class="col-sm-offset-6"><button id="basic_btn" class="btn btn-info btn-sm">编辑</button></div></div>
+            </div>
+            <h4 class="panel-title"></h4>
+        </div>
+        <div id="collapseOne" class="panel-collapse collapse in">
+            <div class="panel-body">
+                <form id="basicForm" class="form-horizontal" role="form" method="POST" onkeydown="if(event.keyCode==13){return false;}">
+                    <div class="col-sm-11">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label"><span class="label red">*</span>事故名称：</label>
+                            <div class="col-sm-10">
+                                <input name="title" id="title" value="{{ accident.title }}" class="form-control" type="text">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label"><span class="label red">*</span>事故编号：</label>
+                            <div class="col-sm-4">
+                                <input name="accidentid" id="accidentid" value="{{ accident.accidentid }}" class="form-control" type="text">
+                            </div>
+                            <label class="col-sm-2 control-label"><span class="label red">*</span>值班经理：</label>
+                            <div class="col-sm-4">
+                                <input name="duty_manager_name" id="duty_manager_name" value="{{ accident.duty_manager_name }}" class="form-control" type="text">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label"><span class="label red">*</span>发生时间：</label>
+                            <div class="col-sm-4">
+                                <input name="happened_time" id="happened_time" class="form-control selectTime" type="text">
+                            </div>
+                            <label class="col-sm-2 control-label">恢复时间：</label>
+                            <div class="col-sm-4">
+                                <input name="finish_time" id="finish_time" class="form-control selectTime" type="text">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">影响时长：</label>
+                            <div class="col-sm-4">
+                                <input name="time_length" id="time_length" value="{{ accident.time_length }}" class="form-control" type="text">
+                            </div>
+                            <label class="col-sm-2 control-label"><span class="label red">*</span>事故等级：</label>
+                            <div class="col-sm-4">
+                                <select name="level" id="level" class="form-control selectpicker">
+                                     <option value="0">未定义</option>
+                                     <option value="1">S1</option>
+                                     <option value="2">S2</option>
+                                     <option value="3">S3</option>
+                                     <option value="4">S4</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label"><span class="label red">*</span>报告人：</label>
+                            <div class="col-sm-4">
+                                <input name="find_user_name" id="find_user_name" value="{{ accident.find_user_name }}" class="form-control" type="text" placeholder="填写报告人域控账号">
+                            </div>
+                            <label class="col-sm-2 control-label">报告部门：</label>
+                            <div class="col-sm-4">
+                                <input name="find_user_department" id="find_user_department" value="{{ accident.find_user_department }}" class="form-control" type="text">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class=" col-sm-2 control-label"><span class="label red">*</span>系统类型：</label>
+                            <div class="col-sm-4">
+                                {% if accident.is_online == 1 %}
+                                    <label class="radio-inline"><input name="is_online" id="is_online1" value="1" type="radio" checked="checked">电商系统</label>
+                                    <label class="radio-inline"><input name="is_online" id="is_online0" value="2" type="radio">办公系统</label>
+                                {% elif accident.is_online == 2%}
+                                    <label class="radio-inline"><input name="is_online" id="is_online1" value="1" type="radio">电商系统</label>
+                                    <label class="radio-inline"><input name="is_online" id="is_online0" value="2" type="radio" checked="checked" >办公系统</label>
+                                {% else %}
+                                    <label class="radio-inline"><input name="is_online" id="is_online1" value="1" type="radio">电商系统</label>
+                                    <label class="radio-inline"><input name="is_online" id="is_online0" value="2" type="radio">办公系统</label>
+                                {% endif %}
+                            </div>
+                            <label class="col-sm-2 control-label">调校系数：</label>
+                            <div class="col-sm-4">
+                                <input name="health" id="health" value="{{ accident.health }}" defaultValue="{{ accident.health }}" class="form-control" type="text" placeholder="填写调校系数(默认1，大于0小于等于1)">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">责任部门：</label>
+                            <div id="duty_dept_select" class="col-sm-4">
+                                <select name="duty_dept_id[]" id="duty_dept_id" class="form-control selectpicker" multiple>
+{#                                    <option value="">请选择</option>#}
+                                    {%  for item in dept_level2 %}
+                                        <option value="{{ item.id }}">{{ item.deptname }}</option>
+                                    {%  endfor %}
+                                    {% for dm in other_domain_list %}
+                                        <option value="{{ dm.deptid }}">{{ dm.deptname }}</option>
+                                    {%  endfor %}
+                                </select>
+                            </div>
+                            <label class="col-sm-2 control-label">责任Domain：</label>
+                            <div id="duty_domain_select" class="col-sm-4">
+                                <select name="duty_domains[]" id="duty_domains" class="form-control selectpicker" multiple>
+                                    {%  for item in domain_list %}
+                                        <option value="{{ item.id }}">{{ item.domainname | safe }}</option>
+                                    {%  endfor %}
+                                    {% for dm in other_domain_list %}
+                                        <option value="{{ dm.id }}">{{ dm.domainname }}</option>
+                                    {%  endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">责任人：</label>
+                            <div class="col-sm-8">
+                                <input name="duty_users" id="duty_users" value="{{ accident.duty_users }}" class="form-control" type="text" placeholder="填写责任人域控账号，多个用逗号做分隔">
+                                <div class="form-tips">
+                                    <p><span>必填项：</span>
+                                        恢复时间、事故等级、系统类型、责任Domain、责任人（第三方责任人可不填）
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group basic-footer" hidden>
+                            <div class="col-sm-offset-2 col-sm-10">
+                                <button id="basic_reset" type="button" class="btn btn-green">取消</button>
+                                <button id="basic_save" type="submit" class="btn btn-green">保存</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div><!--panel end-->
+
+    <div class="panel panel-success" id="detailinfo">
+        <div class="panel-heading">
+            <div class="row panel-head">
+                <div class="panel-title col-sm-11 chevron_control">
+                    <a data-toggle="collapse" data-target="#collapseTwo">
+                        <i class="glyphicon glyphicon-chevron-up"></i><strong>详细信息</strong>
+                    </a>
+                </div>
+                <div class="col-sm-1"><div class="col-sm-offset-6"><button id="detail_btn" class="btn btn-success btn-sm">编辑</button></div></div>
+            </div>
+            <h4 class="panel-title"></h4>
+        </div>
+        <div id="collapseTwo" class="panel-collapse collapse in">
+            <div class="panel-body">
+                <form id="detailForm" class="form-horizontal" role="form" method="POST">
+                    <div class="col-sm-11">
+                        <div class="form-group">
+                            <label class=" col-sm-2 control-label"><span class="label red">*</span>事故影响：</label>
+                            <div class="col-sm-10">
+                                <textarea name="affect" id="affect" class="form-control" rows="2" placeholder="事故影响中应包含事故引起的订单下跌率、损失金额、客户投诉件数、不可用期间的用户占比、事故期间的业务健康度等具体内容，否则不予调校。">{{ accident.affect }}</textarea>
+                                <div class="form-tips">
+                                    <p><span>Tips：</span>
+                                        事故影响中应包含事故引起的订单下跌率、损失金额、客户投诉件数、不可用期间的用户占比、事故期间的业务健康度等具体内容，否则不予调校。
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+{#                        <div class="form-group">#}
+{#                            <label class=" col-sm-2 control-label"><span class="label red">*</span>影响可用：</label>#}
+{#                            <div class="col-sm-4">#}
+{#                                {% if accident.is_available %}#}
+{#                                    <label class="radio-inline"><input name="is_available" id="is_available1" value="1" type="radio" checked="checked">是</label>#}
+{#                                    <label class="radio-inline"><input name="is_available" id="is_available0" value="0" type="radio">否</label>#}
+{#                                {% else %}#}
+{#                                    <label class="radio-inline"><input name="is_available" id="is_available1" value="1" type="radio">是</label>#}
+{#                                    <label class="radio-inline"><input name="is_available" id="is_available0" value="0" type="radio" checked="checked" >否</label>#}
+{#                                {% endif %}#}
+{#                            </div>#}
+{#                        </div>#}
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label"><span class="label red">*</span>事故类型：</label>
+                            <div class="col-sm-4">
+                                <select name="type__ptype__id" id="type__ptype__id" class="form-control selectpicker">
+                                    <option value="0">请选择</option>
+                                    {%  for item in accident_parent_type %}
+                                        <option value="{{ item.id }}">{{ item.name }}</option>
+                                    {%  endfor %}
+                                </select>
+                            </div>
+                            <label class="col-sm-2 control-label"><span class="label red">*</span>根源分类：</label>
+                            <div class="col-sm-4">
+                                <select name="type_id" id="type_id" class="form-control selectpicker">
+                                    <option value="0">请选择</option>
+                                    {%  for item in accident_type %}
+                                        <option value="{{ item.id }}">{{ item.name }}</option>
+                                    {%  endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class=" col-sm-2 control-label"><span class="label red">*</span>事故原因：</label>
+                            <div class="col-sm-10">
+                                <textarea name="reason" id="reason" class="form-control" rows="4" placeholder="描述事故发生的原因">{{ accident.reason }}</textarea>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-2">
+                                <div class="form-group">
+                                    <label class=" col-sm-12 control-label"><span class="label red">*</span>处理经过：</label>
+                                </div>
+                                <div class="form-group">
+                                    <div class="col-sm-12 control-label btn-group">
+                                        <button type="button" class="btn btn-default"  style="float:none;" id="get_process" name="get_process">详细经过</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-10">
+                                <textarea name="process" id="process" class="form-control" rows="6" placeholder="描述事故处理经过">{{ accident.process }}</textarea>
+                            </div>
+                        </div>
+                        <div class="form-group detail-footer" hidden>
+                            <div class="col-sm-offset-2 col-sm-10">
+                                <button id="detail_reset" type="reset" class="btn btn-green">取消</button>
+                                <button id="detail_save" type="submit" class="btn btn-green">保存</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div><!--panel end-->
+
+    <div class="panel panel-warning" id="postmortem">
+        <div class="panel-heading">
+            <div class="row panel-head">
+                <div class="panel-title col-sm-11 chevron_control">
+                    <a data-toggle="collapse" data-target="#collapseThree">
+                        <i class="glyphicon glyphicon-chevron-up"></i><strong>改进措施</strong>
+                    </a>
+                </div>
+                <div class="col-sm-1"><div class="col-sm-offset-6"><button id="addAction" class="btn btn-warning btn-sm">新增</button></div></div>
+            </div>
+            <h4 class="panel-title"></h4>
+        </div>
+        <div id="collapseThree" class="panel-collapse collapse in">
+            <div class="panel-body" id="postmortemForm">
+                <div class="col-sm-1">
+                </div>
+                <div class="col-sm-10">
+                        <table id="accident_actions"></table>
+                </div>
+            </div>
+        </div>
+    </div><!--panel end-->
+
+    <div class="panel panel-danger" id="punish">
+        <div class="panel-heading">
+            <div class="row panel-head">
+                <div class="panel-title col-sm-11 chevron_control">
+                    <a data-toggle="collapse" data-target="#collapseFour"><i class="glyphicon glyphicon-chevron-up"></i><strong>处罚信息</strong></a>
+                </div>
+                <div class="col-sm-1"><div class="col-sm-offset-6"><button id="punish_btn" class="btn btn-danger btn-sm">编辑</button></div></div>
+            </div>
+            <h4 class="panel-title"></h4>
+        </div>
+        <div id="collapseFour" class="panel-collapse collapse in">
+            <div class="panel-body">
+                <form id="punishForm" class="form-horizontal" role="form" method="post">
+                    <div class="col-sm-11">
+                        <div class="form-group">
+                            <label class=" col-sm-2 control-label"><span class="label red">*</span>是否处罚：</label>
+                            <div class="col-sm-10">
+                                {% if accident.is_punish %}
+                                    <label class="radio-inline"><input name="is_punish" id="is_punish1" type="radio" checked="checked" value="1">是</label>
+                                    <label class="radio-inline"><input name="is_punish" id="is_punish0" type="radio" value="0">否</label>
+                                {% else %}
+                                    <label class="radio-inline"><input name="is_punish" id="is_punish1" type="radio" value="1">是</label>
+                                    <label class="radio-inline"><input name="is_punish" id="is_punish0" type="radio" checked="checked" value="0">否</label>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">处罚人：</label>
+                            <div class="col-sm-10">
+                                <input name="punish_users" id="punish_users" value="{% if accident.punish_users %}{{ accident.punish_users }}{% else %}{% endif %}" class="form-control" type="text" placeholder="填写处罚人域控账号，多个处罚人之间用逗号做分隔">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class=" col-sm-2 control-label">处罚内容：</label>
+                            <div class="col-sm-10">
+                                <textarea name="punish_content" id="punish_content" class="form-control" rows="2" placeholder="描述针对每个处罚人的具处罚体内容">{% if accident.punish_content %}{{ accident.punish_content }}{% else %}{% endif %}</textarea>
+                            </div>
+                        </div>
+                        <div class="form-group punish-footer" hidden>
+                            <div class="col-sm-offset-2 col-sm-10">
+                                <button id="punish_reset" type="reset" class="btn btn-green">取消</button>
+                                <button id="punish_save" type="submit" class="btn btn-green">保存</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div><!--panel end-->
+</div><!--panel-group end-->
+</div>
+
+<!--新增改进措施模态框（Modal） -->
+<div class="modal fade" id="addActionModal" tabindex="-1" role="dialog" aria-labelledby="addActionModalLabel" aria-hidden="true">
+ <div class="modal-dialog">
+  <div class="modal-content">
+      <form  id="addActionForm" class="form-horizontal" role="form" method="post" onkeydown="if(event.keyCode==13){return false;}">
+        <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h4 class="modal-title" id="addActionModalLabel" style="font-size:18px;">新增改进措施</h4>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-4 control-label"><span class="label red">*</span>改进措施：</label>
+            <div class="col-sm-7">
+             <textarea class="form-control" id="a_action" name="a_action" rows="3" placeholder="描述改进措施"></textarea>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-4 control-label"><span class="label red">*</span>措施负责人：</label>
+            <div class="col-sm-7">
+             <input class="form-control" id="a_duty_users" name="a_duty_users" type="text" placeholder="请输入域控账号，多个负责人之间用,隔开">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-4 control-label"><span class="label red">*</span>预计完成时间：</label>
+            <div class="col-sm-7">
+               <input id="a_expect_time" name="a_expect_time" class="form-control selectDate" type="text" readonly="readonly">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+            <button type="reset" id="addaction_reset" class="btn btn-default"  data-dismiss="modal">取消</button>
+            <button type="submit" id="addaction_save" class="btn btn-green">新增</button>
+        </div>
+      </form>
+  </div>
+ </div>
+</div>
+
+<!--修改改进措施模态框（Modal） -->
+<div class="modal fade" id="editActionModal" tabindex="-1" role="dialog" aria-labelledby="editActionModalLabel" aria-hidden="true">
+ <div class="modal-dialog">
+  <div class="modal-content">
+      <form  id="editActionForm" class="form-horizontal" role="form" method="post" onkeydown="if(event.keyCode==13){return false;}">
+        <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h4 class="modal-title" id="editActionModalLabel" style="font-size:18px;">修改改进措施</h4>
+        </div>
+        <div class="modal-body">
+          <div class="form-group" hidden>
+            <label for="inputPassword3" class="col-sm-4 control-label"><span class="label red">*</span>ID：</label>
+            <div class="col-sm-7">
+             <input class="form-control" id="e_id" name="e_id" type="text" placeholder="actionID"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-4 control-label"><span class="label red">*</span>改进措施内容：</label>
+            <div class="col-sm-7">
+             <textarea class="form-control" id="e_action" name="e_action" rows="3" placeholder="描述改进措施"></textarea>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-4 control-label"><span class="label red">*</span>措施负责人：</label>
+            <div class="col-sm-7">
+             <input class="form-control" id="e_duty_users" name="e_duty_users" type="text" placeholder="请输入域控账号，多个负责人之间用,隔开">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-4 control-label"><span class="label red">*</span>预计完成时间：</label>
+            <div class="col-sm-7">
+               <input id="e_expect_time" name="e_expect_time" class="form-control selectDate" type="text" readonly="readonly">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-4 control-label">Trident编号：</label>
+            <div class="col-sm-7">
+             <input class="form-control" id="e_trident_id" name="e_trident_id" type="text" placeholder="预计完成时间超过两周请输入Trident编号">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-4 control-label"><span class="label red">*</span>Action状态：</label>
+            <div class="col-sm-7">
+                <select name="e_status" id="e_status" class="form-control selectpicker">
+                    <option value="1">进行中</option>
+                    <option value="2">延迟</option>
+                    <option value="200">已完成</option>
+                    <option value="400">已取消</option>
+                </select>
+            </div>
+          </div>
+            <div class="form-group">
+            <label for="inputPassword3" class="col-sm-4 control-label">实际完成时间：</label>
+            <div class="col-sm-7">
+               <input id="e_finish_time" name="e_finish_time" class="form-control selectDate" type="text" readonly="readonly">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-4 control-label">Action跟进备注</label>
+            <div class="col-sm-7">
+             <input class="form-control" id="e_comment" name="e_comment" type="text" placeholder="备注Action跟进情况">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+            <button type="reset" id="editaction_reset" class="btn btn-default"  data-dismiss="modal">取消</button>
+            <button type="submit" id="editaction_save" class="btn btn-green">修改</button>
+        </div>
+      </form>
+  </div>
+ </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    //高度自适应
+    var hg =$(window).height()-70;
+    //滚动触发，进行判断
+    var li_index = 0;
+    $(window).scroll(function   () {
+      var vtop = $(document).scrollTop();
+      $("#myScrollspy li").removeClass("active");
+      //正常情况下li_index赋值
+      $("#accordion .panel").each(function (index, element) {
+          var oftop = $(this).offset().top - 55;
+          if (vtop >= parseInt(oftop)) {
+              li_index = index;
+          }
+      });
+      //当滚动条还未滚到最后一个时，就已经到底部，li_index赋值
+      if (vtop + $(window).height() >= $(document).height()) {
+          li_index = $("#accordion .panel").length - 1;
+      }
+      $("#myScrollspy li").eq(li_index).addClass("active");
+    });
+    //点击触发滚动条滚动scroll
+    $("#myScrollspy li").click(function (ev) { //去掉href="javascript:void(0)"
+      var top = $("#accordion .panel").eq($(this).index()).offset().top - 55;
+      $(document).scrollTop(top);
+    });
+
+    <!-- 事故发生时间初始化 -->
+    $('#happened_time').datetimepicker({
+        format: 'yyyy-mm-dd hh:ii:ss',
+        weekStart:1,
+        todayHighlight:1,
+        autoclose: true,
+        minView:1,
+        hourStep: 1,
+    }).on('changeDate show', function(e) {
+        var enddate = $('#finish_time').val();
+        if(enddate != ''){
+            $('#happened_time').datetimepicker('setEndDate', enddate);
+        }else{
+            $('#happened_time').datetimepicker('setEndDate', moment().format('YYYY-MM-DD HH:mm:ss'));
+        }
+        $('#basicForm').bootstrapValidator('revalidateField', 'happened_time');
+        $('#basicForm').bootstrapValidator('revalidateField', 'finish_time');
+    });
+    $('#happened_time').datetimepicker('setStartDate', '2014-07-01 00:00:00');
+    <!-- 事故恢复时间初始化 -->
+    $('#finish_time').datetimepicker({
+        format: 'yyyy-mm-dd hh:ii:ss',
+        weekStart:1,
+        todayHighlight:1,
+        autoclose: true,
+        minView:1,
+        hourStep: 1,
+    }).on('changeDate show', function(e) {
+        var startdate = $('#happened_time').val();
+        if(startdate != ''){
+            $('#finish_time').datetimepicker('setStartDate', startdate);
+        }else{
+            $('#finish_time').datetimepicker('setStartDate', '2014-07-01 00:00:00');
+        }
+        $('#basicForm').bootstrapValidator('revalidateField', 'happened_time');
+        $('#basicForm').bootstrapValidator('revalidateField', 'finish_time');
+    });
+    $('#finish_time').datetimepicker('setEndDate', moment().format('YYYY-MM-DD HH:mm:ss'));
+    <!-- 选择日期初始化 -->
+    $('#a_expect_time').datetimepicker({
+        format: 'yyyy-mm-dd',
+        autoclose: true,
+        minView: 2
+    }).on('changeDate show', function(e) {
+        $('#addActionForm').bootstrapValidator('revalidateField', 'a_expect_time');
+    });
+    $('#e_expect_time').datetimepicker({
+        format: 'yyyy-mm-dd',
+        autoclose: true,
+        minView: 2
+    }).on('changeDate show', function(e) {
+        $('#editActionForm').bootstrapValidator('revalidateField', 'e_expect_time');
+    });
+    $('#e_finish_time').datetimepicker({
+        format: 'yyyy-mm-dd',
+        autoclose: true,
+        minView: 2
+    });
+
+    $('#duty_dept_id').selectpicker({
+        'title': '请选择',
+    });
+
+    $('#duty_domains').selectpicker({
+        'title': '请选择',
+        'liveSearch': true,
+        'liveSearchPlaceholder': '搜索责任Domain',
+    });
+
+    $('#get_process').click(function(){
+        {% if accident.logs %}
+            window.open("{{ ROOT_URL }}detail/process/?id={{ accident.accidentid }}");
+        {% else %}
+            swal("查看处理详情", "未在事故处理中心处理，无更多详情", "warning");
+        {% endif %}
+    });
+
+    <!-- Panel的收缩和展开 -->
+    $(".chevron_control").click( function(){
+        var colBtn=$(this).find("i");
+        if(colBtn.hasClass("glyphicon-chevron-down")){
+            colBtn.removeClass("glyphicon-chevron-down").addClass("glyphicon-chevron-up");
+        }else{
+            colBtn.removeClass("glyphicon-chevron-up").addClass("glyphicon-chevron-down");
+        }
+    });
+
+    <!-- 默认表单均不可编辑 -->
+    $("form input").prop("disabled", true);
+    $("form textarea").prop("disabled", true);
+    $("form select").prop("disabled", true);
+    $("form input[type='radio']").prop("disabled", true);
+    $("form table td").prop("disabled", true);
+    $(".panel-head button").prop("disabled", false);
+    $('#postmortemForm button').prop('disabled', true);
+    $("#addActionForm input").prop("disabled", false);
+    $("#addActionForm textarea").prop("disabled", false);
+    $("#addActionForm button").prop("disabled", false);
+    $("#editActionForm input").prop("disabled", false);
+    $("#editActionForm textarea").prop("disabled", false);
+    $("#editActionForm button").prop("disabled", false);
+    $("#editActionForm select").prop("disabled", false);
+
+    <!-- 用户可选值 -->
+    var user_names = new Array();
+    $.ajax({
+        url: '{{ CMDBAPI_URL }}cmdb/user/v2/?format=json',
+        headers:{'Authorization':'Token {{ API_TOKEN }}'},
+        async: true,
+        success: function( json ) {
+            $.each(json, function(i, value) {
+                user_names.push(value.username);
+            });
+        }
+    });
+    $( "#find_user_name, #duty_manager_name" ).autocomplete({
+        source: user_names
+    });
+
+    $( "#find_user_name" ).autocomplete({
+        close: function( event, ui ) {
+            $('#basicForm').bootstrapValidator('revalidateField', 'find_user_name');
+        }
+    });
+    $( "#duty_manager_name" ).autocomplete({
+        close: function( event, ui ) {
+            $('#basicForm').bootstrapValidator('revalidateField', 'duty_manager_name');
+        }
+    });
+
+    function split( val ) {
+      return val.split( /,\s*/ );
+    }
+    function extractLast( term ) {
+      return split( term ).pop();
+    }
+    <!-- 责任人可多选 -->
+    $( "#duty_users, #a_duty_users, #e_duty_users, #punish_users" ).on( "keydown", function( event ) {
+        if ( event.keyCode === $.ui.keyCode.TAB &&
+            $( this ).autocomplete( "instance" ).menu.active ) {
+          event.preventDefault();
+        }
+    }).autocomplete({
+        minLength: 0,
+        source: function( request, response ) {
+          response( $.ui.autocomplete.filter(
+            user_names, extractLast( request.term ) ) );
+        },
+        focus: function() {
+          return false;
+        },
+        select: function( event, ui ) {
+          var terms = split( this.value );
+          terms.pop();
+          terms.push( ui.item.value );
+          this.value = terms.join( "," );
+          return false;
+        }
+      });
+
+    $( "#duty_users" ).autocomplete({
+        close: function( event, ui ) {
+            $('#basicForm').bootstrapValidator('revalidateField', 'duty_users');
+        }
+    });
+
+    $( "#a_duty_users" ).autocomplete({
+        close: function( event, ui ) {
+            $('#addActionForm').bootstrapValidator('revalidateField', 'a_duty_users');
+        }
+    });
+
+    $( "#e_duty_users" ).autocomplete({
+        close: function( event, ui ) {
+            $('#aeditActionForm').bootstrapValidator('revalidateField', 'e_duty_users');
+        }
+    });
+
+    $( "#punish_users" ).autocomplete({
+        close: function( event, ui ) {
+            $('#punishForm').bootstrapValidator('revalidateField', 'punish_users');
+        }
+    });
+    var other_domains = []
+    {% for dm in other_domain_list %}
+        other_domains.push({
+            'id': "{{ dm.id }}",
+            'domainname': "{{ dm.domainname }}",
+            'deptid': "{{ dm.deptid }}",
+            'deptname': "{{ dm.deptname }}",
+        })
+    {% endfor %}
+    <!-- 部门和Domain联动 -->
+    $('#duty_dept_id').on('change', function (e) {
+        e.preventDefault();
+        var duty_dept_ids = $("#duty_dept_id").val().toString().split(',');
+        $('#duty_domains').find('option').remove();
+        if(duty_dept_ids.length > 0){
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}cmdb/domain/bydeptv2/?format=json&&deptid__in=' + duty_dept_ids.join(','),
+                async: false,
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (json) {
+                    $.each(JSON.parse(json), function (i, value) {
+                        $('#duty_domains').append($('<option>').text(value['domainname']).attr('value', value['id']));
+                    });
+                }
+            });
+            $.each(other_domains, function (i, dm) {
+                $.each(duty_dept_ids, function (i, value) {
+                    if(dm['deptid'] == value){
+                        $('#duty_domains').append($('<option>').text(dm['domainname']).attr('value', dm['id']));
+                    }
+                });
+            });
+        }else{
+            {%  for item in domain_list %}
+                    $('#duty_domains').append($('<option>').text("{{ item.domainname | safe }}").attr('value', "{{ item.id }}"));
+                {%  endfor %}
+            {% for dm in other_domain_list %}
+                $('#duty_domains').append($('<option>').text("{{ dm.domainname }}").attr('value', "{{ dm.id }}"));
+            {% endfor %}
+        }
+        var doamin_ids=('{{ accident.duty_domain_ids }}').split(",");
+        $('#duty_domains').val(doamin_ids);
+        $('#duty_domains').selectpicker('refresh');
+    });
+
+    window.actionEvents = {
+        'click .edit_action': function (e, value, row, index) {
+            $('#e_id').val(row.id);
+            $('#e_action').val(row.action);
+            $('#e_duty_users').val(row.duty_users);
+            if(row.expect_time != 0){
+                $("#e_expect_time").val(moment.unix(row.expect_time).format('YYYY-MM-DD'));
+            }else{
+                $("#e_expect_time").val('');
+            }
+            $('#e_trident_id').val(row.trident_id);
+            $('#e_status').val(row.status);
+            $('#e_status').selectpicker('refresh');
+            var duty_users = '{{ accident.duty_users }}'.split(',');
+            if('{{ is_edit_action }}' == 'True'){
+                $('#editActionModal').modal('show');
+            }else if($.inArray('{{ USER.username }}', row.duty_users.split(',')) != -1){
+                $("#e_expect_time").prop("disabled", true);
+                $('#editActionModal').modal('show');
+            }else{
+                swal("", "只有责任人、事故当日的值班经理、action负责人或超级管理员才有此权限！", "warning");
+            }
+        },
+        'click .remove_action': function (e, value, row, index) {
+            if('{{ is_edit_action }}' == 'True' || $.inArray('{{ USER.username }}', row.duty_users.split(',')) != -1){
+                swal({
+                  title: "确认删除？",
+                  type: "warning",
+                  showCancelButton: true,
+                  confirmButtonClass: 'btn-danger',
+                  closeOnConfirm: true,
+                  closeOnCancel: true
+                }, function(isConfirm) {
+                    if (isConfirm) {
+                        $.ajax({
+                            url: '{{ CMDBAPI_URL }}accident/action/'+ row.id +'/',
+                            type: 'DELETE',
+                            async: false,
+                            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                            success: function(json) {
+                                $('#accident_actions').bootstrapTable('refresh', {
+                                    silent: true
+                                });
+                            },
+                            error: function( json ) {
+                                swal("删除Action失败", JSON.stringify(JSON.parse(json.responseText)['detail']), "error");
+                            }
+                        });
+                    }
+                });
+            }else{
+                swal("", "只有责任人、事故当日的值班经理、action负责人或超级管理员才有此权限！", "warning");
+            }
+        },
+    };
+
+    $('#addAction').click(function(){
+        {% if not is_edit_action %}
+            swal("", "只有责任人、事故当日的值班经理或超级管理员才有此权限！", "warning");
+        {% elif accident.reason == '' or accident.level == 0 or accident.finish_time == 0 %}
+            swal("修改改进措施信息", "请确保已填写事故基本信息和详细信息！", "warning");
+        {% else %}
+
+            $('#addActionModal').modal('show');
+        {% endif %}
+    });
+
+    <!-- 特殊字段默认赋值 -->
+    $('#level').val('{{ accident.level }}');
+    $('#duty_users').val('{{ accident.duty_users }}');
+    $('#happened_time').val(getFormat_Time('{{ accident.happened_time }}'));
+    $('#finish_time').val(getFormat_Time('{{ accident.finish_time }}'));
+    var dept_ids=('{{ accident.duty_dept_ids }}').split(",");
+    var doamin_ids=('{{ accident.duty_domain_ids }}').split(",");
+    $('#duty_dept_id').val(dept_ids);
+    if($('#duty_dept_id').val()){
+        $('#duty_dept_id').change();
+    }
+    $('#duty_domains').val(doamin_ids);
+    $("#basicForm select").selectpicker('refresh');
+
+    $('#type__ptype__id').val('{{ accident.type.ptype_id }}');
+    $('#type_id').val('{{ accident.type_id }}');
+    $("#detailForm select").selectpicker('refresh');
+{#    $('#punish_users').val('{{ accident.punish_users }}');#}
+
+    <!-- 两级事故类型联动-->
+    var accident_type = new Array();
+    $.ajax({
+        url:'{{ CMDBAPI_URL }}accident/type/?format=json',
+        headers:{'Authorization':'Token {{ API_TOKEN }}'},
+        async: true,
+        success: function( json ) {
+            $.each(json, function(i, value) {
+                accident_type.push({
+                    'id': value.id,
+                    'name': value.name,
+                    'p_id': value.ptype.id,
+                    'p_name': value.ptype.name
+                });
+            });
+        }
+    });
+    $('#type__ptype__id').change(function(){
+        var ptype_id = $('#type__ptype__id option:selected').val();
+        $('#type_id').find('option').remove();
+{#        $('#type_id').append($('<option>').text('请选择').attr('value', 0));#}
+        if(ptype_id != 0){
+            $.each(accident_type, function(i, value) {
+                if(value['p_id'] == ptype_id){
+                    $('#type_id').append($('<option>').text(value['name']).attr('value', value['id']));
+                }
+            });
+        }else{
+            {%  for item in accident_type %}
+                $('#type_id').append($('<option>').text("{{ item.name }}").attr('value', "{{ item.id }}"));
+            {%  endfor %}
+        }
+        $('#type_id').selectpicker('refresh');
+    });
+
+    <!-- 改进措施内容加载 -->
+    $('#accident_actions').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}accident/action/?format=json&accident__accidentid={{ accident.accidentid }}&page_size=500',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        async: true,
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'status_name',
+                title: 'Action状态',
+                cellStyle: statusBackground,
+            },
+            {
+                field: 'action',
+                title: 'Action（改进措施）内容',
+            },
+            {
+                field: 'dutydept_name',
+                title: '责任部门',
+            },
+            {
+                field: 'duty_users',
+                title: '责任人',
+            },
+            {
+                field: 'trident_id',
+                title: 'trident编号',
+            },
+            {
+                field: 'create_time',
+                title: '创建时间',
+                formatter: getFormat_date,
+            },
+            {
+                field: 'expect_time',
+                title: '预计完成时间',
+                formatter: getFormat_date,
+            },
+            {
+                field: 'finish_time',
+                title: '实际完成时间',
+                formatter: getFormat_date,
+            },
+            {
+                field: 'comment',
+                title: '备注',
+            },
+            {
+                field: 'operate',
+                title: '操作',
+                formatter: operateFormatter,
+                events:  actionEvents,
+                align: 'center',
+            }
+
+        ],
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            data_count = res.count;
+            return result
+        },
+        clickToSelect: true,
+        pagination: true,
+        pageSize: 500,
+        pageList: [10,20,50,100],
+        sidePagination: 'server',
+        cache: false,
+    });
+    function statusBackground(value, row, index, field) {
+        var class_name = 'text-nowrap another-class';
+        var color = 'white'
+        if (value == '已完成') {
+            color = '#33CC66'
+        } else if (value == '已取消') {
+            color = '#FFFF33'
+        } else if (value == '进行中') {
+            color = '#3399FF'
+        } else if (value == '延迟') {
+            color = 'red'
+        }
+        return {
+            classes: class_name,
+            css: {
+                "color": 'white',
+                "background-color": color
+            }
+        };
+    }
+    function getFormat_date(value) {
+        if(value != 0 && value != null){
+            return moment.unix(value).format('YYYY-MM-DD');
+        }else{
+            return ''
+        }
+
+    };
+
+    function operateFormatter(value, row, index) {
+        return '&nbsp;<a class="edit_action" title="修改改进措施" ><span class="glyphicon glyphicon-pencil"></span></a>&nbsp;<a class="remove_action" title="删除改进措施" ><span class="glyphicon glyphicon-remove"></span></a>';
+    }
+
+    $("#basicForm input[type='radio']").change(function(){
+        $('#basicForm').bootstrapValidator('revalidateField', 'is_online');
+        $('#basicForm').bootstrapValidator('revalidateField', 'health');
+    });
+    <!-- 编辑基础信息 -->
+    $('#basic_btn').click(function(){
+        $("#basicForm input").prop("disabled", false);
+        $("#accidentid").prop("disabled", true);
+        $("#time_length").prop("disabled", true);
+        $("#find_user_department").prop("disabled", true);
+        $("#basicForm select").prop("disabled", false);
+        $("#basicForm select").selectpicker('refresh');
+        $('#basicForm button').prop('disabled', false);
+        $('#basicForm .basic-footer').prop('hidden', false);
+        $('#basic_btn').prop('disabled', true);
+    });
+    <!-- 重置基础信息 -->
+    $('#basic_reset').click(function(){
+        $('#basicForm').bootstrapValidator('resetForm', false);
+        $('#title').val('{{ accident.title }}');
+        $('#level').val('{{ accident.level }}');
+        $('#duty_manager_name').val('{{ accident.duty_manager_name }}');
+        $('#find_user_name').val('{{ accident.find_user_name }}');
+        $('#happened_time').val(getFormat_Time('{{ accident.happened_time }}'));
+        $('#finish_time').val(getFormat_Time('{{ accident.finish_time }}'));
+        {% if accident.is_online == 1 %}
+            $('#is_online1').prop('checked', 'checked');
+        {% elif accident.is_online == 2%}
+            $('#is_online2').prop('checked', 'checked');
+        {% else %}
+            $("#basicForm input[name='is_online']").prop("checked", false);
+        {% endif %}
+        $('#health').val('{{ accident.health }}');
+        var dept_ids=('{{ accident.duty_dept_ids }}').split(",");
+        var doamin_ids=('{{ accident.duty_domain_ids }}').split(",");
+        $('#duty_dept_id').val(dept_ids);
+        if($('#duty_dept_id').val()){
+            $('#duty_dept_id').change();
+        }
+        $('#duty_domains').val(doamin_ids);
+        $('#duty_users').val('{{ accident.duty_users }}');
+        $("#basicForm select").selectpicker('refresh');
+        $("#basicForm input").prop("disabled", true);
+        $("#basicForm select").prop("disabled", true);
+        $("#basicForm select").selectpicker('refresh');
+        $('#basicForm button').prop('disabled', false);
+        $('#basicForm .basic-footer').prop('hidden', true);
+        $('#basic_btn').prop('disabled', false);
+    });
+
+    <!-- 编辑详细信息 -->
+    $('#detail_btn').click(function(){
+        {% if accident.finish_time == 0 or accident.level == 0 or accident.duty_domain_ids == '' %}
+            swal("修改详细信息", "请确保已完成所有基础信息必填项！", "warning");
+        {% else %}
+            var duty_users = $('#duty_users').val().trim();
+            $('#type_id').val('{{ accident.type_id }}');
+            $('#type__ptype__id').val('{{ accident.type.ptype_id }}');
+            $("#detailForm select").prop("disabled", false);
+            $("#detailForm select").selectpicker('refresh');
+            $("#detailForm textarea").prop("disabled", false);
+    {#        $("#detailForm input[type='radio']").prop("disabled", false);#}
+            $('#detailForm .detail-footer').prop('hidden', false);
+            $('#detailForm button').prop('disabled', false);
+            $('#detail_btn').prop('disabled', true);
+        {% endif %}
+
+    });
+    <!-- 重置详细信息 -->
+    $('#detail_reset').click(function(){
+        $('#detailForm').bootstrapValidator('resetForm', false);
+        $('#type_id').val('{{ accident.type_id }}');
+        $('#type__ptype__id').val('{{ accident.type.ptype_id }}');
+        $("#detailForm select").prop("disabled", true);
+        $("#detailForm select").selectpicker('refresh');
+        $("#detailForm textarea").prop("disabled", true);
+        $('#detailForm button').prop('disabled', false);
+        $('#detailForm .detail-footer').prop('hidden', true);
+        $('#detail_btn').prop('disabled', false);
+    });
+
+    <!-- 是否处罚切换 -->
+    $('input:radio[name="is_punish"]').change( function(){
+        if($('input:radio[name=is_punish]:checked').val()=="1"){
+            $("#punish_users").val('{{ accident.punish_users }}');
+            $("#punish_content").val('{{ accident.punish_content }}');
+            $("#punish_users").prop("disabled", false);
+            $("#punish_content").prop("disabled", false);
+        }else{
+            $("#punish_users").val('');
+            $("#punish_content").val('');
+            $("#punish_users").prop("disabled", true);
+            $("#punish_content").prop("disabled", true);
+        }
+    });
+
+    <!-- 编辑处罚信息 -->
+    $('#punish_btn').click(function(){
+        $("#punishForm input[type='radio']").prop("disabled", false);
+        {% if accident.is_punish %}
+            $("#punish_users").prop("disabled", false);
+            $("#punish_content").prop("disabled", false);
+        {% else %}
+            $("#punish_users").val('');
+            $("#punish_content").val('');
+            $("#punish_users").prop("disabled", true);
+            $("#punish_content").prop("disabled", true);
+        {% endif %}
+        $('#punishForm button').prop('disabled', false);
+        $('#punishForm .punish-footer').prop('hidden', false);
+        $('#punishForm button').prop('disabled', false);
+        $('#punish_btn').prop('disabled', true);
+    });
+    <!-- 重置处罚信息 -->
+    $('#punish_reset').click(function(){
+        $('#punishForm').bootstrapValidator('resetForm', false);
+        {% if accident.is_punish %}
+            $('#is_punish1').prop('checked', 'checked');
+            $("#punish_users").val('{{ accident.punish_users }}');
+            $("#punish_content").val('{{ accident.punish_content }}');
+        {% else %}
+            $('#is_punish0').prop('checked', 'checked');
+            $("#punish_users").val('');
+            $("#punish_content").val('');
+        {% endif %}
+        $("#punishForm input[type='radio']").prop("disabled", true);
+        $("#punishForm textarea").prop("disabled", true);
+        $('#punishForm button').prop('disabled', true);
+        $("#punishForm input").prop("disabled", true);
+        $('#punishForm .punish-footer').prop('hidden', true);
+        $('#punish_btn').prop('disabled', false);
+    });
+
+    function getFormat_Time(value) {
+        if(value != '0' && value != null){
+            return moment.unix(parseInt(value)).format('YYYY-MM-DD HH:mm:ss');
+        }else{
+            return ''
+        }
+
+    };
+
+    <!--  修改基础信息 -->
+    $('#basicForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                duty_manager_name: {
+                    validators: {
+                        callback: {
+                            message: '值班经理不存在（请根据下方提示输入域控账号）',
+                            callback: function(value) {
+                                if(value != '') {
+                                    if($.inArray(value, user_names) != -1){
+                                        return true;
+                                    }else{
+                                        return false;
+                                    }
+                                }else{
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                },
+                find_user_name: {
+                    validators: {
+                        callback: {
+                            message: '报告人为空或不存在（请根据下方提示输入域控账号）',
+                            callback: function(value) {
+                                if(value != '') {
+                                    if($.inArray(value, user_names) != -1){
+                                        return true;
+                                    }else{
+                                        return false;
+                                    }
+                                }else{
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                },
+                duty_users: {
+                    validators: {
+                        callback: {
+                            message: '责任人不存在（请根据下方提示输入域控账号，多个责任人之间用,分隔）',
+                            callback: function(value) {
+                                var users = value.trim();
+                                if(users.charAt(users.length-1) == ','){
+                                    users = users.substring(0, users.length-1);
+                                }
+                                var cur_users = users.split(',')
+                                var res = true;
+                                $.each(cur_users, function(i, val){
+                                    if(val != '') {
+                                        if($.inArray(val.trim(), user_names) == -1){
+                                            res = false;
+                                        }
+                                    }
+                                });
+                                return res;
+
+                            }
+                        }
+                    }
+                },
+                happened_time: {
+                    validators: {
+                        callback: {
+                            message: '发生时间格式为YYYY-MM-DD HH:mm:ss且小于恢复时间（或当前时间）',
+                            callback: function(value) {
+                                if(value != '') {
+                                    var m = new moment(value, 'YYYY-MM-DD HH:mm:ss', true);
+                                    if (!m.isValid()) {
+                                        return false;
+                                    }
+                                    var enddate = $('#finish_time').val();
+                                    if (enddate != '') {
+                                        return m.isAfter('2014-07-01 00:00:00') && m.isBefore(enddate);
+                                    } else {
+                                        return m.isAfter('2014-07-01 00:00:00') && m.isBefore(moment().format('YYYY-MM-DD HH:mm:ss'));
+                                    }
+                                }else{
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                },
+                finish_time: {
+                    validators: {
+                        callback: {
+                            message: '恢复时间格式为YYYY-MM-DD HH:mm:ss且大于发生时间小于当前时间',
+                            callback: function(value) {
+                                if(value != ''){
+                                    var m = new moment(value, 'YYYY-MM-DD HH:mm:ss', true);
+                                    if (!m.isValid()) {
+                                        return false;
+                                    }
+                                    var startdate = $('#happened_time').val();
+                                    if(startdate != ''){
+                                        return m.isAfter(startdate) && m.isBefore(moment().format('YYYY-MM-DD HH:mm:ss'));
+                                    }else{
+                                        return m.isAfter('2014-07-01 00:00:00') && m.isBefore(moment().format('YYYY-MM-DD HH:mm:ss'));
+                                    }
+                                }else{
+                                    return true;
+                                }
+
+                            }
+                        }
+                    }
+                },
+                is_online: {
+                    validators: {
+                        notEmpty: {
+                            message: '是否电商系统不能为空。'
+                        }
+                    }
+                },
+                health: {
+                    validators: {
+                        callback: {
+                            message: '调校系数应大于0且小于等于1，最多保留3位小数，默认为1',
+                            callback: function(value) {
+                                if(value != ''){
+                                    $('#basicForm').bootstrapValidator('revalidateField', 'is_online');
+                                    if(parseFloat(value) > 0.0 && parseFloat(value) <=1.0 && value.length >= 1 &&value.length <= 5){
+                                        return true
+                                    }else{
+                                        return false
+                                    }
+                                }else{
+                                    return false
+                                }
+
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var users = $('#duty_users').val().trim();
+            if(users.charAt(users.length-1) == ','){
+                users = users.substring(0, users.length-1);
+            }
+            var duty_dept_ids = new Array();
+            $("#duty_dept_ids").each(function() {
+                if($(this).val() !=null){
+                    duty_dept_ids.push($(this).val());
+                }
+            });
+            var duty_domain_ids = new Array();
+            $("#duty_domains").each(function() {
+                if($(this).val() !=null){
+                    duty_domain_ids.push($(this).val());
+                }
+            });
+            var happened_time = $('#happened_time').val();
+            if(happened_time != ''){
+                happened_time = moment(happened_time).format('X')
+            }else{
+                happened_time = 0
+            }
+
+            var finish_time = $('#finish_time').val();
+            if(finish_time != ''){
+                finish_time = moment(finish_time).format('X')
+            }else{
+                finish_time = 0
+            }
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/accident/{{ accident.id }}/',
+                type: 'PATCH',
+                async: false,
+                data: {
+                    'action': 'basic',
+                    'title': $('#title').val(),
+                    'duty_manager_name': $('#duty_manager_name').val(),
+                    'happened_time': happened_time,
+                    'finish_time': finish_time,
+                    'level': $('#level').val(),
+                    'find_user_name': $('#find_user_name').val(),
+                    'is_online': $('input:radio[name=is_online]:checked').val(),
+                    'health': parseFloat($('#health').val()),
+                    'duty_users': users,
+                    'duty_dept_id': duty_dept_ids.join(','),
+                    'duty_domain_ids': duty_domain_ids.join(","),
+                },
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function(json) {
+                    $('#basicForm').bootstrapValidator('resetForm', false);
+                    location.reload();
+                },
+                error: function( json ) {
+                    $('#basicForm').bootstrapValidator('resetForm', false);
+                    swal({
+                        title: "修改基本信息",
+                        text: JSON.stringify(JSON.parse(json.responseText)['detail']),
+                        type: "error",
+                        confirmButtonClass: 'btn-green',
+                        closeOnConfirm: true,
+                    },
+                    function(isConfirm) {
+                        if (isConfirm) {
+                            $('#basic_reset').click();
+                        }
+                    });
+                }
+            });
+        });
+
+    <!--  修改详细信息 -->
+    $('#detailForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                affect: {
+                    validators: {
+                        notEmpty: {
+                            message: '事故影响不能为空。'
+                        }
+                    }
+                },
+                reason: {
+                    validators: {
+                        notEmpty: {
+                            message: '事故原因不能为空。'
+                        }
+                    }
+                },
+                process: {
+                    validators: {
+                        notEmpty: {
+                            message: '事故经过不能为空。'
+                        }
+                    }
+                },
+                type_id: {
+                    validators: {
+                        callback: {
+                            message: '必须选择根源分类。',
+                            callback: function(value) {
+                                if(value == 0){
+                                    return false;
+                                }else{
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/accident/{{ accident.id }}/',
+                type: 'PATCH',
+                async: false,
+                data: {
+                    'action': 'detail',
+                    'affect': $('#affect').val(),
+{#                    'is_available': $('input:radio[name=is_available]:checked').val(),#}
+                    'type_id': $('#type_id option:selected').val(),
+                    'reason': $('#reason').val(),
+                    'process': $('#process').val()
+                },
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function(json) {
+                    $('#detailForm').bootstrapValidator('resetForm', false);
+                    location.reload();
+                },
+                error: function( json ) {
+                    $('#detailForm').bootstrapValidator('resetForm', false);
+                    swal({
+                        title: "修改详细信息",
+                        text: JSON.stringify(JSON.parse(json.responseText)['detail']),
+                        type: "error",
+                        confirmButtonClass: 'btn-green',
+                        closeOnConfirm: true,
+                    },
+                    function(isConfirm) {
+                        if (isConfirm) {
+                            $('#detail_reset').click();
+                        }
+                    });
+                }
+            });
+
+        });
+
+    $('#addActionForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                a_action: {
+                    validators: {
+                        notEmpty: {
+                            message: '改进措施内容不能为空。'
+                        },
+                        stringLength: {
+                            max: 255,
+                            message: '改进措施的内容长度不得超过255。'
+                        }
+                    }
+                },
+                a_duty_users: {
+                    validators: {
+                        notEmpty: {
+                            message: '改进措施负责人不能为空。'
+                        },
+                        callback: {
+                            message: '改进措施负责人不存在（请根据下方提示输入域控账号，多个负责人之间用,分隔）',
+                            callback: function(value) {
+                                var users = value.trim();
+                                if(users.charAt(users.length-1) == ','){
+                                    users = users.substring(0, users.length-1);
+                                }
+                                var cur_users = users.split(',')
+                                var res = true;
+                                $.each(cur_users, function(i, val){
+                                    if(val != '') {
+                                        if($.inArray(val.trim(), user_names) == -1){
+                                            res = false;
+                                        }
+                                    }
+                                });
+                                return res;
+
+                            }
+                        }
+                    }
+                },
+                a_expect_time: {
+                    validators: {
+                        notEmpty: {
+                            message: '改进措施预计完成时间不能为空。'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var expect_time = $('#a_expect_time').val();
+            if(expect_time != ''){
+                expect_time = moment(expect_time).format('X')
+            }else{
+                expect_time = 0
+            }
+            var duty_users = $('#a_duty_users').val().trim();
+            if(duty_users.charAt(duty_users.length-1) == ','){
+                duty_users = duty_users.substring(0, duty_users.length-1);
+            }
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/action/',
+                type: 'POST',
+                async: false,
+                data: {
+                    'accident_id': '{{ accident.accidentid }}',
+                    'action': $('#a_action').val(),
+                    'duty_users': duty_users,
+                    'expect_time': expect_time,
+                },
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function(json) {
+                    $('#addActionForm').bootstrapValidator('resetForm', true);
+                    $('#addActionModal').modal('hide');
+                    $('#accident_actions').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                },
+                error: function( json ) {
+                    $('#addActionModal').modal('hide');
+                    swal({
+                        title: "新增改进措施失败",
+                        text: JSON.stringify(JSON.parse(json.responseText)['detail']),
+                        type: "error",
+                        confirmButtonClass: 'btn-green',
+                        closeOnConfirm: true,
+                    },
+                    function(isConfirm) {
+                        if (isConfirm) {
+                            $('#addActionForm').bootstrapValidator('resetForm', false);
+                        }
+                    });
+                }
+            });
+        });
+
+    $('#editActionForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                e_action: {
+                    validators: {
+                        notEmpty: {
+                            message: '改进措施内容不能为空。'
+                        },
+                        stringLength: {
+                            max: 255,
+                            message: '改进措施的内容长度不得超过255。'
+                        }
+                    }
+                },
+                e_duty_users: {
+                    validators: {
+                        notEmpty: {
+                            message: '改进措施负责人不能为空。'
+                        },
+                        callback: {
+                            message: '改进措施负责人不存在（请根据下方提示输入域控账号，多个负责人之间用,分隔）',
+                            callback: function(value) {
+                                var users = value.trim();
+                                if(users.charAt(users.length-1) == ','){
+                                    users = users.substring(0, users.length-1);
+                                }
+                                var cur_users = users.split(',')
+                                var res = true;
+                                $.each(cur_users, function(i, val){
+                                    if(val != '') {
+                                        if($.inArray(val.trim(), user_names) == -1){
+                                            res = false;
+                                        }
+                                    }
+                                });
+                                return res;
+                            }
+                        }
+                    }
+                },
+                e_expect_time: {
+                    validators: {
+                        notEmpty: {
+                            message: '改进措施预计完成时间不能为空。'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var expect_time = $('#e_expect_time').val();
+            if(expect_time != ''){
+                expect_time = moment(expect_time).format('X')
+            }else{
+                expect_time = 0
+            }
+            var finish_time = $('#e_finish_time').val();
+            if(finish_time != ''){
+                finish_time = moment(finish_time).format('X')
+            }else{
+                finish_time = 0
+            }
+            var duty_users = $('#e_duty_users').val().trim();
+            if(duty_users.charAt(duty_users.length-1) == ','){
+                duty_users = duty_users.substring(0, duty_users.length-1);
+            }
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/action/'+ $('#e_id').val() +'/',
+                type: 'PATCH',
+                async: false,
+                data: {
+                    'action': $('#e_action').val(),
+                    'duty_users': duty_users,
+                    'expect_time': expect_time,
+                    'trident_id': $('#e_trident_id').val(),
+                    'status': $('#e_status').val(),
+                    'comment': $('#e_comment').val(),
+                    'finish_time': finish_time
+                },
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function(json) {
+                    $('#editActionForm').bootstrapValidator('resetForm', true);
+                    $('#editActionModal').modal('hide');
+                    $('#accident_actions').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                },
+                error: function( json ) {
+                    $('#editActionModal').modal('hide');
+                    swal({
+                        title: "修改改进措施失败",
+                        text: JSON.stringify(JSON.parse(json.responseText)['detail']),
+                        type: "error",
+                        confirmButtonClass: 'btn-green',
+                        closeOnConfirm: true,
+                    },
+                    function(isConfirm) {
+                        if (isConfirm) {
+                            $('#editActionForm').bootstrapValidator('resetForm', false);
+                        }
+                    });
+                }
+            });
+        });
+
+    <!--  修改处罚信息 -->
+    $('#punishForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                punish_users: {
+                    validators: {
+                        notEmpty: {
+                            message: '处罚人不能为空。'
+                        },
+                        callback: {
+                            message: '处罚人不存在（请根据下方提示输入域控账号，多个负责人之间用,分隔）',
+                            callback: function(value) {
+                                var users = value.trim();
+                                if(users.charAt(users.length-1) == ','){
+                                    users = users.substring(0, users.length-1);
+                                }
+                                cur_users = users.split(',')
+                                var res = true;
+                                $.each(cur_users, function(i, val){
+                                    if(val != '') {
+                                        if($.inArray(val.trim(), user_names) == -1){
+                                            res = false;
+                                        }
+                                    }
+                                });
+                                return res;
+
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var users = $('#punish_users').val().trim();
+            if(users.charAt(users.length-1) == ','){
+                users = users.substring(0, users.length-1);
+            }
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/accident/{{ accident.id }}/',
+                type: 'PATCH',
+                async: false,
+                data: {
+                    'action': 'punish',
+                    'is_punish': $('input:radio[name=is_punish]:checked').val(),
+                    'punish_users': users,
+                    'punish_content': $('#punish_content').val()
+                },
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function(json) {
+                    $('#punishForm').bootstrapValidator('resetForm', false);
+                    location.reload();
+                },
+                error: function( json ) {
+                    $('#punishForm').bootstrapValidator('resetForm', false);
+                    swal({
+                        title: "修改处罚信息",
+                        text: JSON.stringify(JSON.parse(json.responseText)['detail']),
+                        type: "error",
+                        confirmButtonClass: 'btn-green',
+                        closeOnConfirm: true,
+                    },
+                    function(isConfirm) {
+                        if (isConfirm) {
+                            $('#punish_reset').click();
+                        }
+                    });
+                }
+            });
+
+        });
+
+ })
+</script>
+
+{% endblock %}

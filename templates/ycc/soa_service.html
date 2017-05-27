@@ -1,0 +1,1232 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %}分组信息管理{% endblock %}
+{% block content %}
+
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.css" rel="stylesheet"
+          xmlns="http://www.w3.org/1999/html"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-fileinput/css/fileinput.min.css" rel="stylesheet"/><!--fileinput-->
+    <link href="{{ STATIC_URL }}libs/jsdifflib/diffview.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-treeview/js/bootstrap-treeview.min.js"></script>
+    <script src="{{ STATIC_URL }}ycc/js/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-fileinput/js/fileinput.min.js"></script><!--fileinput-->
+    <script src="{{ STATIC_URL }}libs/bootstrap-fileinput/js/fileinput_locale_zh.js"></script><!--fileinput-->
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/difflib.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/diffview.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/jsdiff.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+
+    {#    <div class="inner-h1">#}
+    {#        <h1>#}
+    {#            分组信息管理#}
+            {#            <a href="http://oms.yihaodian.com.cn/docs/?p=1600" target="_blank">点击此处查看文档</a>#}
+    {#            {% if env_obj %}#}
+    {#                <select id="env4shift">#}
+    {#                    {% for e in env %}#}
+    {#                        {% if e.name == env_obj.name %}#}
+    {#                            <option value="{{ e.id }}" selected="selected">{{ e.name }}</option>#}
+    {#                        {% elif e.name == 'both' %}#}
+    {#                        {% else %}#}
+    {#                            <option value="{{ e.id }}">{{ e.name }}</option>#}
+    {#                        {% endif %}#}
+    {#                    {% endfor %}#}
+    {#                </select>#}
+    {#            {% endif %}#}
+    {#        </h1>#}
+    {#    </div>#}
+
+    <div class="modal fade" id="descriptionValue" tabindex="-1" role="dialog"
+         aria-labelledby="descriptionValueValueTitle"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:1000px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="descriptionValueForm1" method="POST">
+                    <input type="hidden" name="edit_id" id="edit_id" value="">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="">配置文件</h4>
+                    </div>
+
+                    <div class="modal-body">
+                        <div id="show_cmp_div">
+                            <table id="show_cmp"></table>
+                        </div>
+                    </div>
+                    <div class="modal-footer" id="view_button">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!--新建分组-->
+    <div class="modal fade" id="soa_create" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog" style="">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="soa_create_form" method="POST">
+                    <input type="hidden" name="parent" id="parent" value="">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">新建分组</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="app" class="col-sm-2 control-label">应用名</label>
+
+                            <div class='col-sm-10'>
+                                <select name="app" id="app" class="form-control">
+                                    <option value="">请选择应用</option>
+                                    {% for item in app_show_list %}
+                                        <option value="{{ item.id }}">{{ item.site_app_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="idc" class="col-sm-2 control-label">IDC</label>
+
+                            <div class='col-sm-10'>
+                                <select name="idc" id="idc" class="form-control">
+                                    <option value="">请选择IDC</option>
+                                    {% for item in idc %}
+                                        <option value="{{ item.id }}">{{ item.name_ch }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="env" class="col-sm-2 control-label">环境</label>
+
+                            <div class='col-sm-10'>
+                                <select name="env" id="env" class="form-control">
+                                    <option value="">请选择环境</option>
+                                    {% for item in soa_env %}
+                                        <option value="{{ item.id }}">{{ item.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="path" class="col-sm-2 control-label">路径</label>
+
+                            <div class='col-sm-10'>
+                                <select name="path" id="path" class="form-control">
+                                    <option value="">请选择路径</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="group_name" class="col-sm-2 control-label">分组名</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="group_name" id="group_name"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="servers" class="col-sm-2 control-label">可选机器</label>
+
+                            <div class='col-sm-10'>
+                                <select name="servers[]" id="servers" class="form-control selectpicker" multiple
+                                        data-live-search="true">
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="alert2" name="alert">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green" id="soa_create_submit">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!--新增机器-->
+    <div class="modal fade" id="soa_edit" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true"
+         data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog" style="">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="soa_edit_form" method="POST">
+                    <input type="hidden" name="parent" id="parent" value="">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">新增机器</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div id="alert3" name="alert">
+                        </div>
+                        <div class="form-group">
+                            <label for="app" class="col-sm-2 control-label">应用名</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="app_edit" id="app_edit"
+                                       readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="idc" class="col-sm-2 control-label">IDC</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="idc_edit" id="idc_edit"
+                                       readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="path" class="col-sm-2 control-label">路径</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="path_edit" id="path_edit"
+                                       readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="group_name" class="col-sm-2 control-label">分组名</label>
+
+                            <div class='col-sm-10'>
+                                <select name="group_name_edit" id="group_name_edit" class="form-control">
+                                    <option value="">请选择分组</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="servers_edit" class="col-sm-2 control-label">可选机器</label>
+
+                            <div class='col-sm-10'>
+                                <select name="servers_edit[]" id="servers_edit" class="form-control selectpicker"
+                                        multiple data-live-search="true">
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="servers_content_edit" class="col-sm-2 control-label">组内机器</label>
+
+                            <div class='col-sm-10'>
+                                <textarea class="form-control" rows="18" name="servers_content_edit"
+                                          id="servers_content_edit"
+                                          class="resizable" readonly="readonly"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green" id="soa_create_submit">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!--删除机器-->
+    <div class="modal fade" id="soa_edit_del" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog" style="">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="soa_edit_del_form" method="POST">
+                    <input type="hidden" name="parent" id="parent" value="">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">删除机器</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="app" class="col-sm-2 control-label">应用名</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="app_edit_del" id="app_edit_del"
+                                       readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="idc" class="col-sm-2 control-label">IDC</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="idc_edit_del" id="idc_edit_del"
+                                       readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="path" class="col-sm-2 control-label">路径</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="path_edit_del" id="path_edit_del"
+                                       readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="group_name_edit_del" class="col-sm-2 control-label">分组名</label>
+
+                            <div class='col-sm-9'>
+                                <select name="group_name_edit_del" id="group_name_edit_del" class="form-control">
+                                    <option value="">请选择分组</option>
+                                </select>
+                            </div>
+                            <a id="remove_group_btn" style="padding-top: 7px;display: inline-block;">
+                                <span class="glyphicon glyphicon-remove" title="删除"
+                                      style="cursor:pointer;margin-right:10px;color:red;"></span>
+                            </a>
+                        </div>
+
+                        <div class="form-group">
+                            <div class='col-sm-12'>
+                                <div id="show_del_server_div">
+                                    <table id="show_del_server"></table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="alert1" name="alert">
+                        </div>
+
+                        <input type="hidden" id="soa_service_id_del" name="soa_service_id_del" value="">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!--显示详细信息-->
+    <div class="modal fade" id="soa_show_detail" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true"
+         data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog" style="">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span
+                            class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="detail_txt"></h4>
+                </div>
+                <div class='col-sm-12' style="margin-top: 5px;" id="tree_but">
+                    <div class='col-sm-5'>
+                        <button id="expand_all" class="btn btn-default" type="button">全部展开</button>
+                        <button id="collapse_all" class="btn btn-default" type="button">全部折叠</button>
+                    </div>
+                    <div class='col-sm-7'>
+                        <input type="text" class="form-control" id="tree_search_txt"
+                               style="width: 60%;display: inline-block;">
+                        <input type="button" class="btn btn-green" id="tree_search_btn" value="搜索" style="width: 20%;">
+                        <span style="" id="count_tree_count"></span>
+                    </div>
+                    {#                    <div class='col-sm-2'>#}
+                    {#                        <input type="button" class="btn btn-green" id="tree_search_btn" value="搜索">#}
+                    {#                    </div>#}
+                </div>
+                <div class='col-sm-12' style="margin-top: 5px;">
+                    <div id="tree"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="alert" name="alert">
+    </div>
+
+    <div id="toolbar">
+        <div class="form-inline" role="form">
+            {% if soa_permission %}
+                <button id="create" data-toggle="modal" data-target="#soa_create" class="btn btn-green">
+                    新建分组
+                </button>
+                &nbsp;&nbsp;
+            {% endif %}
+            <select name="params_app_id" id="params_app_id" class="form-control">
+                <option value="">POOL查询</option>
+                {% for item in app_show_list %}
+                    <option value="{{ item.id }}">{{ item.site_app_name }}</option>
+                {% endfor %}
+            </select>
+            <select name="params_idc" id="params_idc" class="form-control">
+                <option value="">IDC</option>
+                {% for item in idc %}
+                    <option value="{{ item.id }}">{{ item.name_ch }}</option>
+                {% endfor %}
+            </select>
+            <select name="params_env" id="params_env" class="form-control">
+                <option value="">环境</option>
+                {% for item in soa_env %}
+                    <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+            </select>
+            {#            <button id="clear" class="btn btn-green">#}
+            {#                条件重置#}
+            {#            </button>#}
+        </div>
+    </div>
+
+    <table id="asset" style="line-height:900px;">
+    </table>
+
+    <div class="modal fade" id="remove_div" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">确认？</h4>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="del_ip_id" id="del_ip_id" value="">
+                    <input type="hidden" name="ip_port" id="ip_port" value="">
+
+                    <p style="font-size:16px; color:#f00000;" id="rmtext"><i class="fa fa-warning"></i></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="remove_btn" class="btn btn-warning">删除</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <script>
+        $(document).ready(function () {
+            init();
+
+            function init() {
+                initValidatedStatus();
+                initChange($('#app'), $('#soa_create_form'));
+                initChange($('#idc'), $('#soa_create_form'));
+                initChange($('#env'), $('#soa_create_form'));
+                $("#app").combobox({});
+                $("#idc").combobox({});
+                $("#env").combobox({});
+                $("#path").combobox({});
+                $("#group_name_edit").combobox({});
+                $("#group_name_edit_del").combobox({});
+                $('#params_app_id').selectpicker({
+                    'liveSearch': true,
+                    'liveSearchPlaceholder': '搜索',
+                    'width': 'fit',
+                }).on('change', function () {
+                    exactlyFilter();
+                });
+                $('#params_env').selectpicker({
+                    'liveSearch': false,
+                    'liveSearchPlaceholder': '搜索',
+                    'width': 'fit',
+                }).on('change', function () {
+                    exactlyFilter();
+                });
+                $('#params_idc').selectpicker({
+                    'liveSearch': false,
+                    'liveSearchPlaceholder': '搜索',
+                    'width': 'fit',
+                }).on('change', function () {
+                    exactlyFilter();
+                });
+                $('#create').bind('click', function () {
+                    $('#soa_create_submit').attr("disabled", false);
+                    elementInit($('#app'), 'combobox', '请选择应用', false);
+                    elementInit($('#idc'), 'combobox', '请选择IDC', false);
+                    elementInit($('#env'), 'combobox', '请选择环境', false);
+                    elementInit($('#path'), 'combobox', '请选择路径', true);
+                    elementInit($('#servers'), 'selectpicker', '', true);
+                    elementInit($('#group_name'), 'text', '', false);
+                    $('#alert2').empty();
+                });
+                $('#clear').bind('click', function () {
+                    $("#params_app_id").val('');
+                    $("#params_app_id").selectpicker('refresh');
+                    $("#params_env").val('');
+                    $("#params_env").selectpicker('refresh');
+                    $('#asset').bootstrapTable('refresh', {
+                        url: '{{ CMDBAPI_URL }}ycc/soa_service/',
+                    });
+                });
+                $('#remove_group_btn').bind('click', function () {
+                    initRemoveBtn('del_group');
+                    $('#remove_div').modal('show');
+                });
+                path_change($('#path'), $('#servers'));
+            }
+
+            function initRemoveBtn(type) {
+                var show_text = '';
+                var remove_id = 0;
+                $('#remove_btn').css('display', '');
+                if (type == 'del_server') {
+                    show_text = '确定删除' + $('#ip_port').val() + '？';
+                } else if (type == 'del_group') {
+                    remove_id = $('#group_name_edit_del').val();
+                    if (remove_id) {
+                        show_text = '确定删除分组' + $('#group_name_edit_del').find("option:selected").text() + '？';
+                    } else {
+                        $('#remove_btn').css('display', 'none');
+                        show_text = '先选择要删除的分组';
+                    }
+                }
+                $('#rmtext').text(show_text);
+                $('#remove_btn').unbind('click');
+                $('#remove_btn').bind('click', function () {
+                    var text_success = '';
+                    var text_error = '';
+                    var url = '';
+                    if (type == 'del_server') {
+                        remove_id = $('#del_ip_id').val();
+                        url = '{{ CMDBAPI_URL }}ycc/soa_service_group_bind_delete/';
+                        text_success = "删除机器<strong>成功</strong>";
+                        text_error = "删除机器<strong>错误!</strong>";
+                        var html_type = 'POST';
+                    } else if (type == 'del_group') {
+                        if (remove_id) {
+                            url = '{{ CMDBAPI_URL }}ycc/soa_service_group/' + remove_id + '/';
+                        }
+                        text_success = "删除分组<strong>成功</strong>";
+                        text_error = "删除分组<strong>错误!</strong>";
+                        var html_type = 'DELETE';
+                    }
+                    if (url) {
+                        $.ajax({
+                            url: url,
+                            type: html_type,
+                            async: false,
+                            dataType: 'json',
+                            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                            data: {
+                                'remove_id': remove_id,
+                            },
+                            success: function (json) {
+                                $('#alert1').empty().append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>' + text_success + '</div>');
+                                $('#show_del_server').bootstrapTable('refresh', {
+                                    silent: false
+                                });
+                                $('#asset').bootstrapTable('refresh', {
+                                    silent: false
+                                });
+                                $('#remove_div').modal('hide');
+                            },
+                            error: function (json) {
+                                $('#alert1').empty().append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>' + text_error + JSON.stringify(json.responseText) + '</div>');
+                                $('#remove_div').modal('hide');
+                            }
+                        });
+                    } else {
+                        alert('Url none.')
+                    }
+                    if (type == 'del_group') {
+                        create_group_select($("#group_name_edit_del"), $('#soa_service_id_del').val(), 'del_server');
+                    }
+                });
+            }
+
+            function create_group_select(id, soa_service_id, type) {
+                var group_url = '{{ CMDBAPI_URL }}ycc/soa_service_group/?group_name=YCC_ADMIN&format=json&page_size=10000&soa_service__id=' + soa_service_id;
+                var groups = ajax(group_url, 'GET', '');
+                elementInit(id, 'combobox', '请选择分组', true);
+                $.each(groups['result'].results, function (i, value) {
+                    id.append($('<option>').text(value.cname).attr('value', value.id));
+                });
+                id.data('combobox').refresh();
+                if (type == 'add_server') {
+                    group_change($('#group_name_edit'));
+                }
+                else if (type == 'del_server')
+                    group_change_del(id);
+                else
+                    alert('create_group_select type error');
+            }
+
+            function elementInit(id, type, text, is_remove) {
+                $('.alert').empty().css('display', 'none');
+                if (type == 'combobox') {
+                    id.data('combobox').clearTarget();
+                    id.data('combobox').clearElement();
+                    if (is_remove) {
+                        id.find('option').remove();
+                        id.append($('<option>').text(text).attr('value', ''));
+                        id.data('combobox').refresh();
+                    }
+                    id.data('combobox').refresh();
+                } else if (type == 'selectpicker') {
+                    id.find('option').remove();
+                    $('.selectpicker').selectpicker('refresh');
+                } else if (type == 'text') {
+                    id.val(text);
+                }
+            }
+
+            function initValidatedStatus() {
+                updateValidatedStatus($('#soa_create_form'), $('#path'));
+                updateValidatedStatus($('#soa_create_form'), $('#group_name'));
+            }
+
+            function updateValidatedStatus(form, id) {
+                $(id).unbind('change');
+                $(id).change(function () {
+                    var tmp_id = id.attr('id');
+                    form.data('bootstrapValidator')
+                            .updateStatus(tmp_id, 'NOT_VALIDATED').validateField(tmp_id);
+                });
+            }
+
+            function initChange(id, form) {
+                $(id).unbind('change');
+                $(id).change(function () {
+                    if ($(this).val()) {
+                        var app = $('#app').val();
+                        var idc = $('#idc').val();
+                        var env = $('#env').val();
+                        var tmp_id = id.attr('id');
+                        form.data('bootstrapValidator')
+                                .updateStatus(tmp_id, 'NOT_VALIDATED').validateField(tmp_id);
+                        elementInit($('#path'), 'combobox', '请选择路径', true);
+                        elementInit($('#servers'), 'selectpicker', '', true);
+                        if (app && idc && env) {
+                            var path_url = '{{ CMDBAPI_URL }}ycc/soa_service/?group_name=YCC_ADMIN&format=json&page_size=10000&room__id=' + idc + '&app__id=' + app + '&env__id=' + env;
+                            var path_results = ajax(path_url, 'GET', '');
+                            if (path_results['is_cmp']) {
+                                if (path_results['result'].results.length > 0) {
+                                    $.each(path_results['result'].results, function (i, value) {
+                                        $('#path').append($('<option>').text(value.service_path).attr('value', value.id));
+                                    });
+                                    $("#path").data('combobox').refresh();
+                                } else {
+                                    $('#path').empty();
+                                }
+                            } else {
+                                $('#path').empty();
+                            }
+                        }
+                    }
+                });
+            }
+
+            function get_service_reg(soa_service_id, id, alert) {
+                var server_reg_url = '{{ CMDBAPI_URL }}ycc/get_service_reg/?group_name=YCC_ADMIN&format=json&page_size=10000&soa_service_id=' + $('#path').val();
+                var servers_reg = ajax(server_reg_url, 'GET', '');
+                if (servers_reg['is_cmp']) {
+                    alert.empty();
+                    var notin_ip = [];
+                    var except_ip = [];
+                    var ip_result = servers_reg['result'].detail;
+                    if (ip_result['in_ip'].length > 0) {
+                        $.each(ip_result['in_ip'], function (i, value) {
+                            var port = value.ip.split(':')[1];
+                            id.append($('<option>').text(value.ip).attr('value', value.server_id + ':' + port));
+                        });
+                    }
+                    if (ip_result['notin_ip'].length > 0) {
+                        $.each(ip_result['notin_ip'], function (i, value) {
+                            notin_ip.push(value.ip);
+                        });
+                        alert.append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>提示: </strong>该路径中有以下机器不在CMDB中，或者CMDB中状态非使用中！{' + notin_ip.join(',') + '}</div>');
+                    }
+                    if (ip_result['except_ip'].length > 0) {
+                        $.each(ip_result['except_ip'], function (i, value) {
+                            except_ip.push(value.ip);
+                        });
+                        alert.append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>提示: </strong>该路径中有以下机器在CMDB中多个存在！{' + except_ip.join(',') + '}</div>');
+                    }
+                    $('.selectpicker').selectpicker('refresh');
+                } else {
+                    alert.empty().append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>查询可选机器失败！' + JSON.stringify(server_results['result']) + '</div>');
+                }
+            }
+
+            function get_service_available(group_id, id, alert) {
+                elementInit(id, 'selectpicker', '', true);
+                var server_reg_url = '{{ CMDBAPI_URL }}ycc/get_userdserver_regserver/?group_name=YCC_ADMIN&format=json&page_size=10000&group_id=' + group_id;
+                var servers_reg = ajax(server_reg_url, 'GET', '');
+                if (servers_reg['is_cmp']) {
+                    alert.empty();
+                    var notin_ip = [];
+                    var except_ip = [];
+                    var ip_result = servers_reg['result'];
+                    if (ip_result['available_server']) {
+                        if (ip_result['available_server']['available_ip'].length > 0) {
+                            $.each(ip_result['available_server']['available_ip'], function (i, value) {
+                                var port = value.ip.split(':')[1];
+                                id.append($('<option>').text(value.ip).attr('value', value.server_id + ':' + port));
+                            });
+                        }
+                        if (ip_result['available_server']['notin_ip'].length > 0) {
+                            $.each(ip_result['available_server']['notin_ip'], function (i, value) {
+                                notin_ip.push(value.ip);
+                            });
+                            alert.append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>提示: </strong>该分组中可添加机器有以下不在CMDB中，或者CMDB中状态非使用中！{' + notin_ip.join(',') + '}</div>');
+                        }
+                        if (ip_result['available_server']['except_ip'].length > 0) {
+                            $.each(ip_result['available_server']['except_ip'], function (i, value) {
+                                except_ip.push(value.ip);
+                            });
+                            alert.append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>提示: </strong>该分组中可添加机器有以下在CMDB中多个存在！{' + except_ip.join(',') + '}</div>');
+                        }
+                    }
+                    $('.selectpicker').selectpicker('refresh');
+                } else {
+                    alert.empty().append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>查询可选机器失败！' + JSON.stringify(server_results['result']) + '</div>');
+                }
+            }
+
+            function path_change(id, select_id) {
+                id.unbind('change');
+                id.change(function () {
+                    get_service_reg(id.val(), select_id, $('#alert2'));
+                });
+            }
+
+            function group_change(id) {
+                $(id).unbind('change');
+                $(id).change(function () {
+                    var cmp_list = [];
+                    var server_content_url = '{{ CMDBAPI_URL }}ycc/get_soa_group_used_servers_show/?group_name=YCC_ADMIN&format=json&page_size=10000&soa_service_groupid=' + id.val();
+                    var server_contents = ajax(server_content_url, 'GET', '')['result'];
+                    if (server_contents) {
+                        server_contents = server_contents.substring(1, server_contents.length - 1);
+                        server_contents = server_contents.split('||');
+                        $.each(server_contents, function (i, value) {
+                            cmp_list.push($.trim(value));
+                        });
+                        server_contents = server_contents.join('\n');
+                    } else
+                        server_contents = '';
+                    $('#servers_content_edit').val(server_contents);
+                    get_service_available(id.val(), $('#servers_edit'), $('#alert3'));
+                });
+            }
+
+            function group_change_del(id) {
+                $(id).unbind('change');
+                $(id).change(function () {
+                    $('#show_del_server_div').css('display', '');
+                    var pool_table = $('#show_del_server  tr').val();
+                    var server_content_url = '{{ CMDBAPI_URL }}ycc/get_del_ip/?format=json&page_size=10000&soa_service_group__id=' + id.val();
+                    var columns = [
+                        {
+                            field: 'ip_port',
+                            title: 'IP',
+                            sortable: true,
+                        },
+                        {
+                            field: 'operate',
+                            title: '操作',
+                            align: 'left',
+                            formatter: detailFormatter,
+                            events: operateEvents
+                        }
+                    ]
+                    if (pool_table == undefined) {
+                        $('#show_del_server').bootstrapTable({
+                            url: server_content_url,
+                            method: 'get',
+                            ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                            undefinedText: '-',
+                            cache: false,
+                            pagination: true,
+                            pageSize: 5,
+                            pageNumber: 1,
+                            sortable: true,
+                            search: true,
+                            sortName: 'id',
+                            columns: columns,
+                        });
+                    } else {
+                        $('#show_del_server').bootstrapTable('refresh', {
+                            url: server_content_url,
+                        });
+                    }
+                    ;
+                    $("#show_del_server_div").find('input[type="text"]').attr('placeholder', 'IP地址').width(200);
+                });
+            }
+
+            function exactlyFilter() {
+                var params_app_id = $("#params_app_id").val();
+                var params_env = $("#params_env").val();
+                var params_idc = $("#params_idc").val();
+                var api_url_base = '{{ CMDBAPI_URL }}ycc/soa_service/?';
+                var params = ['format=json'];
+                if (params_app_id != "") {
+                    params.push('app__id=' + params_app_id);
+                }
+                if (params_idc != "") {
+                    params.push('room__id=' + params_idc);
+                }
+                if (params_env != "") {
+                    params.push('env__id=' + params_env);
+                }
+                var api_url = api_url_base + params.join('&');
+                $('#asset').bootstrapTable('refresh', {
+                    url: api_url
+                });
+            }
+
+            $('#asset').on('click-row.bs.table', function (e, row, $element) {
+            });
+
+            function operateFormatter(value, row, index) {
+                var hrefarr = [];
+                {% if soa_permission %}
+                    hrefarr.push(
+                            '<a class="add_server">',
+                            '<span class="glyphicon glyphicon-plus-sign" title="添加机器" style="cursor:pointer;margin-right:10px;"></span>',
+                            '</a>');
+                    hrefarr.push(
+                            '<a class="del_server">',
+                            '<span class="glyphicon glyphicon-minus-sign" title="删除机器" style="cursor:pointer;margin-right:10px;"></span>',
+                            '</a>');
+                {% else  %}
+                    var parm = '&idc=' + row.room + '&env=' + row.env + '&app=' + row.app_id + '&path=' + row.id;
+                    if (row.env == 1) {
+                        hrefarr.push(
+                                '<a href="http://oms.yihaodian.com.cn/ticket/?action=ticket&method=addGroupSmarty' + parm + '" target="_blank">',
+                                '<span class="" title="" style="cursor:pointer;margin-right:10px;">分组工单</span>',
+                                '</a>');
+                        hrefarr.push(
+                                '<a href="http://oms.yihaodian.com.cn/ticket/?action=ticket&method=addGroupIpSmarty' + parm + '" target="_blank">',
+                                '<span class="" title="" style="cursor:pointer;margin-right:10px;">应用工单</span>',
+                                '</a>');
+                    }
+                    else {
+                        hrefarr.push(
+                                '<span class="" title="" style="cursor:pointer;margin-right:10px;">STAG暂由SA操作</span>'
+                        );
+                    }
+                {% endif %}
+                return hrefarr.join('');
+            };
+
+            function groupDetailFormatter(value, row, index) {
+                var hrefarr = [];
+                hrefarr.push(
+                        '<a class="group_detail">',
+                        '<span class="" title="" style="cursor:pointer;margin-right:10px;">分组详情(' + row.count_groups + '/' + row.count_servers + ')</span>',
+                        '</a>'
+                );
+                return hrefarr.join('');
+            };
+
+            function countFormatter(value, row, index) {
+                var hrefarr = [];
+                hrefarr.push(
+                        '<a class="reg_detail">',
+                        '<span class="" title="" style="cursor:pointer;margin-right:10px;">' + row.service_path + '</span>',
+                        '</a>'
+                );
+                return hrefarr.join('');
+            };
+
+            function detailFormatter(value, row, index) {
+                var hrefarr = [];
+                hrefarr.push(
+                        '<a class="detail_remove">',
+                        '<span class="glyphicon glyphicon-remove" title="删除" style="cursor:pointer;margin-right:10px;color:red;"></span>',
+                        '</a>');
+                return hrefarr.join('');
+            }
+
+            window.operateEvents = {
+                'click .add_server': function (e, value, row, index) {
+                    var site_app = row.site_name + '_' + row.app_name;
+                    $('#app_edit').val(site_app);
+                    $('#idc_edit').val(row.room_name);
+                    $('#path_edit').val(row.service_path);
+                    create_group_select($('#group_name_edit'), row.id, 'add_server');
+                    elementInit($('#servers_edit'), 'selectpicker', '', true);
+                    $('#servers_content_edit').val('');
+                    $('#soa_edit').modal('show');
+                }, 'click .del_server': function (e, value, row, index) {
+                    var site_app = row.site_name + '_' + row.app_name;
+                    $('#app_edit_del').val(site_app);
+                    $('#idc_edit_del').val(row.room_name);
+                    $('#path_edit_del').val(row.service_path);
+                    create_group_select($('#group_name_edit_del'), row.id, 'del_server');
+                    $('#show_del_server').bootstrapTable('destroy');
+                    $('.alert').empty().css('display', 'none');
+                    $('#soa_service_id_del').val(row.id);
+                    $('#soa_edit_del').modal('show');
+                }, 'click .detail_remove': function (e, value, row, index) {
+                    $('#del_ip_id').val(row.id);
+                    $('#ip_port').val(row.ip_port);
+                    initRemoveBtn('del_server');
+                    $('#remove_div').modal();
+                }, 'click .group_detail': function (e, value, row, index) {
+                    var tree_data = [];
+                    var groups_servers_url = '{{ CMDBAPI_URL }}ycc/get_soa_group_servers/?group_name=YCC_ADMIN&format=json&page_size=10000&soa_service_id=' + row.id;
+                    var groups_servers = ajax(groups_servers_url, 'GET', '')['result'];
+                    if (groups_servers) {
+                        $.each(JSON.parse(groups_servers), function (i, value) {
+                            var tree_servers_data = []
+                            $.each(value, function (x, val) {
+                                tree_servers_data.push({
+                                    text: val,
+                                    tags: 1
+                                });
+                            });
+                            tree_data.push({
+                                'text': i + ' (' + tree_servers_data.length + ')',
+                                'nodes': tree_servers_data,
+                                'state.expanded': false
+                            })
+                        });
+                    }
+                    ;
+                    $('#tree_but').css('display', 'block');
+                    $('#soa_show_detail').modal('show');
+                    var count_detail = '配置组：' + row.count_groups + ' 已分配：' + row.count_servers;
+                    $('#detail_txt').text('详细信息' + '（' + count_detail + '）')
+                    $('#tree_search_txt').val('');
+                    $('#count_tree_count').html(' ')
+                    $('#tree_search_txt').attr('placeholder', 'IP地址、分组名')
+                    $('#tree').treeview(
+                            {
+                                data: tree_data,
+                                levels: 1,
+                                showCheckbox: false,
+                                showTags: false
+                            }
+                    );
+                    $('#expand_all').unbind('click');
+                    $('#expand_all').bind('click', function () {
+                        $('#tree').treeview('expandAll', {levels: 2, silent: true});
+                    });
+                    $('#collapse_all').unbind('click');
+                    $('#collapse_all').bind('click', function () {
+                        $('#tree').treeview('collapseAll', {silent: true});
+                    });
+                    $('#tree_search_btn').unbind('click');
+                    $('#tree_search_btn').bind('click', function () {
+                        var tree_search_txt = $('#tree_search_txt').val();
+                        if (tree_search_txt) {
+                            var search_result = $('#tree').treeview('search', [tree_search_txt, {
+                                ignoreCase: true,
+                                exactMatch: false,
+                                revealResults: true,
+                            }]);
+                            {#                            alert($('#tree').treeview('getNode', 0));#}
+                            $('#count_tree_count').html('<span style="color: red;">' + search_result.length + '个</span>&nbsp;');
+                        }
+                    });
+                    {#                    $(document).keypress(function (e) {#}
+                    {#                        if (e.which == 13) {#}
+                    {#                            alert(11111111111111111111)#}
+                    {#                        }#}
+                    {#                    });#}
+                }, 'click .reg_detail': function (e, value, row, index) {
+                    var reg_servers_url = '{{ CMDBAPI_URL }}ycc/get_service_reg/?format=json&soa_service_id=' + row.id;
+                    var reg_servers = ajax(reg_servers_url, 'GET', '');
+                    var tree_data = [];
+                    var reg_length = 0;
+                    var show_group_name = '';
+                    if (reg_servers['result']['result']) {
+                        $.each(reg_servers['result']['detail'], function (i, value) {
+                            var show_status = false;
+                            var tree_servers_data = [];
+                            if (value.length > 0) {
+                                $.each(value, function (y, val) {
+                                    tree_servers_data.push({
+                                        'text': val['ip'],
+                                        'tags': 1
+                                    })
+                                    reg_length += 1;
+                                });
+                                if (i == 'notin_ip') {
+                                    show_group_name = '非法服务器（未在CMDB中注册）';
+                                    show_status = true;
+                                }
+                                else if (i == 'except_ip') {
+                                    show_group_name = '异常服务器（存在多个IP）';
+                                    show_status = true;
+                                }
+                                else if (i == 'in_ip') {
+                                    show_group_name = '已注册服务器';
+                                }
+                                else
+                                    alert('Please check!')
+                                tree_data.push({
+                                    'text': show_group_name + ' (' + tree_servers_data.length + ')',
+                                    'nodes': tree_servers_data,
+                                    'state.expanded': show_status
+                                });
+                            }
+                        });
+                        $('#tree').treeview(
+                                {
+                                    data: tree_data,
+                                    levels: 1,
+                                    showCheckbox: false,
+                                    showTags: false
+                                }
+                        );
+                        $('#detail_txt').text('已注册服务' + '（' + reg_length + '）');
+                        $('#tree_but').css('display', 'none');
+                        $('#soa_show_detail').modal('show');
+                    } else {
+                        alert(reg_servers['result']['msg']);
+                    }
+                }
+            };
+
+            $('#asset').bootstrapTable({
+                url: '{{ CMDBAPI_URL }}ycc/soa_service/',
+                ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                columns: [
+                    {
+                        field: 'id',
+                        visible: false
+                    },
+                    {
+                        field: 'site_name',
+                        title: '站点名',
+                    },
+                    {
+                        field: 'app_name',
+                        title: '应用名',
+                    },
+                    {
+                        field: 'room_name',
+                        title: 'IDC',
+                    },
+                    {
+                        field: 'env_name',
+                        title: 'ENV',
+                    },
+                    {
+                        field: 'service_path',
+                        title: '服务注册路径',
+                        formatter: countFormatter,
+                        events: operateEvents,
+                    },
+                    {
+                        field: 'detail',
+                        title: '详细信息（组/服务）',
+                        formatter: groupDetailFormatter,
+                        events: operateEvents,
+                    },
+                    {
+                        field: 'operate',
+                        title: '操作',
+                        align: 'left',
+                        formatter: operateFormatter,
+                        events: operateEvents,
+                    }
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        {% if app_id %}
+                            group_status__group__app_id: {{ app_id }},
+                        {% endif %}
+                        group_name: 'YCC_ADMIN',
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search,
+                        format: 'json',
+                    };
+                },
+                pagination: true,
+                pageSize: 50,
+                pageList: [10, 20, 100],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: true,
+                showColumns: true,
+                toolbar: "#toolbar",
+                cache: false
+            });
+
+            $('#soa_create_form')
+                    .bootstrapValidator({
+                        excluded: ':disabled',
+                        fields: {
+                            app: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '请选择应用名。'
+                                    }
+                                }
+                            },
+                            idc: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '请选择IDC。'
+                                    }
+                                }
+                            },
+                            env: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '请选择环境。'
+                                    }
+                                }
+                            },
+                            path: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '请选择路径。'
+                                    }
+                                }
+                            },
+                            group_name: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '分组名不能为空。'
+                                    }
+                                }
+                            },
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        var url = '{{ CMDBAPI_URL }}ycc/soa_service_group_create/';
+                        var servers = [];
+                        $("#servers").each(function () {
+                            if ($(this).val() != null) {
+                                servers.push($(this).val());
+                            }
+                        });
+                        var soa_service_id = $('#path').val();
+                        var data = {
+                            'soa_service': soa_service_id,
+                            'cname': $('#group_name').val(),
+                            'servers': servers.join(','),
+                        }
+                        var result_json = ajax(url, 'POST', data);
+                        if (result_json['is_cmp']) {
+                            $('#alert').empty().append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>添加分组成功</div>');
+                            $('#asset').bootstrapTable('refresh', {
+                                silent: true
+                            });
+                            $('#soa_create').modal('hide');
+                            $('#soa_create_form').bootstrapValidator('resetForm', true);
+                        } else {
+                            $('#alert').empty().append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加分组记录' + JSON.stringify(result_json['result']) + '</div>');
+                            $('#soa_create').modal('hide');
+                        }
+                    });
+
+            $('#soa_edit_form')
+                    .bootstrapValidator({
+                        excluded: ':disabled',
+                        fields: {
+                            group_name_edit: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '请选择分组。'
+                                    }
+                                }
+                            },
+                            servers_edit: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '请选择机器。'
+                                    }
+                                }
+                            },
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        var url = '{{ CMDBAPI_URL }}ycc/soa_service_group_bind_create/';
+                        var servers = [];
+                        $("#servers_edit").each(function () {
+                            if ($(this).val() != null) {
+                                servers.push($(this).val());
+                            }
+                        });
+                        var data = {
+                            'soa_service_group': $('#group_name_edit').val(),
+                            'servers': servers.join(','),
+                        }
+                        var result_json = ajax(url, 'POST', data);
+                        if (result_json['is_cmp']) {
+                            $('#alert').empty().append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>添加分组成功</div>');
+                            $('#asset').bootstrapTable('refresh', {
+                                silent: true
+                            });
+                            $('#soa_edit').modal('hide');
+                            $('#soa_edit_form').bootstrapValidator('resetForm', true);
+                        } else {
+                            $('#alert').empty().append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加分组记录' + JSON.stringify(result_json['result']) + '</div>');
+                            $('#soa_edit').modal('hide');
+                        }
+                    });
+
+            function ajax(url, type, data) {
+                var result = null;
+                var is_cmp = false;
+                $.ajax({
+                    url: url,
+                    type: type,
+                    async: false,
+                    data: data,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        result = json;
+                        is_cmp = true;
+                    },
+                    error: function (json) {
+                        result = json.responseText;
+                    }
+                });
+                return {
+                    'result': result,
+                    'is_cmp': is_cmp
+                };
+            }
+
+            function contains(a, obj) {
+                for (var i = 0; i < a.length; i++) {
+                    if (a[i] === obj) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            {% if not domains %}
+                var a = $('<a>')
+                        .attr({href: 'http://oms.yihaodian.com.cn/home/myInfo.action', target: '_blank'})
+                        .text('此处')[0].outerHTML;
+                bootbox.alert('无domain信息，请点击' + a + '查看修复方法，或者联系SA');
+            {% endif %}
+            $('div.search>input[type="text"]').attr('placeholder', '分组路径、IP地址').width(200);
+        });
+    </script>
+{% endblock %}

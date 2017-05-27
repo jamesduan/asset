@@ -1,0 +1,661 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/jQuery-contextMenu/dist/jquery.contextMenu.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+<script src="{{ STATIC_URL }}libs/jQuery-contextMenu/dist/jquery.contextMenu.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/spin.min.js" ></script>
+<style>
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+    .table{
+        width: 100%;
+        table-layout: fixed;
+    }
+   .table td:hover{
+       overflow: visible;
+       white-space: normal;
+   }
+    .table td {
+        word-wrap: break-word;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .table th {
+        text-align: center;
+    }
+    .table > tbody > tr > td{
+        vertical-align: middle;
+    }
+
+   .table td xmp:hover{
+        overflow: visible;
+        white-space: normal;
+   }
+    .table td xmp {
+        word-wrap: break-word;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    @media (max-width:1000px){
+	    body{ font-size:12px;}
+        .bootstrap-table .table, .bootstrap-table .table>tbody>tr>td, .bootstrap-table .table>tbody>tr>th, .bootstrap-table .table>tfoot>tr>td, .bootstrap-table .table>tfoot>tr>th, .bootstrap-table .table>thead>tr>td {
+            padding: 4px!important;
+        }
+        .bootstrap-table .table>tbody>tr>td:nth-child(2), .table>tbody>tr>td:nth-child(4), .table>tbody>tr>td:nth-child(5) {white-space: normal;}
+	}
+</style>
+
+<div id="alert">
+</div>
+
+<div id="loading"></div>
+
+<div id="toolbar">
+<div class="form-inline" role="form">
+
+    <button id="batch_cancel_btn" class="btn btn-danger" disabled>
+        <i class="glyphicon glyphicon-trash"></i> 批量取消
+    </button>
+
+    <select id="eventsource_select" class="form-control select_api_url selectpicker">
+        <option value="">请选择源</option>
+        {%  for item in event_source_list %}
+            <option value="{{ item.id }}">{{ item.name }}</option>
+        {%  endfor %}
+    </select>
+
+    <select id="eventtype_select" class="form-control select_api_url selectpicker">
+        <option value="">请选择类型</option>
+        {%  for item in event_type_list %}
+            <option value="{{ item.id }}">{{ item.name }}</option>
+        {%  endfor %}
+    </select>
+
+    <button id="btn_refresh" type="button" class="btn btn-green  glyphicon glyphicon-refresh" title="刷新"> </button>
+
+    <label id="time_label" style="font-size: 20px;margin-left: 60px">上次刷新时间:</label>
+    <label id="last_request_time" style="font-size: 20px"></label>
+
+</div>
+</div>
+
+<table id="event_table">
+</table>
+
+<div class="modal fade" id="commentModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="commentForm" method="POST" action="">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="addSite">备注</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="event_id" class="col-sm-3 control-label">ID</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="event_id" id="event_id" readonly/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="keyword" class="col-sm-3 control-label">内容</label>
+                        <div class='col-sm-6'>
+                            <textarea type='text' class="form-control" name="comment_content" id="comment_content" ></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal" id="add_cancel">取消</button>
+                    <button type="submit" class="btn btn-green" id="add_submit">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+var $table = $('#event_table');
+var refresh_timer = setTimeout('refresh_by_url()', 30000);
+
+$('.selectpicker').selectpicker({
+    'width': 'fit'
+});
+
+$('.select_api_url').change(function(){
+    refresh_by_url();
+});
+
+function reset_timer(){
+    clearTimeout(refresh_timer);
+    refresh_timer = setTimeout('refresh_by_url()', 30000);
+}
+
+function get_url(){
+    var source = $("#eventsource_select").val().trim();
+    var type = $("#eventtype_select").val().trim();
+
+    var api_url_base = '{{ CMDBAPI_URL }}notification/eventv2/?';
+    var params = ['format=json'];
+    params.push('status=' + 0);
+    params.push('converge_id=' + 0);
+    params.push('level_id=' + 400);
+    if (source !="") {
+        params.push('source__id='+source)
+    }
+    if (type !="") {
+        params.push('type__id=' + type)
+    }
+
+    var api_url = api_url_base + params.join('&');
+    return api_url;
+}
+
+function refresh_by_url() {
+    var api_url = get_url();
+    var opt = {
+        url: api_url,
+        silent:true,
+        query:{page:1}
+    };
+
+    $table.bootstrapTable('refresh', opt);
+    reset_timer();
+}
+
+function cancel_undone_event(row, type){
+    var array_flag = isArray(row);
+    var rows = [];
+    if (array_flag) {
+        rows = row;
+    } else {
+        rows[0] = row;
+    }
+
+    var id_array = [];
+    for(var i in rows){
+        var r_id = rows[i].id;
+        id_array.push(r_id);
+    }
+
+    if (id_array.length == 0){
+        alert("无效ID, 请重试。");
+        return;
+    }
+
+    var ids_str = id_array.join(',');
+    var inputdata = {
+        'ids':ids_str,
+        'cancel_type': type
+    };
+
+    $.ajax({
+        url:'{{ CMDBAPI_URL }}notification/event/updateall/',
+        type: 'POST',
+        async: false,
+        data: inputdata,
+        dataType:'json',
+        headers:{'Authorization':'Token {{ API_TOKEN }}'},
+        success: function( json ) {
+            var result = json.result;
+            if (result == 0){
+                $('#batch_cancel_btn').prop('disabled', true);
+                refresh_by_url();
+            }
+            else {
+                alert('取消失败!原因:'+ json.detail);
+            }
+
+        },
+        error: function( json ) {
+            alert('取消失败!原因：' + JSON.stringify(json.responseText));
+        }
+    });
+}
+
+
+$('#batch_cancel_btn').click(function(){
+    var rows = $table.bootstrapTable('getSelections');
+    cancel_undone_event(rows, 0);
+});
+
+$(document).ready(function() {
+    $(function () { $("[data-toggle='tooltip']").tooltip(); });
+
+    window.operateEvents = {
+        'click .cancel': function (e, value, row) {
+            cancel_undone_event(row, 0);
+        },
+        'click .cancel_misinform': function (e, value, row) {
+            cancel_undone_event(row, 1);
+        },
+        'click .comment': function (e, value, row) {
+            $("#event_id").val(row.id);
+            $("#comment_content").val(value);
+            $("#commentModal").modal('show');
+        }
+    };
+
+    $.contextMenu({
+        selector:'#event_table td',
+        items: {
+            "Ping": {name: "Ping"},
+            "Telnet_8080": {name: "Telnet_8080"},
+            "Telnet_10050": {name: "Telnet_10050"},
+            "Traceroute": {name: "Traceroute"}
+        },
+        build: function ($trigger, e) {
+            return {
+                callback: function (key, options) {
+                    var td_ip = $trigger.parent('tr').children('td')[4];
+
+                    if (typeof  td_ip == "undefined"){
+                        alert("当前记录无法获取IP地址。");
+                        return;
+                    }
+
+                    var ip_list = $.trim(td_ip.innerText);
+
+                    if (ip_list == ""){
+                        alert("IP 为空, 操作无效。");
+                        return;
+                    }
+
+                    var ip_arr = ip_list.split(",");
+                    var ip_first = $.trim(ip_arr[0]);
+                    if (ip_first == ""){
+                        alert("IP 为空, 操作无效。");
+                        return;
+                    }
+
+                    var operate_type = 0;
+                    switch (key){
+                        case "Ping":
+                            operate_type = 1;
+                            break;
+                        case "Telnet_8080":
+                            operate_type = 2;
+                            break;
+                        case "Telnet_10050":
+                            operate_type = 3;
+                            break;
+                        case "Traceroute":
+                            operate_type = 4;
+                            break;
+                        default :
+                            alert("Exception....");
+                            console.log("should not be here...");
+                            return;
+                    }
+
+                    doRightOp(operate_type, ip_first);
+                }
+            }
+        }
+    });
+
+    var urlAddr = get_url();
+    $table.bootstrapTable({
+        url: urlAddr,
+        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}, async:true,timeout:50000},
+        columns: [
+            {
+                field: 'state',
+                checkbox: true,
+                 width: '2px'
+            },
+            {
+                field: 'operate',
+                title: '操作',
+                align: 'center',
+                formatter: operateFormatter,
+                events: operateEvents,
+                 width: '5%'
+            },
+            {
+                field: 'source_name',
+                title: '来源',
+                formatter: getSourceDetail,
+                 width: '6%'
+            },
+            {
+                field: 'pool_name',
+                title: 'Pool',
+                 width: '22%'
+            },
+            {
+                field: 'ip',
+                title: 'IP',
+                 width: '8%'
+            },
+            {
+                field: 'type_name',
+                title: '类型',
+                width: '8%',
+                visible: false
+            },
+            {
+                field: 'level_name',
+                title: '等级',
+                align: 'center',
+                cellStyle:formatTableUnit,
+                 width: '4%',
+                visible: false
+            },
+            {
+                field: 'message',
+                title: '内容',
+                formatter:formatMsg
+            },
+            {
+                field: 'get_time',
+                title: '发生时间',
+                align: 'center',
+                width: '8%',
+                visible: false
+            },
+            {
+                field: 'create_time',
+                title: '创建时间',
+                align: 'center',
+                width: '8%',
+                visible: false
+            },
+            {
+                field: 'during_time',
+                title: '持续时间',
+                align: 'center',
+                width: '6%'
+            },
+            {
+                field: 'comment',
+                title: '备注',
+                align: 'center',
+                formatter: commentFormatter,
+                events: operateEvents,
+                 width: '4%'
+            }
+        ],
+        responseHandler: function (res) {
+            var result = {};
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset / p.limit + 1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 30,
+        pageList: [10, 30, 50],
+        sidePagination: 'server',
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false,
+        minimumCountColumns:3,
+        formatLoadingMessage: function(){
+            return "";
+        },
+        formatNoMatches: function(){
+            return "";
+        }
+    });
+
+
+    function operateFormatter(value, row, index) {
+        return [
+            '<a href="#" class="cancel" data-toggle="tooltip" title="取消">',
+            '<span class="glyphicon glyphicon-trash"></span>',
+            '</a>&nbsp;&nbsp;&nbsp',
+            '<a href="#" class="cancel_misinform" data-toggle="tooltip" title="误报">',
+            '<span class="glyphicon glyphicon-hand-up"></span>',
+            '</a> '
+        ].join('');
+    }
+
+    function commentFormatter(value, row, index) {
+        var cmt_icon_class = "";
+        if (value == ""){
+            value = "备注";
+            cmt_icon_class = "glyphicon glyphicon-paperclip";
+        }
+        else {
+            cmt_icon_class = "glyphicon glyphicon-envelope";
+        }
+
+        return [
+            '<a href="#" class="comment" data-toggle="tooltip" title=' + value + '>',
+            '<span class="' + cmt_icon_class + '"></span>',
+            '</a> '
+        ].join('');
+    }
+
+    $table.on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+        $('#batch_cancel_btn').prop('disabled', !$table.bootstrapTable('getSelections').length);
+        if (!$table.bootstrapTable('getSelections').length) {
+            refresh_timer = setTimeout('refresh_by_url()', 30000);
+        }
+        else {
+            clearTimeout(refresh_timer);
+        }
+    });
+
+    $table.on('load-success.bs.table',function(data){
+        realTime();
+    });
+
+    $table.on('page-change.bs.table', function(number, size){
+        reset_timer();
+    });
+});
+
+$('#commentForm').bootstrapValidator({
+    excluded: ':disabled',
+    fields: {
+        comment_content: {
+            validators: {
+                notEmpty: {
+                    message: '内容不能为空。'
+                }
+            }
+        }
+    }
+}).on('success.form.bv', function(e) {
+    e.preventDefault();
+
+    var inputdata = {};
+    var content = $.trim($("#comment_content").val());
+    if (content!=''){
+        inputdata['comment']= content;
+    }
+    var event_id = $("#event_id").val().trim();
+    inputdata['id'] = event_id;
+
+    $.ajax({
+        url: '{{ CMDBAPI_URL }}notification/event/' + event_id + '/',
+        type: 'PATCH',
+        async: false,
+        data: inputdata,
+        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+        success: function (json) {
+            $('#commentModal').modal('hide');
+            $table.bootstrapTable('refresh', {
+                silent: true
+            });
+            $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>备注成功!</strong></div>');
+            setTimeout(function(){$('#alert').empty();}, 1000);
+
+            reset_timer();
+        },
+        error: function (json) {
+            $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误</strong>添加备注' + JSON.stringify(json.responseText) + '</div>');
+            $('#commentModal').modal('hide');
+        }
+    });
+});
+
+
+function formatTableUnit(value, row, index) {
+    var front_color, bg_color;
+    switch (row.level_id){
+        case 100:
+            front_color = "#b64fff";
+            bg_color = "White";
+            break;
+        case 200:
+            front_color = "#cc3529";
+            bg_color = "White";
+            break;
+        case 300:
+            front_color = "#fa8c42";
+            bg_color = "White";
+            break;
+        case 350:
+            front_color = "#b7b000";
+            bg_color = "White";
+            break;
+        case 400:
+            front_color = "#33b704";
+            bg_color = "White";
+            break;
+        case 500:
+            front_color = "#000";
+            bg_color = "White ";
+            break;
+        default :
+            front_color = "Aqua";
+            bg_color = "Fuchsia";
+    }
+
+    return {
+        css: {
+            "color":front_color,
+            "background-color": bg_color
+        }
+    };
+}
+
+function formatMsg(value, row, index) {
+    var msg = row.message;
+    if (msg.indexOf("<br>") != -1) {
+        var newmsg = msg.replace(/<br>/g, "");
+        msg = newmsg;
+    }
+
+    if (msg.indexOf("<table") != -1) {
+        var max_length = 300;
+        if (msg.length > max_length){
+            msg = msg.substring(0, max_length);
+        }
+        msg = "<xmp>" + msg + "</xmp>...";
+    }
+
+    return msg;
+}
+
+function realTime(){
+    var currentTime = new Date();
+    var year = currentTime.getFullYear();
+    var month = formatStyle(currentTime.getMonth()+1);
+    var date = formatStyle(currentTime.getDate());
+
+    var hour = formatStyle(currentTime.getHours());
+    var min = formatStyle(currentTime.getMinutes());
+    var sec = formatStyle(currentTime.getSeconds());
+
+    var displayTime= year+"-"+month+"-"+date+" "+hour+":"+min+":"+sec;
+    $("#last_request_time").html(displayTime);
+}
+
+function formatStyle(p){
+    if (p < 10) {
+        p = "0" + p;
+    }
+    return p;
+}
+
+
+
+function doRightOp(operate_type, ip_first){
+    var right_operate_url = '{{ CMDBAPI_URL }}notification/event/frontrightop/';
+
+    var opts = {
+        lines: 13, // 花瓣数目
+        length: 10, // 花瓣长度
+        width: 10, // 花瓣宽度
+        radius: 25, // 花瓣距中心半径
+        corners: 1, // 花瓣圆滑度 (0-1)
+        rotate: 0, // 花瓣旋转角度
+        direction: 1, // 花瓣旋转方向 1: 顺时针, -1: 逆时针
+        color: '#5882FA', // 花瓣颜色
+        speed: 1, // 花瓣旋转速度
+        trail: 60, // 花瓣旋转时的拖影(百分比)
+        shadow: false, // 花瓣是否显示阴影
+        hwaccel: false, //spinner 是否启用硬件加速及高速旋转
+        className: 'spinner', // spinner css 样式名称
+        zIndex: 2e9, // spinner的z轴 (默认是2000000000)
+        top: '0%', // spinner 相对父容器Top定位 单位 px
+        left: '0%'// spinner 相对父容器Left定位 单位 px
+    };
+    var spinner = new Spinner(opts);
+
+    $.ajax({
+        url: right_operate_url,
+        type: 'POST',
+        data: {'type':operate_type, 'ip':ip_first},
+        headers:{'Authorization':'Token {{ API_TOKEN }}'},
+        beforeSend: function(){
+            $("#loading").css({display:"",top:"40%",left:"50%",position:"fixed"});
+            var target = $("#loading").get(0);
+            spinner.spin(target);
+        },
+        success: function (json) {
+            spinner.spin();
+            var ret = json.retcode;
+            if (ret == 0){
+                alert("success");
+            }
+            else {
+                alert("failed");
+            }
+        },
+        error: function (json) {
+            spinner.spin();
+            $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误</strong>操作' + JSON.stringify(json.responseText) + '</div>');
+
+        }
+    });
+
+}
+
+$("#btn_refresh").click(function(){
+    refresh_by_url();
+});
+
+function getSourceDetail(value, row, index) {
+    return '<a href="{{ ROOT_URL }}srcdtl/?id=' + row.source_id + '" target="_blank" class="tooltip-show" data-toggle="tooltip" title="点击查看Domain详情">' + value + '</a>';
+
+}
+
+function isArray(o){
+    return Object.prototype.toString.call(o)=='[object Array]';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,231 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block title %} 发布—发布大屏 {% endblock %}
+
+{% block content %}
+    <script src="{{ STATIC_URL }}libs/jquery/jquery-1.11.2.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap/js/bootstrap.min.js"></script>
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+    <style>
+        #all{
+            width:98%;
+            height:70%;
+            position:absolute;
+            border:solid 1px #777777;
+        }
+        #current_title{
+            position:absolute;
+            top:0px;
+            width:100%;
+            height:6%;
+            background-color: #45a1eb;
+            font-size: 18px;
+            color:#FFFFFF;
+        }
+        #current_content{
+            position:absolute;
+            bottom:0px;
+            width:100%;
+            height:94%;
+            font-size: 14px;
+            color:#FFFFFF;
+        }
+        #title{
+            background-color: #005580;
+            height: 10%;
+            border: none;
+            padding-right: 15px;
+        }
+        #content{
+            background-color: #005580;
+            height: 90%;
+            border: none;
+            overflow: scroll;
+        }
+        .table-hover tbody tr:hover td{
+            background-color: #4297d7;
+        }
+        .table tbody tr td{
+            height: 16px;
+            line-height: 16px;
+        }
+
+        .progress-bar {
+            background-color: rgba(251,178,23,0.88);
+            box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.15) inset;
+            color: #fff;
+            float: left;
+            font-size: 14px;
+            height: 15px;
+            line-height: 15px;
+            text-align: center;
+            transition: width 0.6s ease 0s;
+        }
+
+    </style>
+<div id="all">
+    <div id="current_title">{{ today }} 所有发布</div>
+    <div id="current_content">
+        <div id="title">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th width="12%">Trident单号</th>
+                        <th width="15%">发布申请单号</th>
+                        <th width="17%">发布Pool</th>
+                        <th width="6%">包类型</th>
+                        <th width="5%">灰度</th>
+                        <th width="15%">最新发布进度</th>
+                        <th width="5%">进行中</th>
+                        <th width="8%">发布状态</th>
+                        <th width="17%">更新时间</th>
+                    </tr>
+                </thead>
+            </table>
+        </div>
+        <div id="content">
+            <table id="all-publish" cellspacing="0" style="border-collapse:collapse;">
+            </table>
+        </div>
+    </div>
+</div>
+
+<script type="application/javascript">
+$(document).ready(function() {
+
+$('#all-publish').bootstrapTable({
+    url: '{{ CMDBAPI_URL }}deploy/publish/screen/?format=json',
+    method: 'get',
+    ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+    pagination: false,
+    showHeader: false,
+    columns: [
+        {
+            field: 'trident',
+            title: 'Trident单号',
+            width: 12 +'%'
+        },
+            {
+            field: 'depid',
+            title: '发布申请单号',
+            width: 15 + '%'
+        },
+        {
+            field: 'pool',
+            title: '发布Pool',
+            width: 17 + '%'
+        },
+        {
+            field: 'package_type',
+            title: '包类型',
+            width: 6 + '%',
+            align: 'center'
+        },
+        {
+            field: 'is_gray_release',
+            title: '灰度',
+            width: 5 + '%',
+            align: 'center'
+        },
+        {
+            field: 'progress',
+            title: '最新发布进度',
+            formatter: progressFormatter,
+            width: 15 + '%',
+            align: 'center'
+        },
+        {
+            field: 'is_progress',
+            title: '进行中',
+            width: 5 + '%',
+            align: 'center'
+        },
+        {
+            field: 'status',
+            title: '状态',
+            width: 8 + '%',
+            formatter: statusFormatter,
+            align: 'center'
+        },
+        {
+            field: 'last_modified',
+            title: '更新时间',
+            width: 17 + '%'
+        }
+    ],
+});
+
+function progressFormatter(value, row, index){
+    return '<div class="progress-bar" role="progressbar" aria-valuenow="'+ value + '" aria-valuemin="0" aria-valuemax="100" style="width: '+ value + '%;">'+ value +'%</div>';
+}
+
+function statusFormatter(value, row, index){
+    if(value == '发布成功'){
+        return "<div style='background:RGB(2,227,45); margin:0px'  height:100%>" + value + "<div>";
+    }else if(value == '待发布' || value== '初始值'){
+        return "<div style='background:RGB(208, 128,232); margin:0px'  height:100%>" + value + "<div>";
+    }else if(value == '已回滚'){
+        return "<div style='background:RGB(78,71,255); margin:0px'  height:100%>" + value + "<div>";
+    }else if(value == '发布中'){
+        return "<div style='background:RGB(119,191,140); margin:0px'  height:100%>" + value + "<div>";
+    }else if(value == '已作废' || value == '发布异常' || value == '回滚异常'){
+        return "<div style='background:RGB(237,0,0); margin:0px'  height:100%>" + value + "<div>";
+    }else if (value=='待回滚'){
+        return "<div style='background:RGB(133,186,176); margin:0px'  height:100%>" + value + "<div>";
+    }else if(value == '无待发配置'){
+        return "<div style='background:RGB(240,4,157); margin:0px'  height:100%>" + value + "<div>";
+    }else{
+        return value;
+    }
+
+}
+
+function marques(lh,speed,delay){
+    var intervalFunction;
+    var scrollDiv=document.getElementById("content");
+    var oHeight = $('#content').height();
+    var preTop = 0;
+    scrollDiv.scrollTop = 0;
+
+    function start(){
+        intervalFunction=setInterval(scrolling,speed);
+    };
+
+    function scrolling(){
+        if( scrollDiv.scrollHeight-scrollDiv.offsetHeight<scrollDiv.scrollTop){
+            preTop = scrollDiv.scrollTop;
+            scrollDiv.scrollTop+=1;
+            if(preTop > oHeight){
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}deploy/publish/screen/?format=json',
+                    dataType: 'json',
+                    type: 'GET',
+                    async: false,
+                    headers:{'Authorization':'Token {{ API_TOKEN }}'},
+                    success: function( json ) {
+                        $('#all-publish').bootstrapTable('load', json);
+                        scrollDiv.scrollTop = 0;
+                    }
+                });
+
+
+            }
+        }
+         scrollDiv.scrollTop+=1;
+         scrollDiv.onmouseover=function() {clearInterval(intervalFunction)};
+         scrollDiv.onmouseout=function() {intervalFunction=setInterval(scrolling,speed)};
+    };
+
+    setTimeout(start,delay);
+};
+
+marques(16,16,300);
+
+
+});
+
+</script>
+
+{% endblock %}

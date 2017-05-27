@@ -1,0 +1,288 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+<div id="alert">
+</div>
+
+
+<div class="modal fade" id="editValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="attributeForm1" method="POST">
+  <input type="hidden" name="id" id="id">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="myModalLabel">更新故障记录</h4>
+  </div>
+  <div class="modal-body">
+
+      <div class="form-group">
+        <label for="inputEmail3" class="col-sm-3 control-label">故障类型</label>
+        <div class="col-sm-6">
+            <select name="repair_type" id="repair_type" class="form-control">
+                <option value="0">未定义</option>
+                <option value="1">主板故障</option>
+                <option value="2">内存故障</option>
+                <option value="3">硬盘故障</option>
+                <option value="4">电源故障</option>
+                <option value="5">电池故障</option>
+                <option value="6">CPU故障</option>
+                <option value="7">raid卡故障</option>
+                <option value="8">风扇故障</option>
+                <option value="9">交换机故障</option>
+            </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">故障描述</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="repair_reson" id="repair_reson" />
+            </div>
+      </div>
+
+      <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">是否修复</label>
+            <div class='col-sm-6'>
+                <select name="is_repair" id="is_repair" class="form-control">
+                <option value="0">暂不更新</option>
+                <option value="1">已修复，设备状态置为未交付</option>
+                <option value="2">已修复，设备状态置为已申请</option>
+                <option value="3">已修复，设备状态置为已交付</option>
+            </select>
+            </div>
+      </div>
+
+      <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">修复结果</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="repair_result" id="repair_result" />
+            </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">修复时间</label>
+        <div class="col-sm-6">
+            <input type="text" value="{{ current_date }}" readonly size="16" name="expiration_time" id="expiration_time" class=" form-control form_datetime">
+        </div>
+      </div>
+
+
+  </div>
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn btn-green" id="submit1">保存</button>
+  </div>
+</form>
+</div>
+</div>
+</div>
+
+
+<div id="toolbar">
+{#    <button id="create" data-toggle="modal" data-target="#addValue" class="btn btn-green">#}
+{#        <i class="glyphicon glyphicon-plus"></i> 新增#}
+{#    </button>#}
+</div>
+
+<table id="asset">
+</table>
+
+
+<script>
+$(document).ready(function() {
+    window.operateEvents = {
+        'click .edit': function (e, value, row, index) {
+            $('#editValue').modal('show');
+        }
+    };
+    $('.form_datetime').datetimepicker({
+        format: 'yyyy-mm-dd',
+        autoclose: true,
+        showMeridian: true,
+        minView: 2
+    });
+    $('#asset').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}asset/repair/?format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'assetid',
+                title: '设备编号'
+            },
+            {
+                field: 'sn',
+                title: '序列号',
+                visible: false
+            },
+            {
+                field: 'idc',
+                title: 'IDC'
+            },
+            {
+                field: 'rack_name',
+                title: '机柜名'
+            },
+            {
+                field: 'type_name',
+                title: '故障类型'
+            },
+            {
+                field: 'reson_user',
+                title: '故障登记人'
+            },
+            {
+                field: 'reson',
+                title: '故障描述'
+            },
+            {
+                field: 'reson_time',
+                title: '故障时间',
+                formatter: getExpire_date
+            },
+            {
+                field: 'result_user',
+                title: '修复人'
+            },
+            {
+                field: 'result',
+                title: '修复结果'
+            },
+            {
+                field: 'result_time',
+                title: '修复时间',
+                formatter: getExpire_date
+            },
+            {
+                field: 'operate',
+                title: '操作',
+                align: 'center',
+                formatter: operateFormatter,
+                events: operateEvents
+            }
+        ],
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [10,20,100,500],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        showExport: true,
+{#        exportDataType: 'all',#}
+        cache: false
+    });
+
+    function getExpire_date(value, row, index) {
+        if(!value) {
+            return "";
+        }
+        return moment.unix(value).format('YYYY-MM-DD');
+    };
+
+    function operateFormatter(value, row, index) {
+        return [
+            '<a href="#" class="edit">',
+            '<span class="glyphicon glyphicon-pencil"></span>',
+            '</a>'
+        ].join('');
+    };
+
+    $('#asset').on('click-row.bs.table', function (e, row, $element) {
+        //$("#repair_type :selected").prop('selected', false);
+        $("#repair_type").find("option").removeAttr("selected");
+        $("#id").val(row.id);
+        $("#repair_reson").val(row.reson);
+        $("#repair_type option[value="+row.type+"]").attr("selected","selected");
+        $("#repair_result").val(row.result);
+        if(row.result_time) {
+            $("#expiration_time").val(moment.unix(row.result_time).format('YYYY-MM-DD'));
+        }
+    });
+
+    $('#attributeForm1')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                repair_type: {
+                    validators: {
+                        notEmpty: {
+                            message: '故障类型不能为空。'
+                        }
+                    }
+                },
+                reason: {
+                    validators: {
+                        notEmpty: {
+                            message: '故障描述不能为空。'
+                        }
+                    }
+                }
+            }
+            })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var id = $("#id").val()
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/repair/' + id + '/',
+                type: 'PATCH',
+                async:  false,
+                data: {
+                    'reson': $('#repair_reson').val(),
+                    'result_user': '{{ USER.username }}',
+                    'type': $('#repair_type option:selected').val(),
+                    'result': $('#repair_result').val(),
+                    'result_time': moment($("#expiration_time").val()).format('X'),
+                    'is_repair': $('#is_repair').val()
+                },
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>操作</div>');
+                    $('#asset').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#editValue').modal('hide');
+                    $('#attributeForm1').bootstrapValidator('resetForm', true);
+
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>日志详情' + JSON.stringify(json.responseText) +'</div>');
+                    $('#editValue').modal('hide');
+                    $('#attributeForm1').bootstrapValidator('resetForm', true);
+                }
+            });
+
+        });
+});
+</script>
+{% endblock %}

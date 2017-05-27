@@ -1,0 +1,254 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block title %} 发布-Dashboard  {% endblock %}
+
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+<script src="{{ STATIC_URL }}libs/echarts-2.2.7/echarts.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+
+    <div class="inner-box inner-list-box">
+        <div class="form-inline" role="form">
+        <form id="multi_select">
+            <select name="app_id" id="app_id" class="form-control update_api_url">
+                {% for item in applist %}
+                    <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="select_num" id="select_num" class="form-control update_api_url">
+                <option value="">最近10次</option>
+                <option value="5">最近5次</option>
+                <option value="10" selected="selected">最近10次</option>
+                <option value="15">最近15次</option>
+                <option value="20">最近20次</option>
+            </select>
+            <select name="is_gray_release" id="is_gray_release" class="form-control update_api_url">
+                <option value="">一键发布</option>
+                <option value="0" selected="selected">一键发布</option>
+                <option value="1">灰度发布</option>
+            </select>
+            <select name="package_type" id="package_type" class="form-control update_api_url">
+                <option value="">webapps</option>
+                <option value="0" selected="selected">webapps</option>
+                <option value="3">static</option>
+            </select>
+            <button id="clear" type="button" class="btn btn-green">重置</button>
+        </form>
+        </div>
+    </div>
+    <div id="trent_chart" style="height:480px; margin-top: 5px;"></div>
+
+<script type="application/javascript">
+var form = $("#multi_select");
+
+require.config({
+    paths : {
+        echarts : "{{ STATIC_URL }}libs/echarts-2.2.7/",
+    }
+});
+
+$('.update_api_url').change(function(){
+    var api_url = '{{ CMDBAPI_URL }}deploy/dashboard/pool/?';
+    var params = ['format=json'];
+    var app_id = $('#app_id').val();
+    if(app_id){
+        if(typeof form != 'undefined') {
+            var arr = form.serializeArray();
+            $.each(arr, function(i, field){
+                if (field.value !="" && field.value != " ") {
+                    params.push(field.name + '=' + field.value)
+                }
+            });
+        }
+        api_url = api_url + params.join('&');
+        loadChartData(api_url);
+    }
+
+});
+
+$('#clear').click(function(){
+    $("#select_num").data('combobox').clearTarget();
+    $("#is_gray_release").data('combobox').clearTarget();
+    $("#package_type").data('combobox').clearTarget();
+
+    $("#select_num").combobox('clearElement');
+    $("#is_gray_release").combobox('clearElement');
+    $("#package_type").combobox('clearElement');
+
+    var app_id = $('#app_id').val();
+    if(app_id){
+        loadChartData('{{ CMDBAPI_URL }}deploy/dashboard/pool/?format=json&app_id=' + app_id);
+    }
+});
+function loadChartData(api_url){
+    $.ajax({
+        url: api_url,
+        type: 'GET',
+        async: false,
+        dataType: "json",
+        cache: false,
+        headers:{'Authorization':'Token {{ API_TOKEN }}'},
+        success: function (json) {
+            var legend = json.legend;
+            var xAxis = json.xAxis;
+            var series = json.series;
+            require(
+            [
+                "echarts",
+                'echarts/theme/macarons',
+                "echarts/chart/line",
+                "echarts/chart/bar"
+            ],
+            function(ec){
+                var myChart = ec.init(document.getElementById('trent_chart'), 'macarons');
+                var option = {
+                    title: {
+                        text: '发布持续时间统计图',
+                        x: 'center',
+                        itemGap: 8,
+                        textStyle: {
+                            fontSize: 22,
+                            fontWeight: 'normal',
+                        }
+                    },
+                    tooltip: {
+                        show: true,
+                        trigger: 'axis',
+
+                    },
+                    toolbox: {
+                        show : true,
+                        showTitle: true,
+                        feature : {
+                            mark : {
+                                show : true,
+                                title : {
+                                    mark : '辅助线-开关',
+                                    markUndo : '辅助线-删除',
+                                    markClear : '辅助线-清空'
+                                },
+                                lineStyle : {
+                                    width : 1,
+                                    color : '#1e90ff',
+                                    type : 'dashed'
+                                }
+                            },
+                            dataZoom : {
+                                show : true,
+                                title : {
+                                    dataZoom : '区域缩放',
+                                    dataZoomReset : '区域缩放-后退'
+                                }
+                            },
+                            dataView : {
+                                show : true,
+                                title : '数据视图',
+                                readOnly: true,
+                                lang : ['数据视图', '关闭', '刷新'],
+                                optionToContent: function(opt) {
+                                    var axisData = opt.xAxis[0].data;
+                                    var series = opt.series;
+                                    var table = '<table style="width:100%;text-align:center;border=1;"><tbody><tr>'
+                                                 + '<td>日期</td>'
+                                                 + '<td>' + series[0].name + '</td>'
+                                                 + '<td>' + series[1].name + '</td>'
+                                                 + '<td>' + series[2].name + '</td>'
+                                                 + '<td>' + series[3].name + '</td>'
+                                                 + '<td>' + series[4].name + '</td>'
+                                                 + '</tr>';
+                                    for (var i = 0, l = axisData.length; i < l; i++) {
+                                        table += '<tr>'
+                                                 + '<td>' + axisData[i] + '</td>'
+                                                 + '<td>' + series[0].data[i] + '</td>'
+                                                 + '<td>' + series[1].data[i] + '</td>'
+                                                 + '<td>' + series[2].data[i] + '</td>'
+                                                 + '<td>' + series[3].data[i] + '</td>'
+                                                 + '<td>' + series[4].data[i] + '</td>'
+                                                 + '</tr>';
+                                    }
+                                    table += '</tbody></table>';
+                                    return table;
+                                }
+                            },
+                            magicType: {
+                                show : true,
+                                title : {
+                                    line : '动态类型切换-折线图',
+                                    bar : '动态类型切换-柱形图',
+                                },
+                                type : ['line', 'bar']
+                            },
+                            restore : {
+                                show : true,
+                                title : '还原',
+                                color : 'black'
+                            },
+                            saveAsImage : {
+                                show : true,
+                                title : '保存为图片',
+                                type : 'jpeg',
+                                lang : ['点击本地保存']
+                            }
+                        }
+                    },
+                    legend: {
+                        data: ['持续时间',],
+                        y: 'bottom',
+                         textStyle: {
+                            fontSize: 14
+                        }
+                    },
+                    xAxis : [
+                        {
+                            name: '发布时间',
+                            type : 'category',
+                            boundaryGap : false,
+                            data :xAxis
+                        }
+                    ],
+                    yAxis : [
+                        {
+                            type : 'value',
+                            splitArea: { show: true },
+                            name: "发布持续时间（秒）",
+                            splitNumber:20
+                        }
+                    ],
+                    series : [
+                        {
+                            name: "持续时间",
+                            type: "bar",
+                            data: series.keep_time
+                        }
+                    ]
+                };
+                myChart.setOption(option);
+            }
+            );
+        },
+        error: function(json){
+
+        }
+    });
+};
+$(document).ready(function() {
+$("#select_num, #is_gray_release, #package_type, #app_id").combobox({});
+
+if('{{ error }}' != ''){
+    alert('{{ error }}');
+}else{
+    var app_id = $('#app_id').val();
+    if(app_id){
+        loadChartData('{{ CMDBAPI_URL }}deploy/dashboard/pool/?format=json&app_id=' + app_id);
+    }
+}
+
+
+
+});
+</script>
+{% endblock %}

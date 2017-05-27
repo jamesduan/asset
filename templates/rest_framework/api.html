@@ -1,0 +1,113 @@
+{% extends "rest_framework/base.html" %}
+
+{% block branding %}
+
+    <a class='navbar-brand' href='{{ RESTFUL_ROOT_URL }}'>CMDBAPI <span class="version">V2</span></a>
+
+    <ul class="nav navbar-nav">
+        <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                基础管理
+                <b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+                <li><a href="{{ RESTFUL_ROOT_URL }}cmdb/site/">站点列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}cmdb/site/1/">站点单页（按ID查）</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}cmdb/site/name/yihaodian/">站点单页（按名称查）</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}cmdb/app/">应用列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}cmdb/app/1/">应用单页（按ID查）</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}cmdb/app/name/test/">应用单页（按名称查）</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}cmdb/appcontact/">POOL联系人</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}cmdb/department/">部门列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}cmdb/domain/">DOMAIN列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}cmdb/deptlevel2/domain/">DOMAIN列表（按二级部门查）</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}cmdb/users/">用户信息列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}cmdb/usersdomains/">用户和Domain关系列表</a></li>
+            </ul>
+        </li>
+        <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                IDC管理
+                <b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+                <li><a href="{{ RESTFUL_ROOT_URL }}asset/asset/">设备列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}asset/asset/1/">设备单页</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}asset/zone/">机房可用ZONE列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}asset/zone/1">机房可用ZONE单页</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}asset/assettype/">设备类型列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}asset/assettype/1/">设备类型单页</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}asset/assetmodel/">设备型号列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}asset/assetmodel/14/">设备型号单页</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}ip/ipsegment/">IP段列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}ip/ipsegment/10/">IP段单页</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}ip/ip/">IP列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}ip/ip/885/">IP单页</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}asset/rackspace/">机位号列表</a></li>
+            </ul>
+        </li>
+        <li>
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                发布系统
+                <b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+                <li><a href="{{ RESTFUL_ROOT_URL }}deploy/version/">POOL版本列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}deploy/main/list/">发布申请单列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}ycc/group/">YCC配置组管理</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}ycc/configinfo/">YCC配置文件管理</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}ycc/configinfo/1/">YCC配置文件内容管理</a></li>
+                <!--<li><a href="{{ RESTFUL_ROOT_URL }}deploy/version/staging/">POOL版本列表(Staging)</a></li>-->
+                <!--<li><a href="{{ RESTFUL_ROOT_URL }}deploy/version/production/">POOL版本列表(Production)</a></li>-->
+            </ul>
+        </li>
+        <li>
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                主机管理
+                <b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+                <li><a href="{{ RESTFUL_ROOT_URL }}server/ostemplate/">主机操作系统模板</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}server/apptemplate/">主机应用模板</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}server/">主机列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}server/10195/">主机详情（按ID查）</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}server/ip/10.17.26.3/">主机详情（按IP查）</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}server/sn/YLSA002716/">主机详情（按SN查）</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}server/host/">宿主机容量列表</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}server/host/1/">宿主机容量详情</a></li>
+            </ul>
+        </li>
+        <li>
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                流程相关
+                <b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+                <li><a href="{{ RESTFUL_ROOT_URL }}apply/vm/">申请/列表虚拟机</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}apply/vm/1/">查看申请记录</a></li>
+            </ul>
+        </li>
+        <li>
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                事故中心
+                <b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+                <li><a href="{{ RESTFUL_ROOT_URL }}accident/accident/list/">历史事故</a></li>
+                <li><a href="{{ RESTFUL_ROOT_URL }}accident/accident/log/">事故Log</a></li>
+            </ul>
+        </li>
+        <li>
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+                变更相关
+                <b class="caret"></b>
+            </a>
+            <ul class="dropdown-menu">
+                <li><a href="{{ RESTFUL_ROOT_URL }}change/">创建/列表变更记录</a></li>
+            </ul>
+        </li>
+    </ul>
+
+
+{% endblock %}
+

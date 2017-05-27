@@ -1,0 +1,261 @@
+{% extends "common/common_menu_base.html" %}
+<!--common/bootstrap3.html-->
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<style>
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+</style>
+<!-- <div class=" inner-h1">
+  <h1>IP段管理  </h1>
+</div> -->
+
+<div id="alert">
+</div>
+
+<div class="modal fade" id="addValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="attributeForm" method="POST">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="myModalLabel">新增IP段</h4>
+  </div>
+  <div class="modal-body">
+
+      <div class="form-group">
+        <label for="inputEmail3" class="col-sm-3 control-label">IP网段</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="ip" id="ip" placeholder="如：10.3.0.0" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">掩码（简码）</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="mask" id="mask" placeholder="数字，如：24" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">IP段类型</label>
+        <div class='col-sm-6'>
+            <select name="type" id="type" class="form-control" >
+                <option value="1">外网IP段</option>
+                <option value="2">管理IP段</option>
+                <option value="3">内网IP段</option>
+            </select>
+        </div>
+      </div>
+
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">IP所属机房</label>
+            <div class='col-sm-6'>
+                <select name="idc" id="idc" class="form-control" >
+                    <option value="" selected>请选择</option>
+                    {% for item in room %}
+                    <option value="{{ item.id }}">{{ item.comment }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">IP所属运营商</label>
+            <div class='col-sm-6'>
+                <select name="owner" id="owner" class="form-control" >
+                    <option value="" selected>请选择</option>
+                    <option value="1">中国电信</option>
+                    <option value="2">中国联通</option>
+                    <option value="3">BGP</option>
+                    <option value="5">内网</option>
+                    <option value="6">管理内网</option>
+                </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">备注</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="comment" id="comment" placeholder="可留空" />
+            </div>
+          </div>
+
+  </div>
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn btn-primary btn-green" id="submit1">保存</button>
+  </div>
+</form>
+</div>
+</div>
+</div>
+
+
+<div id="toolbar">
+    <button id="create" data-toggle="modal" data-target="#addValue" class="btn btn-primary btn-green">
+        <i class="glyphicon glyphicon-plus"></i> 新增
+    </button>
+</div>
+
+<table id="asset">
+</table>
+
+
+<script>
+$(document).ready(function() {
+    $('#asset').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}asset/ipsegment/?format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'ip',
+                title: 'IP段',
+                align: 'center'
+            },
+            {
+                field: 'mask',
+                title: '子网简码',
+                align: 'center'
+            },
+            {
+                field: 'type_name',
+                title: 'IP类型',
+                align: 'center'
+            },
+            {
+                field: 'idc_name',
+                title: '所属机房',
+                align: 'center'
+            },
+            {
+                field: 'owner_name',
+                title: '运营商',
+                align: 'center'
+            },
+            {
+                field: 'created',
+                title: '创建时间',
+                align: 'center'
+            },
+            {
+                field: 'comment',
+                title: '备注',
+                align: 'center'
+            }
+        ],
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [10,20,100],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false
+    });
+
+    $('#attributeForm')
+        .bootstrapValidator({
+            fields: {
+                ip: {
+                    validators: {
+                        notEmpty: {
+                            message: 'IP段不能为空。'
+                        }
+                    }
+                },
+                mask: {
+                    validators: {
+                        notEmpty: {
+                            message: '子网掩码不能为空。'
+                        }
+                    }
+                },
+                type: {
+                    validators: {
+                        notEmpty: {
+                            message: 'IP段类型不能为空。'
+                        }
+                    }
+                },
+                idc: {
+                    validators: {
+                        notEmpty: {
+                            message: 'IDC不能为空。'
+                        }
+                    }
+                },
+                owner: {
+                    validators: {
+                        notEmpty: {
+                            message: '运营商不能为空。'
+                        }
+                    }
+                }
+            }
+            })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var inputdata = {
+                'is_gen_ip': 1,
+                'ip': $("#ip").val(),
+                'mask': $("#mask").val(),
+                'type': $("#type option:selected").val(),
+                'idc': $("#idc option:selected").val(),
+                'owner': $("#owner option:selected").val(),
+                'comment': $("#comment").val()
+            };
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/ipsegment/',
+                type: 'POST',
+                async:  false,
+                data: inputdata,
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>添加IP段' + json.ip +'</div>');
+                    $('#addValue').modal('hide');
+                    $('#attributeForm').bootstrapValidator('resetForm', true);
+                    $('#asset').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加设备记录' + JSON.stringify(json.responseText) +'</div>');
+                    $('#addValue').modal('hide');
+                }
+            });
+        });
+});
+</script>
+{% endblock %}

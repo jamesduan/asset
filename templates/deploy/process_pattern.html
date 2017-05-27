@@ -1,0 +1,330 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %}进程配置{% endblock %}
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox-v1.1.6/css/bootstrap-combobox.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"
+      rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox-v1.1.6/js/bootstrap-combobox.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+
+<!-- 新建ProcessPattern -->
+<div class="modal fade" id="modal_process_pattern_create" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog" style="width:800px;">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="form_process_pattern_create">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span
+                            class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="myModalLabel">新建process_pattern</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="process_pattern_app_create" class="col-sm-2 control-label">App</label>
+                        <div class='col-sm-10'>
+                            <select id="process_pattern_app_create" name="process_pattern_app_create"
+                                    class="form-control combobox">
+                                <option value="">请选择站点/应用</option>
+                                {% for app in app_queryset %}
+                                <option value="{{ app.id }}">{{ app.site.name }}/{{ app.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="pattern_create" class="col-sm-2 control-label">Pattern</label>
+                        <div class='col-sm-10'>
+                            <input type='text' class="form-control" id="pattern_create"
+                                   name="pattern_create"/>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-green">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 修改ProcessPattern -->
+<div class="modal fade" id="modal_process_pattern_app_edit" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog" style="width:800px;">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="form_process_pattern_edit">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span
+                            class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="myModalLabel">修改ProcessPattern</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="process_pattern_app_edit" class="col-sm-2 control-label">App</label>
+                        <div class='col-sm-10'>
+                            <input type='text' class="form-control" id="process_pattern_app_edit"
+                                   name="process_pattern_app_edit" disabled="disabled"/>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="pattern_edit" class="col-sm-2 control-label">Pattern</label>
+                        <div class='col-sm-10'>
+                            <input type='text' class="form-control" id="pattern_edit"
+                                   name="pattern_edit"/>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-green">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<div id="toolbar_process_pattern">
+    <form class="form-inline">
+        <div class="form-group">
+            <label for="app">Pool筛选：</label>
+            <select id="app" class="form-control combobox">
+                <option value="">请选择站点/应用</option>
+                {% for app in app_queryset %}
+                <option value="{{ app.id }}">{{ app.site.name }}/{{ app.name }}</option>
+                {% endfor %}
+            </select></div>
+        <button type="button" class="btn btn-green" onclick="javascript:$('#modal_process_pattern_create').modal('show')">新增
+        </button>
+    </form>
+</div>
+<table id="table_process_pattern" class="bootstrap-table"></table>
+
+<script>
+    $(document).ready(function () {
+        var id = null;
+
+        function operateFormatter(value, row, index) {
+            var edit = $('<a>').attr('class', 'edit').append(
+                    $('<span>').attr({
+                        class: 'glyphicon glyphicon-pencil',
+                        title: ' 编辑',
+                    }).css({
+                        cursor: 'pointer',
+                        'margin-right': '10px'
+                    }))
+            var remove = $('<a>').attr('class', 'remove').append(
+                    $('<span>').attr({
+                        class: 'glyphicon glyphicon-remove',
+                        title: ' 删除',
+                    }).css({
+                        cursor: 'pointer',
+                    }))
+            return edit[0].outerHTML + remove[0].outerHTML;
+        };
+        function ajax(url, method, data) {
+            $.ajax({
+                url: url,
+                async: false,
+                method: method,
+                data: data,
+                headers: {
+                    Authorization: 'Token {{ API_TOKEN }}'
+                },
+                success: function (json) {
+                    bootbox.alert('操作成功');
+                },
+                error: function (json) {
+                    bootbox.alert('操作失败，原因为' + json.responseText);
+                }
+            });
+        }
+
+        window.operateEvents = {
+            'click .edit': function (e, value, row, index) {
+                $('#process_pattern_app_edit').val(row.site_name + '/' + row.app_name);
+                $('#pattern_edit').val(row.pattern);
+                $('#modal_process_pattern_app_edit').modal('show');
+            }, 'click .remove': function (e, value, row, index) {
+                bootbox.confirm('是否删除？', function (result) {
+                    if (result) {
+                        ajax(
+                                '/api/deploy/process_pattern/' + row.id + '/',
+                                'delete',
+                                null
+                        )
+                        $('#table_process_pattern').bootstrapTable('refresh', {
+                            silent: false,
+                            query: $('#app').val() ? {
+                                app_id: $('#app').val()
+                            } : null
+                        });
+                    }
+                })
+            },
+        };
+        $('select.combobox').combobox({});
+        $('#app').change(function () {
+            if ($(this).val())
+                $('#table_process_pattern').bootstrapTable('refresh', {
+                    silent: false,
+                    query: {
+                        app_id: $(this).val()
+                    }
+                });
+        })
+        $('#table_process_pattern').bootstrapTable({
+            url: '/api/deploy/process_pattern/',
+            ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+            columns: [
+                {
+                    field: 'id',
+                    title: 'id',
+                    visible: false
+                },
+                {
+                    field: 'app_id',
+                    title: 'app_id',
+                    visible: false
+                },
+                {
+                    field: 'pool',
+                    title: 'Pool',
+                    formatter: function (value, row, index) {
+                        return row.site_name + '/' + row.app_name;
+                    }
+                },
+                {
+                    field: 'pattern',
+                    title: 'Pattern'
+                },
+                {
+                    field: 'operate',
+                    title: '操作',
+                    align: 'left',
+                    formatter: operateFormatter,
+                    events: operateEvents
+                }
+            ],
+            responseHandler: function (res) {
+                var result = new Object();
+                result.rows = res.results;
+                result.total = res.count;
+                return result
+            },
+            queryParams: function (p) {
+                return {
+                    page_size: p.limit,
+                    page: p.offset / p.limit + 1,
+                    search: p.search,
+                    format: 'json',
+                };
+            },
+            pagination: true,
+            pageSize: 10,
+            pageList: [10, 20, 50, 100],
+            sidePagination: 'server',
+            showRefresh: true,
+            search: false,
+            showColumns: true,
+            toolbar: "#toolbar_process_pattern",
+            cache: false
+        });
+        <!-- process_pattern_create -->
+        $('#form_process_pattern_create')
+                .bootstrapValidator({
+                    excluded: ':disabled',
+                    fields: {
+                        process_pattern_app_create: {
+                            validators: {
+                                notEmpty: {
+                                    message: 'Pool不能为空'
+                                }
+                            }
+                        },
+                        pattern_create: {
+                            validators: {
+                                notEmpty: {
+                                    message: 'pattern不能为空'
+                                }
+                            }
+                        },
+                    }
+                })
+                .on('success.form.bv', function (e) {
+                    e.preventDefault();
+                    ajax(
+                            '/api/deploy/process_pattern/',
+                            'post',
+                            {
+                                app: $('#process_pattern_app_create').val(),
+                                pattern: $('#pattern_create').val(),
+                            }
+                    );
+                    $('#table_process_pattern').bootstrapTable('refresh', {
+                        silent: false,
+                        query: $('#app').val() ? {
+                            app_id: $('#app').val()
+                        } : null
+                    });
+                    $('#modal_process_pattern_create').modal('hide');
+                });
+        $("#process_pattern_app_create").change(function () {
+            $('#form_process_pattern_create').data('bootstrapValidator')
+                    .updateStatus('process_pattern_app_create', 'NOT_VALIDATED').validateField('process_pattern_app_create');
+        });
+        $('#modal_process_pattern_create').on('hidden.bs.modal', function (e) {
+            $("#process_pattern_app_create").data('combobox').clearElement();
+            $('#form_process_pattern_create').bootstrapValidator('resetForm', true);
+        });
+        <!--process_pattern_edit -->
+        $('#form_process_pattern_edit')
+                .bootstrapValidator({
+                    excluded: ':disabled',
+                    fields: {
+                        pattern_edit: {
+                            validators: {
+                                notEmpty: {
+                                    message: 'pattern不能为空'
+                                }
+                            }
+                        },
+                    }
+                })
+                .on('success.form.bv', function (e) {
+                    e.preventDefault();
+                    ajax(
+                            '/api/deploy/process_pattern/' + id + '/',
+                            'patch',
+                            {
+                                pattern: $('#pattern_edit').val(),
+                            }
+                    );
+                    $('#table_process_pattern').bootstrapTable('refresh', {
+                        silent: false,
+                        query: $('#app').val() ? {
+                            app_id: $('#app').val()
+                        } : null
+                    });
+                    $('#modal_process_pattern_app_edit').modal('hide');
+                });
+        $('#modal_proess_pattern_edit').on('hidden.bs.modal', function (e) {
+            $('#form_process_pattern_edit').bootstrapValidator('resetForm', true);
+        });
+        <!-- process_pattern_init -->
+        $('#table_process_pattern').on('click-row.bs.table', function (e, row, $element) {
+            id = row.id;
+        });
+    })
+</script>
+{% endblock %}

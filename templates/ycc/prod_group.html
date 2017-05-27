@@ -1,0 +1,1813 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %}配置组管理{% endblock %}
+{% block content %}
+
+    <link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/jsdifflib/diffview.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-multiselect/css/bootstrap-multiselect.css" rel="stylesheet"/>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/difflib.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/diffview.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/jsdiff.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery/spin.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-multiselect/js/bootstrap-multiselect.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-json/js/jquery.json.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+
+    <style>
+        table.diff {
+            width: 100%;
+        }
+
+        table.diff tbody th {
+            width: 10px;
+        }
+
+        table.diff tbody td {
+            TABLE-LAYOUT: fixed;
+            WORD-BREAK: break-all;
+            width: 48%
+        }
+    </style>
+
+  <!--   <div class="inner-h1">
+        <h1>配置组管理<a href="http://oms.yihaodian.com.cn/docs/?p=1081" target="_blank">点击此处查看文档</a></h1>
+    </div> -->
+
+    <div id="alert">
+    </div>
+
+    <div id="loading">
+    </div>
+
+    <div class="modal fade" id="downloadDlg" tabindex="-1" role="dialog" aria-labelledby="downloadLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="downloadForm" method="GET">
+                    <input type="hidden" name="parent" id="parent" value="">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="downloadLabel">下载配置文件</h4>
+                    </div>
+                    <div class="modal-body">
+
+                        <div class="form-group">
+                            <label for="dlgroup_id" class="col-sm-2 control-label">配置组</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="dlgroup_id" id="dlgroup_id"
+                                       readonly="readonly"/>
+                                <input type="hidden" name="dlgroup_id_id" id="dlgroup_id_id">
+                                <input type="hidden" name="dlgroup_idc" id="dlgroup_idc">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dlenv" class="col-sm-2 control-label">环境</label>
+
+                            <div class='col-sm-10'>
+                                <select name="dlenv" id="dlenv" class="form-control">
+                                    <option value="">请选择环境</option>
+                                    {% for item in env %}
+                                        <option value="{{ item.name }}">{{ item.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="dlver" class="col-sm-2 control-label">版本</label>
+
+                            <div class='col-sm-10'>
+                                <select name="dlver" id="dlver" class="form-control">
+                                    <option value="">请选择版本</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="alertDlDlg">
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-green" id="downloadSubmit">下载</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="attributeForm" method="POST">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">新增配置组</h4>
+                    </div>
+                    <div class="modal-body">
+
+{#                        <div class="form-group">#}
+{#                            <label for="idc" class="col-sm-3 control-label">机房</label>#}
+{##}
+{#                            <div class='col-sm-6'>#}
+{#                                <select name="idc" id="idc" class="form-control">#}
+{#                                    {% for item in room %}#}
+{#                                        <option value="{{ item.id }}">{{ item.name_ch }}</option>#}
+{#                                    {% endfor %}#}
+{#                                </select>#}
+{#                            </div>#}
+{#                        </div>#}
+{##}
+{#                        <div class="form-group" style="display:none">#}
+{#                            <label for="site_id" class="col-sm-3 control-label">站点</label>#}
+{##}
+{#                            <div class="col-sm-6">#}
+{#                                <select name="site_id" id="site_id" class="form-control">#}
+{#                                    <option value="">选择站点</option>#}
+{#                                    {% for item in site %}#}
+{#                                        <option value="{{ item.id }}">{{ item.name }}</option>#}
+{#                                    {% endfor %}#}
+{#                                </select>#}
+{#                            </div>#}
+{#                        </div>#}
+{##}
+{#                        <div class="form-group" style="display:none">#}
+{#                            <label for="app_id" class="col-sm-3 control-label">应用</label>#}
+{##}
+{#                            <div class="col-sm-6">#}
+{#                                <select name="app_id" id="app_id" class="form-control">#}
+{#                                    <option value="">选择POOL</option>#}
+{#                                </select>#}
+{#                            </div>#}
+{#                        </div>#}
+{##}
+{#                        <div class="form-group">#}
+{#                            <label for="group_id" class="col-sm-3 control-label">配置组名</label>#}
+{##}
+{#                            <div class='col-sm-6'>#}
+{#                                <input type='zInputTxt' class="form-control" name="group_id" id="group_id"/>#}
+{#                            </div>#}
+{#                        </div>#}
+{##}
+{#                        <div class="form-group">#}
+{#                            <label for="type" class="col-sm-3 control-label">配置组类型</label>#}
+{##}
+{#                            <div class='col-sm-6'>#}
+{#                                <select name="type" id="type" class="form-control" readonly="readonly">#}
+                                    {#                <option value="1">应用类</option>#}
+{#                                    <option value="2">公共组件类</option>#}
+{#                                </select>#}
+{#                            </div>#}
+{#                        </div>#}
+                        请联系<a href="mailto:IT_OPS_DEV@yhd.com">平台研发</a>进行相关操作
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+{#                        <button type="submit" class="btn btn-green" id="submit1">保存</button>#}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="editForm" method="POST">
+                    <input type="hidden" name="id" id="id">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">编辑配置组</h4>
+                    </div>
+                    <div class="modal-body">
+
+                        <div class="form-group">
+                            <label for="idc" class="col-sm-3 control-label">机房</label>
+
+                            <div class='col-sm-6'>
+                                <select name="eidc" id="eidc" class="form-control">
+                                    {% for item in room %}
+                                        <option value="{{ item.id }}">{{ item.name_ch }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="display:none" id="show_esite_id">
+                            <label for="site_id" class="col-sm-3 control-label">站点</label>
+
+                            <div class="col-sm-6">
+                                <select name="esite_id" id="esite_id" class="form-control">
+                                    <option value="">选择站点</option>
+                                    {% for item in site %}
+                                        <option value="{{ item.id }}">{{ item.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="display:none" id="show_eapp_id">
+                            <label for="app_id" class="col-sm-3 control-label">应用</label>
+
+                            <div class="col-sm-6">
+                                <select name="eapp_id" id="eapp_id" class="form-control">
+                                    <option value="">选择POOL</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="group_id" class="col-sm-3 control-label">配置组名</label>
+
+                            <div class='col-sm-6'>
+                                <input type='zInputTxt' class="form-control" name="egroup_id" id="egroup_id"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="type" class="col-sm-3 control-label">配置组类型</label>
+
+                            <div class='col-sm-6'>
+                                <select name="etype" id="etype" class="form-control" readonly="readonly"
+                                        onchange="javascript:test();">
+                                    {#                <option value="1">应用类</option>#}
+                                    {#                <option value="2">公共组件类</option>#}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green" id="submit1">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!--对比-->
+    <div class="modal fade" id="cmpValue" tabindex="-1" role="dialog"
+         aria-labelledby="cmpValueTitle"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:800px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="cmpValueForm1" method="POST">
+                    <input type="hidden" name="edit_id" id="edit_id" value="">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id=""><span id="cmpValueTitle"></span></h4>
+                    </div>
+
+                    <div class="modal-body">
+                        <div id="show_cmp_configinfos_div">
+                            <table id="show_cmp_configinfos"></table>
+                        </div>
+                    </div>
+                    <div class="modal-footer" id="view_button">
+                        {#                        <input type="button" class="btn btn-info" id="di_btn" value="配置文件">#}
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="toolbar">
+        {#    <button id="synchronize" class="btn btn-green">#}
+        {#        <i class="glyphicon glyphicon-refresh"></i> 同步配置组#}
+        {#    </button>#}
+        <button id="create" data-toggle="modal" data-target="#addValue" class="btn btn-green">
+            <i class="glyphicon glyphicon-plus"></i> 新增
+        </button>
+        <button id="switch" class="btn btn-green">
+            <i class="glyphicon glyphicon-share-alt"></i>配置文件管理
+        </button>
+    </div>
+
+    <div class="modal fade" id="cmpProCurPublished" tabindex="-1" role="dialog"
+         aria-labelledby="cmpProCurPublishedTitle" aria-hidden="true">
+        <div class="modal-dialog" style="width:1000px;">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span aria-hidden="true">&times;</span>
+                        <span class="sr-only">Close</span>
+                    </button>
+                    <h4 class="modal-title" id="cmpProCurPublishedTitle"></h4>
+                </div>
+                <div class="modal-body">
+
+                    <table id="configinfo">
+                    </table>
+                    <input type="hidden" name="op" id="op"/>
+                    <input type="hidden" name="group" id="group"/>
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-green" id="submit3">提交</button>
+                    <button type="submit" class="btn btn-green" id="submit4">拒绝</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- 信息删除确认 -->
+    <!-- 信息删除确认 -->
+    <div class="modal fade" id="delcfmModel">
+        <div class="modal-dialog">
+            <div class="modal-content message_align">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">×</span></button>
+                    <h4 class="modal-title">提示信息</h4>
+                </div>
+                <div class="modal-body">
+                    <p id="rmtext"></p>
+                </div>
+                <div class="modal-footer">
+                    <input type="hidden" id="rmid" name="rmid"/>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <a class="btn btn-success" data-dismiss="modal" id="rmsub" name="rmsub">确定</a>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <div class="modal fade" id="diff" tabindex="-1" role="dialog" aria-labelledby="diffTitle" aria-hidden="true">
+        <div class="modal-dialog" style="width:1000px;">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span aria-hidden="true">&times;</span>
+                        <span class="sr-only">Close</span>
+                    </button>
+                    <h4 class="modal-title" id="diffTitle"></h4>
+                </div>
+
+                <div class="modal-body">
+                    <div id="diffoutput" style="clear:both;width:100%;">
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">关闭</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <!-- copy -->
+    <div class="modal fade" id="modal_copy">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">复制配置组文件</h4>
+                </div>
+                <div class="modal-body">
+                    <fieldset>
+                        <legend>源</legend>
+                        <form class="form-horizontal">
+                            <div class="form-group">
+                                <input type="hidden" id="src_group"/>
+                                <label class="col-sm-2 control-label">Group_IDC</label>
+
+                                <div class="col-sm-10">
+                                    <p class="form-control-static"></p>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="src_env" class="col-sm-2 control-label">环境</label>
+
+                                <div class="col-sm-10">
+                                    <select name="src_env" id="src_env" class="form-control combobox">
+                                        <option value="">选择源环境</option>
+                                        {% for item in env %}
+                                            <option value="{{ item.id }}">{{ item.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="src_version" class="col-sm-2 control-label">版本</label>
+
+                                <div class="col-sm-10">
+                                    <select name="src_version" id="src_version" class="form-control combobox">
+                                        <option value="">选择源版本</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="src_data" class="col-sm-2 control-label">配置文件</label>
+
+                                <div class="col-sm-4">
+                                    <div class="checkbox">
+                                        <label>
+                                            <input type="checkbox"> 复制部分配置文件
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <select name="src_data" id="src_data" class="form-control multiselect"
+                                            multiple="multiple">
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                    </fieldset>
+                    <fieldset>
+                        <legend>目的</legend>
+                        <form class="form-horizontal">
+                            <div class="form-group">
+                                <label for="dst_group" class="col-sm-2 control-label">Group_IDC</label>
+
+                                <div class="col-sm-10">
+                                    <select name="dst_group" id="dst_group" class="form-control combobox">
+                                        <option value="">选择目的Group_IDC</option>
+                                        {% for item in group %}
+                                            <option value="{{ item.id }}">{{ item.group_id }}_{{ item.idc.ycc_code }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="dst_env" class="col-sm-2 control-label">环境</label>
+
+                                <div class="col-sm-10">
+                                    <select name="dst_env" id="dst_env" class="form-control combobox">
+                                        <option value="">选择目的环境</option>
+                                        {% for item in env %}
+                                            <option value="{{ item.id }}">{{ item.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </form>
+                    </fieldset>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-green" id="copy">复制</button>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <table id="configgroup">
+    </table>
+
+    <script>
+
+        var isCmpProCurPublishedTableCreated = false;
+
+        var opts = {
+            lines: 13, // 花瓣数目
+            length: 20, // 花瓣长度
+            width: 10, // 花瓣宽度
+            radius: 30, // 花瓣距中心半径
+            corners: 1, // 花瓣圆滑度 (0-1)
+            rotate: 0, // 花瓣旋转角度
+            direction: 1, // 花瓣旋转方向 1: 顺时针, -1: 逆时针
+            color: '#5882FA', // 花瓣颜色
+            speed: 1, // 花瓣旋转速度
+            trail: 60, // 花瓣旋转时的拖影(百分比)
+            shadow: true, // 花瓣是否显示阴影
+            hwaccel: true, //spinner 是否启用硬件加速及高速旋转
+            className: 'spinner', // spinner css 样式名称
+            zIndex: 2e9, // spinner的z轴 (默认是2000000000)
+            top: 'auto', // spinner 相对父容器Top定位 单位 px
+            left: 'auto'// spinner 相对父容器Left定位 单位 px
+        };
+
+        var spinner = new Spinner(opts);
+
+        $(document).ready(function () {
+            $("#switch").click(function () {
+                window.open("/deploy/yccv2/configinfo/v2/")
+            })
+            function showSuccess(info) {
+                $('#alert').empty().append('<div class="alert alert-success text-center" role="alert">' +
+                        '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                        '<span aria-hidden="true">&times;</span>' +
+                        '</button>' +
+                        '<strong>成功</strong>' + info +
+                        '</div>');
+            }
+
+            function showError(err) {
+                $('#alert').empty().append('<div class="alert alert-danger text-center" role="alert">' +
+                        '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                        '<span aria-hidden="true">&times;</span>' +
+                        '</button>' +
+                        '<strong>错误!</strong>' + err +
+                        '</div>');
+            }
+
+            function showErrorExt(alertId, err) {
+                $('#' + alertId).empty().append('<div class="alert alert-danger text-center" role="alert">' +
+                        '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                        '<span aria-hidden="true">&times;</span>' +
+                        '</button>' +
+                        '<strong>错误!</strong>' + err +
+                        '</div>');
+            }
+
+            function diffUsingJS(content1, content2, baseTextName, newTextName, div) {
+                content1 = difflib.stringAsLines(content1);
+                content2 = difflib.stringAsLines(content2);
+                if (content1 == '')
+                    content1 = [];
+                if (content2 == '')
+                    content2 = [];
+                var sm = new difflib.SequenceMatcher(content1, content2);
+                var opcodes = sm.get_opcodes();
+                var diffoutputdiv = document.getElementById(div);
+                while (diffoutputdiv.firstChild)
+                    diffoutputdiv.removeChild(diffoutputdiv.firstChild);
+                var contextSize = 1;
+                contextSize = contextSize ? contextSize : null;
+                diffoutputdiv.appendChild(diffview.buildView({
+                    baseTextLines: content1,
+                    newTextLines: content2,
+                    opcodes: opcodes,
+                    baseTextName: baseTextName,
+                    newTextName: newTextName,
+                    contextSize: contextSize,
+                    viewType: 0
+                }));
+            }
+
+            function initDiffDlg(row, curstatus, cmpstatus, baseTextName) {
+                var dataid = row.data_id;
+                var diffTitle = '对比' + ':' + dataid;
+                $('#diffTitle').text(diffTitle);
+                var group = $('#group').val();
+                var inputdata = {
+                    'group': group,
+                    'data_id': dataid,
+                    'cur_group_status': curstatus,
+                    'cmp_group_status': cmpstatus
+                };
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}ycc/prodiffcontent/?format=json',
+                    type: 'GET',
+                    async: false,
+                    data: inputdata,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        diffUsingJS(json.cmpcontent, json.curcontent, baseTextName, 'current', 'diffoutput');
+                    },
+                    error: function (json) {
+                        showError('查询配置文件内容' + JSON.stringify(json.responseText));
+                    }
+                });
+            }
+
+            function cmpDlg(group, cmpProCurPublishedTitle, curstatus, op) {
+                var params = ['format=json'];
+                params.push('group=' + group);
+                params.push('curstatus=' + curstatus);
+                var url = '{{ CMDBAPI_URL }}ycc/procmp/?' + params.join('&');
+                if (isCmpProCurPublishedTableCreated) {
+                    $('#configinfo').bootstrapTable('refresh', {
+                        silent: true,
+                        url: url
+                    });
+                } else {
+                    $('#configinfo').bootstrapTable({
+                        url: url,
+                        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                        columns: [
+                            {
+                                field: 'data_id',
+                                title: '配置文件',
+                                align: 'center'
+                            },
+                            {
+                                field: 'cmpres',
+                                title: 'current vs. published',
+                                align: 'center',
+                                formatter: cmpproFormatter,
+                                events: operateEvents
+                            },
+                        ],
+                        responseHandler: function (res) {
+                            var result = {};
+                            result.rows = res.results;
+                            result.total = res.count;
+                            return result
+                        },
+                        queryParams: function (p) {
+                            return {
+                                page_size: p.limit,
+                                page: p.offset / p.limit + 1,
+                                search: p.search
+                            };
+                        },
+                        pagination: true,
+                        pageSize: 50,
+                        pageList: [10, 20, 100],
+                        sidePagination: 'server',
+                        showRefresh: false,
+                        search: false,
+                        showColumns: false,
+                        cache: false
+                    });
+                    isCmpProCurPublishedTableCreated = true;
+                }
+
+                $("#group").val(group);
+                $("#op").val(op);
+                $('#cmpProCurPublishedTitle').text(cmpProCurPublishedTitle);
+                if (op == 'audit') {
+                    document.getElementById('submit4').disabled = false;
+                } else {
+                    document.getElementById('submit4').disabled = true;
+                }
+                $('#cmpProCurPublished').modal();
+            }
+
+            function showDownloadDlg(row) {
+                $('#dlgroup_id').val(row.group_id);
+                $('#dlgroup_id_id').val(row.id);
+                $('#dlgroup_idc').val(row.idc);
+                $('#downloadDlg').modal();
+            }
+
+            function commitImpl() {
+                var method = 'POST';
+                var op = $('#op').val();
+                var group = $('#group').val();
+                var url = '{{ CMDBAPI_URL }}ycc/status/';
+                var inputdata = {
+                    'group': group,
+                    'status': 0,
+                    'version': 0,
+                    'pre_version': 0
+                };
+                $.ajax({
+                    url: url,
+                    type: method,
+                    async: false,
+                    data: inputdata,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        $('#configgroup').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        showSuccess(op);
+                    },
+                    error: function (json) {
+                        showError(op + JSON.stringify(json.responseText));
+                    }
+                });
+            }
+
+            function getGroupStatusId(status) {
+                var group = $('#group').val();
+                var op = $('#op').val();
+                var url = '{{ CMDBAPI_URL }}ycc/status/?format=json';
+                var inputdata = {
+                    'group': group,
+                    'op': op,
+                    'status': status
+                };
+                var groupstatusid = -1;
+                $.ajax({
+                    url: url,
+                    async: false,
+                    data: inputdata,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        groupstatusid = json.results[0].id;
+                    },
+                    error: function (json) {
+                        showError(op + JSON.stringify(json.responseText));
+                    }
+                });
+                return groupstatusid;
+            }
+
+            function updateGroupStatus(id, newstatus) {
+                var group = $('#group').val();
+                var op = $('#op').val();
+                var method = 'PATCH';
+                var url = '{{ CMDBAPI_URL }}ycc/status/' + id + '/';
+                var inputdata = {
+                    'group': group,
+                    'op': op,
+                    'status': newstatus
+                };
+                $.ajax({
+                    url: url,
+                    type: method,
+                    async: false,
+                    data: inputdata,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        $('#configgroup').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        showSuccess(op);
+                    },
+                    error: function (json) {
+                        showError(op + JSON.stringify(json.responseText));
+                        return -1;
+                    }
+                });
+            }
+
+            function auditImpl(newstatus) {
+                // 1 means commited status
+                var groupstatusid = getGroupStatusId(1);
+                if (groupstatusid != -1) {
+                    updateGroupStatus(groupstatusid, newstatus);
+                }
+            }
+
+            function publishImpl() {
+                // 2 means approved status, 4 means published status
+                var groupstatusid = getGroupStatusId(2);
+                if (groupstatusid != -1) {
+                    updateGroupStatus(groupstatusid, 4);
+                }
+            }
+
+            function rollbackImpl() {
+                // 5 means history status, 4 means published status
+                var groupstatusid = getGroupStatusId(5);
+                if (groupstatusid != -1) {
+                    updateGroupStatus(groupstatusid, 4);
+                }
+            }
+
+            function rmvpublishImpl() {
+                // 2 means approved status, 4 means published status
+                var groupstatusid = getGroupStatusId(2);
+                if (groupstatusid != -1) {
+                    updateGroupStatus(groupstatusid, 7);
+                }
+            }
+
+            function rmvauditImpl() {
+                // 1 means commited status, 4 means published status
+                var groupstatusid = getGroupStatusId(1);
+                if (groupstatusid != -1) {
+                    updateGroupStatus(groupstatusid, 8);
+                }
+            }
+
+            function subOpImpl() {
+                var op = $('#op').val();
+                if (op == 'commit') {
+                    commitImpl();
+                } else if (op == 'audit') {
+                    // 2 means approved status
+                    auditImpl(2);
+                } else if (op == 'publish') {
+                    publishImpl();
+                } else if (op == 'rollback') {
+                    rollbackImpl();
+                } else if (op == 'rmvpublish') {
+                    rmvpublishImpl();
+                } else if (op == 'rmvaudit') {
+                    rmvauditImpl();
+                } else {
+
+                }
+                $('#cmpProCurPublished').modal('hide');
+            }
+
+            function rejectOpImpl() {
+                var op = $('#op').val();
+                if (op == 'audit') {
+                    // 2 means rejected status
+                    auditImpl(3);
+                }
+                $('#cmpProCurPublished').modal('hide');
+            }
+
+            function commit(row) {
+                var cmpProEditPublishedTitle = '提交审核';
+                // 0 indicates current status is edit
+                cmpDlg(row.id, cmpProEditPublishedTitle, 0, 'commit');
+            }
+
+            function audit(row) {
+                var cmpProEditPublishedTitle = '审核';
+                // 1 indicates current status is commited
+                cmpDlg(row.id, cmpProEditPublishedTitle, 1, 'audit');
+            }
+
+            function publish(row) {
+                var cmpProEditPublishedTitle = '发布';
+                // 2 indicates current status is approved
+                cmpDlg(row.id, cmpProEditPublishedTitle, 2, 'publish');
+            }
+
+            function rollback(row) {
+                var cmpProEditPublishedTitle = '回滚';
+                // 5 indicates current status is history
+                cmpDlg(row.id, cmpProEditPublishedTitle, 5, 'rollback');
+            }
+
+            function download(row) {
+                showDownloadDlg(row);
+            }
+
+            function rmvpublish(row) {
+                var cmpProEditPublishedTitle = '删除发布';
+                // 2 indicates current status is approved
+                cmpDlg(row.id, cmpProEditPublishedTitle, 2, 'rmvpublish');
+            }
+
+            function rmvaudit(row) {
+                var cmpProEditPublishedTitle = '删除审核';
+                // 1 indicates current status is commited
+                cmpDlg(row.id, cmpProEditPublishedTitle, 1, 'rmvaudit');
+            }
+
+            function cmpproFormatter(value, row, index) {
+                var cmp = value;
+                var hrefarr = [];
+                var desc = '相同';
+                var colorStyle = '';
+                if (cmp == 0) {
+                    desc = '相同';
+                } else if (cmp == 1) {
+                    desc = '不同';
+                    // colorStyle = 'color:red;';
+                } else if (cmp == 2) {
+                    desc = '新增';
+                } else if (cmp == 3) {
+                    desc = '删除';
+                    // colorStyle = 'color:red;';
+                } else {
+                    desc = '未知';
+                    // colorStyle = 'color:red;';
+                }
+                colorStyle = 'color:' + row.cmpcolor + ';';
+                hrefarr.push(
+                        '<a class="viewcmppro">',
+                        '<span class="glyphicon glyphicon-info-sign"' + ' style="cursor:pointer;' + colorStyle + '">' + desc + '</span>',
+                        '</a>');
+                return hrefarr.join('');
+            }
+
+            function statusFormatter(value, row, index) {
+                var status_array = $.map(value, function (i) {
+                    return i.status
+                });
+                var committed = $.inArray(1, status_array) != -1 ? true : false;
+                var approved = $.inArray(2, status_array) != -1 ? true : false;
+                if (committed)
+                    return '待审核';
+                else if (approved)
+                    return '待发布';
+                else
+                    return '待编辑';
+            }
+
+            function operateFormatter(value, row, index) {
+                {#        var hrefarr = [];#}
+                {#        var commited = false;#}
+                {#        var approved = false;#}
+                {#        var published = false;#}
+                {#        var history = false;#}
+                {#        for (var i=0; i<value.length; i++) {#}
+                {#            var status = value[i].status;#}
+                {#            if (status == 5)#}
+                {#                history = true;#}
+                {#            else if (status == 4)#}
+                {#                published = true;#}
+                {#            else if (status == 2)#}
+                {#                approved = true;#}
+                {#            else if (status == 1)#}
+                {#                commited = true;#}
+                {#            else#}
+                {#                ;#}
+                {#        }#}
+                {#        if ('{{ canEdit }}' != 'True') {#}
+                {#            hrefarr.push(#}
+                {#                '<a class="download">',#}
+                {#                    '<span class="glyphicon glyphicon-download" style="cursor:pointer;margin-right:10px;">下载</span>',#}
+                {#                '</a>');#}
+                {#            if ('{{ canCommit }}' == 'True' && !approved && !commited) {#}
+                {#                hrefarr.push(#}
+                {#                    '<a class="commit">',#}
+                {#                    '<span class="glyphicon glyphicon-eye-open" style="cursor:pointer;margin-right:10px;">提交审核</span>',#}
+                {#                    '</a>');#}
+                {#            }#}
+                {#            return hrefarr.join('');#}
+                {#        }#}
+                {#        if (approved) {#}
+                {#            hrefarr.push(#}
+                {#                '<a class="publish">',#}
+                {#                    '<span class="glyphicon glyphicon-ok-sign" style="cursor:pointer;margin-right:10px;">发布</span>',#}
+                {#                '</a>');#}
+                {#            hrefarr.push(#}
+                {#                '<a class="rmvpublish">',#}
+                {#                    '<span class="glyphicon glyphicon-remove" style="cursor:pointer;margin-right:10px;color:red;">删除发布</span>',#}
+                {#                '</a>');#}
+                {#        } else if (commited) {#}
+                {#            hrefarr.push(#}
+                {#                '<a class="audit">',#}
+                {#                    '<span class="glyphicon glyphicon-check" style="cursor:pointer;margin-right:10px;">审核</span>',#}
+                {#                '</a>');#}
+                {#            hrefarr.push(#}
+                {#                '<a class="rmvaudit">',#}
+                {#                    '<span class="glyphicon glyphicon-remove" style="cursor:pointer;margin-right:10px;color:red;">删除审核</span>',#}
+                {#                '</a>');#}
+                {#        } else {#}
+                {#            hrefarr.push(#}
+                {#                '<a class="commit">',#}
+                {#                    '<span class="glyphicon glyphicon-eye-open" style="cursor:pointer;margin-right:10px;">提交审核</span>',#}
+                {#                '</a>');#}
+                {#            if (row.type == 2) {#}
+                {#                 hrefarr.push(#}
+                {#                    '<a class="editpg">',#}
+                {#                        '<span class="glyphicon glyphicon-edit" style="cursor:pointer;margin-right:10px;">编辑</span>',#}
+                {#                    '</a>');#}
+                {#            }#}
+                {#            hrefarr.push(#}
+                {#                '<a class="rmpg">',#}
+                {#                    '<span class="glyphicon glyphicon-remove" style="cursor:pointer;margin-right:10px;">删除</span>',#}
+                {#                '</a>');#}
+                {#        }#}
+                {##}
+                {#        if (published && history) {#}
+                {#            hrefarr.push(#}
+                {#                '<a class="rollback">',#}
+                {#                    '<span class="glyphicon glyphicon-backward" style="cursor:pointer;margin-right:10px;color:red;">回滚</span>',#}
+                {#                '</a>');#}
+                {#        }#}
+                {#        hrefarr.push(#}
+                {#            '<a class="download">',#}
+                {#                '<span class="glyphicon glyphicon-download" style="cursor:pointer;margin-right:10px;">下载</span>',#}
+                {#            '</a>');#}
+                {#        return hrefarr.join('');#}
+                var status_array = $.map(value, function (i) {
+                    return i.status
+                });
+                var committed = $.inArray(1, status_array) != -1 ? true : false;
+                var approved = $.inArray(2, status_array) != -1 ? true : false;
+                var published = $.inArray(4, status_array) != -1 ? true : false;
+                var history = $.inArray(5, status_array) != -1 ? true : false;
+                var button_group = $('<div>').attr({
+                    class: 'btn-group',
+                    role: 'group'
+                });
+                button_group.append($('<button>').text('下载').attr('class', 'btn btn-sm btn-green download'));
+                button_group.append($('<button>').text('对比').attr('class', 'btn btn-sm btn-green cmp'));
+                if (row.app_status == 0) {
+                    {% if is_commit %}
+                        if (!committed && !approved)
+                            button_group.append($('<button>').text('提交审核').attr('class', 'btn btn-sm btn-green commit'));
+                        else if (committed)
+                            button_group.append($('<button>').text('删除审核').attr('class', 'btn btn-sm btn-danger rmvaudit'));
+                        button_group.append($('<button>').text('复制').attr('class', 'btn btn-sm btn-green copy'));
+                        {% if is_admin %}
+                            if (published && history)
+                                button_group.append($('<button>').text('回滚').attr('class', 'btn btn-sm btn-green rollback'));
+                            if (committed) {
+                                button_group.append($('<button>').text('审核').attr('class', 'btn btn-sm btn-green audit'));
+                            } else if (approved) {
+                                button_group.append($('<button>').text('发布').attr('class', 'btn btn-sm btn-green publish'));
+                                button_group.append($('<button>').text('删除发布').attr('class', 'btn btn-sm btn-danger rmvpublish'));
+                            } else {
+                                if (row.type == 2)
+                                    button_group.append($('<button>').text('编辑').attr('class', 'btn btn-sm btn-green editpg'));
+                                button_group.append($('<button>').text('删除').attr('class', 'btn btn-sm btn-danger rmpg'));
+                            }
+                        {% endif %}
+                    {% endif %}
+                }
+                return button_group[0].outerHTML;
+            }
+
+            function initBtn() {
+                $('#submit3').bind('click', function () {
+                    subOpImpl();
+                });
+                $('#submit4').bind('click', function () {
+                    rejectOpImpl();
+                });
+            }
+
+            initBtn();
+
+            window.operateEvents = {
+                'click .publish': function (e, value, row, index) {
+                    publish(row);
+                }, 'click .audit': function (e, value, row, index) {
+                    audit(row);
+                }, 'click .commit': function (e, value, row, index) {
+                    commit(row);
+                }, 'click .rollback': function (e, value, row, index) {
+                    rollback(row);
+                }, 'click .download': function (e, value, row, index) {
+                    download(row);
+                }, 'click .rmvpublish': function (e, value, row, index) {
+                    rmvpublish(row);
+                }, 'click .rmvaudit': function (e, value, row, index) {
+                    rmvaudit(row);
+                }, 'click .editpg': function (e, value, row, index) {
+                    $('#editValue').modal('show');
+                }, 'click .copy': function (e, value, row, index) {
+                    $('#src_group').val(row.id);
+                    $('#modal_copy p.form-control-static').text(row.group_id + '_' + row.ycc_code);
+                    $('#modal_copy').modal('show');
+                }, 'click .rmpg': function (e, value, row, index) {
+                    var rmid = row.id;
+                    $('#delcfmModel').modal('show');
+                    $('#rmtext').text('您确定要删除配置组：' + row.group_id + '?');
+                    $('#rmid').val(rmid);
+                }, 'click .viewcmppro': function (e, value, row, index) {
+                    // 0 means edit status, 1 means commited, 2 means approved, 4 means published
+                    var curstatus = 0;
+                    var cmpstatus = 4;
+                    var curop = $('#op').val();
+                    if (curop == 'commit')
+                        curstatus = 0;
+                    else if (curop == 'audit')
+                        curstatus = 1;
+                    else if (curop == 'publish')
+                        curstatus = 2;
+                    else if (curop == 'rollback') {
+                        curstatus = 5;
+                    } else {
+                        ;
+                    }
+                    initDiffDlg(row, curstatus, cmpstatus, 'published');
+                    $('#diff').modal();
+                }, 'click .cmp': function (e, value, row, index) {
+                    $('#cmpValue').modal('show');
+                    $('#cmpValueTitle').text('对比');
+                    var pool_table = $('#show_cmp_configinfos  tr').val();
+                    var url = '{{ CMDBAPI_URL }}ycc/group_cmp_idc/?id=' + row.id
+                    if (pool_table == undefined) {
+                        $('#show_cmp_configinfos').bootstrapTable({
+                            url: url,
+                            method: 'get',
+                            ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                            undefinedText: '-',
+                            cache: false,
+                            pagination: true,
+                            pageSize: 20,
+                            pageNumber: 1,
+                            sortable: true,
+                            sortName: 'data_id',
+                            sortOrder: '',
+                            columns: [
+                                {
+                                    field: 'data_id',
+                                    title: '配置文件',
+                                },
+                                {
+                                    field: 'cmp',
+                                    title: '状态',
+                                    formatter: cmpproFormatterCmp,
+                                    sortable: true,
+                                    events: operateEventsCmp,
+                                },
+                            ],
+                        });
+                    } else {
+                        $('#show_cmp_configinfos').bootstrapTable('refresh', {
+                            url: url
+                        });
+                    }
+                }
+            };
+
+            window.operateEventsCmp = {
+                'click .cmp_pro': function (e, value, row, index) {
+                    var other_content = ''
+                    var this_content = ''
+                    var baseTextName = row.data_id + '/' + row.group_id + '/' + row.idc
+                    var nextTextName = row.other_dataid + '/' + row.other_groupid + '/' + row.other_idc
+                    if (row.other_content) {
+                        other_content = row.other_content
+                    }
+                    if (row.this_content) {
+                        this_content = row.this_content
+                    }
+                    if (row.cmp == 'delete') {
+                        diffUsingJS(other_content, this_content, nextTextName, baseTextName, 'diffoutput');
+                    } else {
+                        diffUsingJS(this_content, other_content, baseTextName, nextTextName, 'diffoutput');
+                    }
+                    $('#diff').modal();
+                },
+            }
+
+            function cmpproFormatterCmp(value, row, index) {
+                var hrefarr = []
+                var colorStyle = ''
+                var desc = ''
+                if (value == 'different') {
+                    {#                    colorStyle = row.color;#}
+                    colorStyle = 'color:' + row.color;
+                    desc = '不同'
+                } else if (value == 'new') {
+                    {#                    colorStyle = row.color;#}
+                    colorStyle = 'color:' + row.color;
+                    desc = '独有'
+                } else if (value == 'delete') {
+                    colorStyle = 'color:' + row.color;
+                    desc = '暂无'
+                }
+                if (value) {
+                    hrefarr.push(
+                            '<a class="cmp_pro">',
+                            '<span class="glyphicon glyphicon-info-sign"' + ' style="cursor:pointer;' + colorStyle + '">' + desc + '</span>',
+                            '</a>');
+                }
+                return hrefarr.join('');
+            }
+
+            $("#site_id").combobox({});
+            $("#app_id").combobox({});
+            $("#site_id").change(function () {
+                selectChange($('#site_id'), $('#app_id'));
+            });
+            $("#esite_id").combobox({});
+            $("#eapp_id").combobox({});
+            $("#esite_id").change(function () {
+                selectChange($('#esite_id'), $('#eapp_id'));
+            });
+            $('#dlenv').combobox({});
+            $('#dlver').combobox({});
+            $('.combobox').combobox();
+            $('.multiselect').multiselect({
+                includeSelectAllOption: true,
+                enableFiltering: true,
+                selectAllValue: 'select-all-value',
+            });
+            function selectChange(thisid, changeid) {
+                changeid.find('option').remove();
+                changeid.append($('<option>').text('请选择POOL').attr('value', ''));
+                $.ajax({
+                    url: "{{ CMDBAPI_URL }}cmdb/app/?site_id=" + thisid.val() + "&page_size=1000&format=json",
+                    type: 'GET',
+                    async: false,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        $.each(json.results, function (i, value) {
+                            changeid.append($('<option>').text(value.name).attr('value', value.id));
+                        });
+                        changeid.data('combobox').refresh();
+                    }
+                });
+            }
+
+            //删除配置组管理
+            //url:http://local.oms/deploy/yccv2/group/
+            //action:set "status=0"
+            $("#rmsub").click(function () {
+                var rmid = $("#rmid").val();
+                var inputdata = {
+                    'status': 0,
+                    'rmid': rmid
+                };
+                var url = '{{ CMDBAPI_URL }}ycc/group/' + rmid + '/';
+                $.ajax({
+                    url: url,
+                    type: 'PATCH',
+                    async: false,
+                    data: inputdata,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        showSuccess('成功删除配置组');
+                        $('#configgroup').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                    },
+                    error: function (json) {
+                        showError('删除配置组错误' + JSON.stringify(json.responseText));
+                    }
+                });
+            });
+
+            $('#configgroup').bootstrapTable({
+                url: '{{ CMDBAPI_URL }}ycc/group/',
+                ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                columns: [
+                    {
+                        field: 'id',
+                        visible: false
+                    },
+                    {
+                        field: 'site_name',
+                        title: '站点名'
+                    },
+                    {
+                        field: 'app_name',
+                        title: '应用名'
+                    },
+                    {
+                        field: 'group_id',
+                        title: '配置组'
+                    },
+                    {
+                        field: 'type_name',
+                        title: '类型'
+                    },
+                    {
+                        field: 'idc',
+                        visible: false
+                    },
+                    {
+                        field: 'idc_name',
+                        title: 'IDC'
+                    },
+                    {
+                        field: 'all_status',
+                        title: 'Production状态',
+                        formatter: statusFormatter,
+                    },
+                    {
+                        field: 'all_status',
+                        title: '操作',
+                        align: 'left',
+                        formatter: operateFormatter,
+                        events: operateEvents
+                    }
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        group_name: 'YCC_ADMIN',
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search,
+                        format: 'json'
+                    };
+                },
+                pagination: true,
+                pageSize: 50,
+                pageList: [10, 20, 100],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: true,
+                showColumns: true,
+                toolbar: "#toolbar",
+                cache: false
+            });
+
+            $('#attributeForm')
+                    .bootstrapValidator({
+                        fields: {
+                            group_id: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '配置组名不能为空。'
+                                    }
+                                }
+                            },
+                            site_name: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '站点不能为空。'
+                                    }
+                                }
+                            },
+                            app_name: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '应用不能为空。'
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        var type = $("#type option:selected").val();
+                        var siteid = $("#site_id").val();
+                        var appid = $("#app_id").val();
+                        if (type == 2) {
+                            siteid = siteid != '' ? siteid : 0;
+                            appid = appid != '' ? appid : 0;
+                        }
+                        var inputdata = {
+                            'site_id': siteid,
+                            'site_name': $("#site").val(),
+                            'app_id': appid,
+                            'app_name': $("#app").val(),
+                            'group_id': $("#group_id").val(),
+                            'old_pool': $("#group_id").val(),
+                            'type': $("#type option:selected").val(),
+                            'idc': $("#idc option:selected").val()
+                        };
+                        $.ajax({
+                            url: '{{ CMDBAPI_URL }}ycc/group/',
+                            type: 'POST',
+                            async: false,
+                            data: inputdata,
+                            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                            success: function (json) {
+                                showSuccess('添加配置组');
+                                $('#addValue').modal('hide');
+                                $('#attributeForm').bootstrapValidator('resetForm', true);
+                                $('#configgroup').bootstrapTable('refresh', {
+                                    silent: true
+                                });
+                            },
+                            error: function (json) {
+                                showError('添加配置组' + JSON.stringify(json.responseText));
+                                $('#addValue').modal('hide');
+                            }
+                        });
+                    });
+
+            //编辑编著组
+            $('#editForm')
+                    .bootstrapValidator({
+                        fields: {
+                            egroup_id: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '配置组名不能为空。'
+                                    }
+                                }
+                            },
+                            esite_id: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '站点不能为空。'
+                                    }
+                                }
+                            },
+                            eapp_id: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '应用不能为空。'
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        var siteid = 0;
+                        var appid = 0;
+                        var type = $("#etype option:selected").val();
+                        var idc = $("#eidc option:selected").val()
+                        var groupid = $("#egroup_id").val();
+                        var oldpool = $("#egroup_id").val();
+                        var siteid = $("#esite_id").val() == 0 ? 0 : $("#esite_id").val();
+                        var appid = $("#eapp_id").val() == null ? 0 : $("#eapp_id").val();
+                        var sitename = siteid == 0 ? '' : $("#esite_id option:selected").text();
+                        var appname = appid == 0 ? '' : $("#eapp_id option:selected").text();
+                        var id = $("#id").val();
+                        if (type == 2) {
+                            siteid = 0;
+                            appid = 0;
+                            sitename = '';
+                            appname = '';
+                        }
+                        var inputdata = {
+                            'site_id': siteid,
+                            'site_name': sitename,
+                            'app_id': appid,
+                            'app_name': appname,
+                            'group_id': groupid,
+                            'old_pool': oldpool,
+                            'type': type,
+                            'idc': idc,
+                            'id': id,
+                        };
+                        $.ajax({
+                            url: '{{ CMDBAPI_URL }}ycc/group/' + id + '/',
+                            type: 'PATCH',
+                            async: false,
+                            data: inputdata,
+                            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                            success: function (json) {
+                                showSuccess('编辑配置组');
+                                $('#editValue').modal('hide');
+                                $('#editForm').bootstrapValidator('resetForm', true);
+                                $('#configgroup').bootstrapTable('refresh', {
+                                    silent: true
+                                });
+                            },
+                            error: function (json) {
+                                showError('编辑配置组错误' + JSON.stringify(json.responseText));
+                                $('#editValue').modal('hide');
+                            }
+                        });
+                    });
+
+            $("#synchronize").click(function (e) {
+                e.preventDefault();
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}ycc/group/importbygroup/',
+                    ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                    type: 'GET',
+                    async: false,
+                    dataType: 'json',
+                    beforeSend: function () {
+                        $("#loading").css({display: "", top: "50%", left: "50%", position: "absolute"});
+                        $("#loading").text("");
+                        var target = $("#loading").get(0);
+                        spinner.spin(target);
+                    },
+                    success: function (response) {
+                        if (response['success']) {
+                            alert('Success: ' + response['msg']);
+                            $('#configgroup').bootstrapTable('refresh', {
+                                silent: true
+                            });
+                        } else {
+                            alert('Error: ' + response['msg']);
+                        }
+                        spinner.spin();
+                    }
+                });
+            })
+
+            $("#etype").change(function () {
+                if ($('#etype').val() == 1) {
+                    comboboxAction('enable')
+                } else if ($('#etype').val() == 2) {
+                    comboboxAction('disable');
+                }
+            });
+
+            function comboboxAction(action) {
+                var comb_act = action;
+                var sel_act = action + 'd';
+                $('#esite_id').combobox(comb_act);
+                $("#esite_id").attr("disabled", sel_act);
+                $('#eapp_id').combobox(comb_act);
+                $("#eapp_id").attr("disabled", sel_act);
+            }
+
+            $('#configgroup').on('click-row.bs.table', function (e, row, $element) {
+                //初始化select
+                $("#eidc").find("option").removeAttr("selected");
+                $("#esite_id").find("option").removeAttr("selected");
+                $("#etype").find("option").removeAttr("selected");
+                if (row.type == 2) {
+                    comboboxAction('disable')
+                    $("#show_esite_id").css('display', 'none');
+                    $("#show_eapp_id").css('display', 'none');
+                    $("#etype").empty()
+                    $("#etype").append('<option value="2">公共组件类</option>')
+                } else if (row.type == 1) {
+                    comboboxAction('enable')
+                    $("#show_esite_id").css('display', 'block');
+                    $("#show_eapp_id").css('display', 'block');
+                    $("#etype").empty()
+                    $("#etype").append('<option value="1">应用类</option>')
+                }
+                //Datalist
+                $('#id').val(row.id);
+                $("#eidc option[value=" + row.idc + "]").attr("selected", true);
+                var count = $("#esite_id option").length;
+                for (var i = 0; i < count; i++) {
+                    if ($("#esite_id").get(0).options[i].text == row.site_name) {
+                        $("#esite_id").get(0).options[i].selected = true;
+                        break;
+                    }
+                }
+                $("#esite_id").data('combobox').refresh();
+                $.ajax({
+                    url: "{{ CMDBAPI_URL }}cmdb/app/?site_id=" + row.site_id + "&page_size=1000&format=json",
+                    type: 'GET',
+                    async: false,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        $("#eapp_id").find('option').remove();
+                        $("#eapp_id").find("option").removeAttr("selected");
+                        $.each(json.results, function (i, value) {
+                            $("#eapp_id").append($('<option>').text(value.name).attr('value', value.id));
+                        });
+                        var count = $("#eapp_id option").length;
+                        for (var i = 0; i < count; i++) {
+                            if ($("#eapp_id ").get(0).options[i].text == row.app_name) {
+                                $("#eapp_id ").get(0).options[i].selected = true;
+                                break;
+                            }
+                        }
+                        $("#eapp_id").data('combobox').refresh();
+                    }
+                });
+                $('#egroup_id').val(row.group_id);
+                $("#etype option[value=" + row.type + "]").attr("selected", true);
+            });
+
+            function getStatusDesc(status) {
+                var desc = 'unknown'
+                if (status == 0)
+                    desc = 'edit';
+                else if (status == 1)
+                    desc = 'commited';
+                else if (status == 2)
+                    desc = 'approved';
+                else if (status == 3)
+                    desc = 'rejected';
+                else if (status == 4)
+                    desc = 'published';
+                else if (status == 5)
+                    desc = 'history';
+                else if (status == 6)
+                    desc = 'rollback';
+                else if (status == 7)
+                    desc = 'rmvpublish';
+                else if (status == 8)
+                    desc = 'rmvaudit';
+                else
+                    desc = 'unknown';
+                return desc;
+            }
+
+            function initVersion() {
+                var params_group_id = $('#dlgroup_id_id').val();
+                var params_env = $('#dlenv').val();
+                $('#dlver').find('option').remove();
+                if (params_group_id == '')
+                    return;
+                if (params_env != 'production') {
+                    $('#dlver').append($('<option>').text('0(edit)').attr('value', '0'));
+                    $("#dlver").data('combobox').refresh();
+                } else {
+                    var inputdata = {
+                        'group': params_group_id
+                    };
+                    $.ajax({
+                        url: '{{ CMDBAPI_URL }}ycc/status/',
+                        async: false,
+                        data: inputdata,
+                        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                        success: function (json) {
+                            var allgs = json.results;
+                            for (var i = 0; i < allgs.length; ++i) {
+                                var gs = allgs[i];
+                                var version = gs.version;
+                                var status = gs.status;
+                                var statusDesc = getStatusDesc(status);
+                                var verDesc = '' + version + '(' + statusDesc + ')';
+                                $('#dlver').append($('<option>').text(verDesc).attr('value', version));
+                            }
+                            $("#dlver").data('combobox').refresh();
+                        },
+                        error: function (json) {
+                            showError('获取配置组版本' + JSON.stringify(json.responseText));
+                        }
+                    });
+                }
+            }
+
+            $('#dlenv').change(function () {
+                initVersion();
+            });
+            $('#downloadDlg').on('hidden.bs.modal', function (e) {
+                $('#alertDlDlg').empty();
+                $("#dlenv").data('combobox').clearTarget();
+                $("#dlenv").data('combobox').clearElement();
+                $("#dlver").data('combobox').clearTarget();
+                $("#dlver").data('combobox').clearElement();
+            });
+            $("#downloadSubmit").bind('click', function () {
+                var group_id = $('#dlgroup_id').val();
+                var idc = $('#dlgroup_idc').val();
+                var env = $('#dlenv').val();
+                var version = $('#dlver').val();
+                if (env == null || env == '' || version == null || version == '') {
+                    showErrorExt('alertDlDlg', '请先选择环境和版本。');
+                    return;
+                }
+                var inputdata = {
+                    'group': group_id,
+                    'idc': idc,
+                    'env': env,
+                    'version': version
+                };
+                var url = '{{ CMDBAPI_URL }}ycc/export/';
+                url += '?group=' + group_id + '&idc=' + idc + '&env=' + env + '&version=' + version;
+                window.open(url);
+                $('#downloadDlg').modal('hide');
+            });
+            $('#src_env').change(function () {
+                $('#src_version').empty();
+                $('#src_version').append($('<option>').text('选择源版本').val(''));
+                $("#src_version").data('combobox').clearElement();
+                $("#src_version").data('combobox').refresh();
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}ycc/status/',
+                    async: false,
+                    data: {
+                        group: $('#src_group').val(),
+                        page_size: 500
+                    },
+                    headers: {
+                        Authorization: 'Token {{ API_TOKEN }}'
+                    },
+                    success: function (json) {
+                        $.each(json.results, function (index, value) {
+                            switch ($('#src_env').val()) {
+                                case '7':
+                                    $('#src_version').append($('<option>').text(value.version + '(' + value.status_desc + ')').val(value.version));
+                                    break;
+                                default:
+                                    if (value.version == 0)
+                                        $('#src_version').append($('<option>').text(value.version + '(' + value.status_desc + ')').val(value.version));
+                            }
+                        });
+                        $("#src_version").data('combobox').refresh();
+                    },
+                    error: function (json) {
+                        alert(json.responseText);
+                    }
+                });
+            });
+            $('#src_version').change(function () {
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}ycc/configinfo/v3/',
+                    async: false,
+                    data: {
+                        group_status__group__id: $('#src_group').val(),
+                        group_status__version: $('#src_version option:selected').val(),
+                        env: $('#src_env option:selected').val(),
+                        page_size: 500
+                    },
+                    headers: {
+                        Authorization: 'Token {{ API_TOKEN }}'
+                    },
+                    success: function (json) {
+                        $('#src_data').empty();
+                        $.each(json.results, function (index, value) {
+                            $('#src_data').append($('<option>').text(value.data_id).attr('value', value.id));
+                        });
+                        $('#src_data').multiselect('rebuild');
+                        $('#src_data').multiselect($('#modal_copy input[type=checkbox]').prop('checked') ? 'enable' : 'disable');
+                    },
+                    error: function (json) {
+                        modal_copy_alert('alert-danger', json.responseText);
+                    }
+                });
+            });
+            $('#modal_copy').on('show.bs.modal', function (e) {
+                $('#modal_copy div.alert').remove();
+                $('#modal_copy input[type=checkbox]').prop('checked', false);
+                $("#src_env").data('combobox').clearElement();
+                $("#src_version").empty();
+                $('#src_version').append($('<option>').text('选择源版本').val(''));
+                $("#src_version").data('combobox').clearElement();
+                $("#src_version").data('combobox').refresh();
+                $("#src_data").empty();
+                $("#src_data").multiselect('rebuild');
+                $('#src_data').multiselect($('#modal_copy input[type=checkbox]').prop('checked') ? 'enable' : 'disable');
+                $("#dst_group").data('combobox').clearElement();
+                $("#dst_env").data('combobox').clearElement();
+            });
+            $('#copy').bind('click', function () {
+                if (!$('#src_env option:selected').val()) {
+                    modal_copy_alert('alert-danger', '请选择源环境！');
+                    return;
+                }
+                else if (!$('#src_version option:selected').val()) {
+                    modal_copy_alert('alert-danger', '请选择源版本！');
+                    return;
+                }
+                else if ($('#modal_copy input[type=checkbox]').prop('checked') && !$('#src_data option:selected').val()) {
+                    modal_copy_alert('alert-danger', '请选择配置文件！');
+                    return;
+                }
+                else if (!$('#dst_group option:selected').val()) {
+                    modal_copy_alert('alert-danger', '请选择目的Group_IDC！');
+                    return;
+                }
+                else if (!$('#dst_env option:selected').val()) {
+                    modal_copy_alert('alert-danger', '请选择目的环境！');
+                    return;
+                }
+                if ($('#src_group').val() == $('#dst_group option:selected').val() && $('#src_env option:selected').val() == $('#dst_env option:selected').val() && $('#src_version option:selected').val() == '0') {
+                    modal_copy_alert('alert-danger', '不允许源和目的条件相同！');
+                    return;
+                }
+                var src_data_id_id_array = $('#modal_copy input[type=checkbox]').prop('checked') ? $.map($('#src_data option:selected'), function (i) {
+                    return i.value;
+                }) : [];
+                var src_data_id_array = $('#modal_copy input[type=checkbox]').prop('checked') ? $.map($('#src_data option:selected'), function (i) {
+                    return i.text;
+                }) : [];
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}ycc/configinfo/v3/',
+                    async: false,
+                    data: {
+                        group_status__group__id: $('#dst_group option:selected').val(),
+                        group_status__version: 0,
+                        group_status__status: 0,
+                        env: $('#dst_env option:selected').val(),
+                        page_size: 500
+                    },
+                    headers: {
+                        Authorization: 'Token {{ API_TOKEN }}'
+                    },
+                    success: function (json) {
+                        var conflict_data_id_array = [], confirm_msg = null;
+                        var dst_data_id_array = $.map(json.results, function (i) {
+                            return i.data_id;
+                        });
+                        if ($('#modal_copy input[type=checkbox]').prop('checked')) {
+                            $.each(src_data_id_array, function (index, value) {
+                                if ($.inArray(value, dst_data_id_array) != -1)
+                                    conflict_data_id_array.push(value);
+                            });
+                            confirm_msg = '下列配置文件将被覆盖：' + $.toJSON(conflict_data_id_array);
+                        } else {
+                            confirm_msg = '所有配置文件将被覆盖';
+                        }
+                        bootbox.confirm('是否继续？' + confirm_msg, function (result) {
+                            if (result) {
+                                $.ajax({
+                                    url: '{{ CMDBAPI_URL }}ycc/copy/v2/',
+                                    method: 'post',
+                                    async: false,
+                                    data: {
+                                        src_group: $('#src_group').val(),
+                                        src_env: $('#src_env option:selected').val(),
+                                        src_version: $('#src_version option:selected').val(),
+                                        src_data_partial: $.toJSON($('#modal_copy input[type=checkbox]').prop('checked')),
+                                        src_data_id_id_list: $.toJSON(src_data_id_id_array),
+                                        dst_group: $('#dst_group option:selected').val(),
+                                        dst_env: $('#dst_env option:selected').val(),
+                                    },
+                                    headers: {
+                                        Authorization: 'Token {{ API_TOKEN }}'
+                                    },
+                                    success: function (json) {
+                                        modal_copy_alert('alert-success', '复制成功');
+                                    },
+                                    error: function (json) {
+                                        modal_copy_alert('alert-danger', json.responseText);
+                                    }
+                                });
+                            }
+                        })
+                    },
+                    error: function (json) {
+                        modal_copy_alert('alert-danger', json.responseText);
+                    }
+                });
+            });
+            $('#modal_copy input[type=checkbox]').change(function () {
+                $('#src_data').multiselect($(this).prop('checked') ? 'enable' : 'disable');
+            })
+            function modal_copy_alert(alert_class, alert) {
+                $('#modal_copy div.modal-body div.alert').remove();
+                $('<div>').attr({
+                    class: ['alert', alert_class, 'alert-dismissible'].join(' '),
+                    role: 'alert'
+                }).append($('<button>').attr({
+                            type: 'button',
+                            class: 'close',
+                            'data-dismiss': 'alert',
+                            'aria-label': 'Close'
+                        }).append($('<span>').attr('aria-hidden', 'true').html('&times;'))
+                ).append($('<strong>').text(alert)).prependTo($('#modal_copy div.modal-body'));
+            }
+            $('div.search>input[type="text"]').attr('placeholder', '站点名、应用名、配置组或IDC').width(200);
+            {% if not domains %}
+                var a = $('<a>')
+                        .attr({href: 'http://oms.yihaodian.com.cn/home/myInfo.action', target: '_blank'})
+                        .text('此处')[0].outerHTML;
+                bootbox.alert('无domain信息，请点击' + a + '查看修复方法，或者联系SA');
+            {% endif %}
+        })
+        ;
+    </script>
+
+{% endblock %}

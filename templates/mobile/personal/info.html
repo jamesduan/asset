@@ -1,0 +1,53 @@
+{% extends "mobile/base/return_base.html" %}
+{% block title %} 关于 {% endblock %}
+
+{% block content %}
+    <style>
+        .mui-table-view:first-child {
+            margin-top: 15px;
+        }
+        .mui-table-view:last-child {
+            margin-bottom: 30px;
+        }
+    </style>
+
+    <div class="mui-content-padded" STYLE="text-align: center; vertical-align: middle; margin-top: 30px; margin-bottom: 30px;">
+        <img src="{{ STATIC_URL }}mobile/img/applogo.png">
+    </div>
+    <ul class="mui-table-view">
+        <li class="mui-table-view-cell">
+            <ul class="mui-list-inline">
+                <li class="mui-pull-left">当前版本</li>
+                <li class="mui-pull-right"><p>V0.0.5</p></li>
+            </ul>
+        </li>
+    </ul>
+    <ul class="mui-table-view">
+{#        <li class="mui-table-view-cell">#}
+{#            <ul class="mui-list-inline">#}
+{#                <li class="mui-pull-left">开发团队</li>#}
+{#                <li class="mui-pull-right"><p>自动化运维平台</p></li>#}
+{#            </ul>#}
+{#        </li>#}
+        <li class="mui-table-view-cell" id="new_test">
+            <div class="mui-slider-right mui-disabled">
+                <a class="mui-btn mui-btn-yellow mui-icon mui-icon-star"></a>
+            </div>
+            <div class="mui-slider-handle">
+                <ul class="mui-list-inline">
+                    <li class="mui-pull-left">开发团队</li>
+                    <li class="mui-pull-right"><p>自动化运维平台</p></li>
+                </ul>
+            </div>
+        </li>
+
+    </ul>
+<script type="text/javascript">
+mui("#new_test").on("tap",".mui-icon-star",function(e) {
+    mui.openWindow({
+        url: '/base/',
+        id: '/base/'
+    });
+});
+</script>
+{% endblock %}

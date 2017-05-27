@@ -1,0 +1,825 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block title %}发布统计{% endblock %}
+
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrap-select-1.10.0/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select-1.10.0/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select-1.10.0/dist/js/i18n/defaults-zh_CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+
+<style>
+    .input-group{
+        width: 208px;
+    }
+</style>
+
+    <!-- <div class="inner-h1">发布统计列表</div> -->
+
+    <div class="form-inline" role="form" style="padding-top: 10px">
+        <label style="width: 45px;">From：</label>
+        <input size="16" style="width: 115px" type="text" value="{{ start_date }}" name="start_date" id="start_date" class="form-control update_api_url datepicker" readonly>
+        <label style="width: 25px; margin: 0px 8px 0px 5px;">To：</label>
+        <input size="16" style="width: 115px" type="text" value="{{ end_date }}" name="end_date" id="end_date" class="form-control update_api_url datepicker" readonly>
+
+        <select name="show_all_or_pool" id="show_all_or_pool" class="form-control selectpicker update_api_url">
+            <option value="0">根据总数统计</option>
+            <option value="2">根据Domain统计</option>
+            <option value="1">根据Pool统计</option>
+        </select>
+        <select name="department_id" id="department_id" class="form-control update_api_url selectpicker">
+            <option value="">选择部门</option>
+            {% for dept in department_list %}
+                <option value={{ dept.id }}>{{ dept.deptname }}</option>
+            {% endfor %}
+        </select>
+        <select name="domain_id" id="domain_id" class="form-control update_api_url">
+{#            <option value="">选择Domain</option>#}
+            <option value="">选择Domain</option>
+            {% for dm in domain_list %}
+                <option value={{ dm.id }}>{{ dm.domainname | safe }}</option>
+            {% endfor %}
+        </select>
+        <select name="app_id" id="app_id" class="form-control update_api_url">
+{#            <option value="">选择Pool</option>#}
+            <option value="">选择Pool</option>
+            {% for app in app_list %}
+                <option value={{ app.id }}>{{ app.site.name }}/{{ app.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="inner-box inner-list-box">
+        <div class="modal fade" id="showPoolPublish" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog"  style="width: 90%; height: 50%; text-align:center; margin-top: 80px;vertical-align: middle;">
+            <div class="modal-content">
+            <form class="form-horizontal" role="form" id="attributeForm3" method="POST">
+              <div class="modal-header" id="domain_title">
+                <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                <h3 class="modal-title">Domain所属Pool的发布统计</h3>
+              </div>
+            <div class="modal-body">
+                <table id="pool_publish_count"></table>
+            </div>
+            </form>
+            </div>
+            </div>
+            </div>
+
+        <div class="modal fade" id="showRoolBackDetail" tabindex="-1" role="dialog" aria-labelledby="RoolBackDetailLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form class="form-horizontal" role="form" id="roolBackDetailForm">
+                      <div class="modal-header" id="roobackDetail_title">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                        <h2 class="modal-title">发布记录详情</h2>
+                      </div>
+                      <div class="modal-body">
+                          <table id="unsuccess_detail" class="table table-bordered">
+                              <thead>
+                                <tr>
+                                    <th>站点/Pool</th>
+                                    <th>发布类型</th>
+                                    <th>是否灰度</th>
+                                    <th>发布单号</th>
+                                </tr>
+                            </thead>
+                              <tbody></tbody>
+                          </table>
+                      </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div id="toolbar">
+            <div class="form-inline" role="form">
+                <form id="multi_select">
+                    <select name="package_type" id="package_type" class="form-control update_api_url selectpicker">
+                        <option value="">选择发布包类型</option>
+                        <option value="0">webapps</option>
+                        <option value="3">static</option>
+                    </select>
+                    <select name="is_stagging" id="is_stagging" class="form-control update_api_url selectpicker">
+                        <option value="2">是否Stg发布</option>
+                        <option value="1">Stg发布</option>
+                        <option value="0">Production发布</option>
+                    </select>
+                    <select name="is_gray_release" id="is_gray_release" class="form-control update_api_url selectpicker">
+                        <option value="">是否灰度发布</option>
+                        <option value="0">一键发布</option>
+                        <option value="1">灰度发布</option>
+                    </select>
+                    <select name="is_trident" id="is_trident" class="form-control update_api_url selectpicker">
+                        <option value="">是否Trident发布</option>
+                        <option value="523">Trident发布</option>
+                        <option value="0">非Trident发布</option>
+                    </select>
+                    <button id="search_by_select" name="search_by_select" class="btn btn-green" type="button">查询</button>
+                    <button id="clear_select" name="clear_select" class="btn btn-green" type="button">重置</button>
+                </form>
+            </div>
+        </div>
+
+        <table id="publish_count">
+        </table>
+    </div>
+<script type="application/javascript">
+    var start_date_init = '{{ start_date | safe }}';
+    var end_date_init = '{{ end_date | safe }}';
+$(document).ready(function() {
+{#    $("#app_id").combobox('disable');#}
+{#    $("#show_all_or_pool,#department_id,#domain_id,#app_id, #is_stagging, #is_gray_release, #is_trident, #package_type").combobox({#}
+{#    });#}
+    $('.datepicker').datetimepicker({
+        format: 'yyyy-mm-dd',
+        autoclose: true,
+        showMeridian: true,
+        minView: 2
+    });
+
+    $('.selectpicker').selectpicker({
+        'width': 'auto',
+    });
+    $('#domain_id').selectpicker({
+        'title': '选择Domain',
+        'liveSearch': true,
+        'liveSearchPlaceholder': '搜索Domain',
+        'width': 'auto',
+        'size': 10,
+    });
+    $('#app_id').selectpicker({
+        'title': '选择Pool',
+        'liveSearch': true,
+        'liveSearchPlaceholder': '搜索Pool',
+        'width': 'auto',
+        'size': 10,
+    });
+    $("#is_stagging").val('0');
+    $("#package_type").val('0');
+    $("#is_gray_release").val('');
+    $("#is_trident").val('');
+    $("#is_gray_release").prop("disabled", false);
+    $("#is_trident").prop("disabled", false);
+    $('.selectpicker').selectpicker('refresh');
+    $('#department_id').change(function(){
+        var duty_dept_id = $('#department_id option:selected').val();
+        $('#domain_id').find('option').remove();
+        $('#domain_id').append($('<option>').text('选择Domain').attr('value', ''));
+        $('#app_id').find('option').remove();
+        $('#app_id').append($('<option>').text('选择Pool').attr('value', ''));
+        if(duty_dept_id != ""){
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}cmdb/deptlevel2/domain/?format=json&deptid=' + duty_dept_id,
+                async:   false,
+                headers:{'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $.each(json, function(i, value) {
+                        $('#domain_id').append($('<option>').text(value.domainname).attr('value', value.id));
+                        $.each(value.app, function(i, val) {
+                            $('#app_id').append($('<option>').text(val.site_name + '/' + val.name).attr('value', val.id));
+                        });
+                    });
+                }
+            });
+
+        }else{
+            {%  for item in domain_list %}
+                $('#domain_id').append($('<option>').text("{{ item.domainname | safe }}").attr('value', "{{ item.id }}"));
+            {%  endfor %}
+            {%  for app_item in app_list %}
+                $('#app_id').append($('<option>').text("{{ app_item.site.name }}/{{ app_item.name }}").attr('value', "{{ app_item.id }}"));
+            {%  endfor %}
+        }
+        $('#domain_id').selectpicker('refresh');
+        $('#app_id').selectpicker('refresh');
+    });
+
+    $('#domain_id').change(function(){
+        var domain_id = $('#domain_id option:selected').val();
+        var dept_id = $('#department_id option:selected').val();
+        $('#app_id').find('option').remove();
+        $('#app_id').append($('<option>').text('选择Pool').attr('value', ''));
+        if(domain_id != ""){
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}cmdb/app/?format=json&page_size=1000&domainid=' + domain_id,
+                async:   false,
+                dataType: 'json',
+                type: 'GET',
+                headers:{'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $.each(json.results, function(i, value) {
+                        $('#app_id').append($('<option>').text(value.site_name + '/' + value.name).attr('value', value.id));
+                    });
+                }
+            });
+
+        }else {
+            if (dept_id != "") {
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}cmdb/deptlevel2/domain/?format=json&deptid=' + dept_id,
+                    async: false,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        $.each(json, function (i, value) {
+                            $.each(value.app, function (i, val) {
+                                $('#app_id').append($('<option>').text(val.site_name + '/' + val.name).attr('value', val.id));
+                            });
+                        });
+                    }
+                });
+            }else{
+                {%  for app_item in app_list %}
+                    $('#app_id').append($('<option>').text("{{ app_item.site.name }}/{{ app_item.name }}").attr('value', "{{ app_item.id }}"));
+                {%  endfor %}
+            }
+        }
+        $('#app_id').selectpicker('refresh');
+    });
+
+    $("#is_stagging").change(function(){
+        if ($('#is_stagging option:selected').val() == "0") {
+            $("#is_gray_release").prop("disabled", false);
+            $("#is_trident").prop("disabled", false);
+            $('#is_gray_release').selectpicker('refresh');
+            $('#is_trident').selectpicker('refresh');
+        }else {
+            $("#is_gray_release").val('');
+            $("#is_trident").val('');
+            $("#is_gray_release").prop("disabled", true);
+            $("#is_trident").prop("disabled", true);
+            $('#is_gray_release').selectpicker('refresh');
+            $('#is_trident').selectpicker('refresh');
+        }
+    });
+
+    $("#show_all_or_pool").change(function(){
+        if ($('#show_all_or_pool option:selected').val() == "2") {
+            $("#app_id").val('');
+            $("#app_id").prop("disabled", true);
+            $('#app_id').selectpicker('refresh');
+        } else {
+            $("#app_id").prop("disabled", false);
+            $('#app_id').selectpicker('refresh');
+        }
+    });
+
+    $("#search_by_select").click(function(){
+        var start_date = $('#start_date').val();
+        var end_date = $('#end_date').val();
+        var department_id = $('#department_id option:selected').val();
+        var domain_id = $('#domain_id option:selected').val();
+        var app_id = $('#app_id option:selected').val();
+        var is_stagging = $('#is_stagging option:selected').val();
+        var is_gray_release = $('#is_gray_release option:selected').val();
+        var is_trident = $('#is_trident option:selected').val();
+        var package_type = $('#package_type option:selected').val();
+        var show_all_or_pool = $('#show_all_or_pool option:selected').val();
+
+        var api_url = '{{ CMDBAPI_URL }}deploy/publish/count/?';
+        var params = ['format=json'];
+        if (show_all_or_pool !='') {
+            if (show_all_or_pool == '0') {
+                $('#publish_count').bootstrapTable('hideColumn', 'site');
+                $('#publish_count').bootstrapTable('hideColumn', 'pool');
+                $('#publish_count').bootstrapTable('hideColumn', 'domainid');
+                $('#publish_count').bootstrapTable('hideColumn', 'domain');
+                $('#publish_count').bootstrapTable('hideColumn', 'department');
+                $('.fixed-table-footer').prop("hidden", 'hidden');
+            } else if (show_all_or_pool == '1') {
+                $('#publish_count').bootstrapTable('showColumn', 'site');
+                $('#publish_count').bootstrapTable('showColumn', 'pool');
+                $('#publish_count').bootstrapTable('hideColumn', 'domainid');
+                $('#publish_count').bootstrapTable('showColumn', 'domain');
+                $('#publish_count').bootstrapTable('showColumn', 'department');
+                $('.fixed-table-footer').prop("hidden", false);
+            } else {
+                $('#publish_count').bootstrapTable('hideColumn', 'site');
+                $('#publish_count').bootstrapTable('hideColumn', 'pool');
+                $('#publish_count').bootstrapTable('showColumn', 'domainid');
+                $('#publish_count').bootstrapTable('showColumn', 'domain');
+                $('#publish_count').bootstrapTable('showColumn', 'department');
+                $('.fixed-table-footer').prop("hidden", false);
+            }
+            params.push('show_all_or_pool=' + show_all_or_pool)
+        }
+        if (start_date !="") {
+            params.push('start_date=' + start_date)
+        }
+        if (end_date !="") {
+            params.push('end_date=' + end_date)
+        }
+        if (department_id !="" && domain_id =="" && app_id =="") {
+            params.push('department_id=' + department_id)
+        }
+        if (domain_id !="" && app_id =="") {
+            params.push('domain_id=' + domain_id)
+        }
+        if (app_id !="") {
+            params.push('app_id=' + app_id)
+        }
+        if (is_stagging !="") {
+            params.push('is_stagging=' + is_stagging)
+        }
+        if (package_type !="") {
+            params.push('package_type=' + package_type)
+        }
+        if (is_gray_release !="") {
+            params.push('is_gray_release=' + is_gray_release)
+        }
+        if (is_trident !="") {
+            params.push('is_trident=' + is_trident)
+        }
+        api_url = api_url + params.join('&');
+
+        $('#publish_count').bootstrapTable('refresh', {
+            url: api_url,
+        });
+
+    });
+
+    $('#clear_select').click(function(){
+        $("#show_all_or_pool").val('0');
+        $('.fixed-table-footer').prop("hidden", 'hidden');
+        $("#is_stagging").val('0');
+        $("#package_type").val('0');
+        $("#is_gray_release").val('');
+        $("#is_trident").val('');
+
+        $("#domain_id").find("option").remove();
+        $('#domain_id').append($('<option>').text('选择Domain').attr('value', ''));
+        {%  for item in domain_list %}
+            $('#domain_id').append($('<option>').text("{{ item.domainname | safe }}").attr('value', "{{ item.id }}"));
+        {%  endfor %}
+        $("#app_id").find("option").remove();
+        $('#app_id').append($('<option>').text('选择Pool').attr('value', ''));
+        {%  for app_item in app_list %}
+            $('#app_id').append($('<option>').text("{{ app_item.site.name }}/{{ app_item.name }}").attr('value', "{{ app_item.id }}"));
+        {%  endfor %}
+        $("#department_id").val('');
+
+        $('#start_date').val(start_date_init);
+        $('#end_date').val(end_date_init);
+
+        $("#is_gray_release").prop("disabled", true);
+        $("#is_trident").prop("disabled", true);
+        $('#domain_id').selectpicker('refresh');
+        $('#app_id').selectpicker('refresh');
+        $('.selectpicker').selectpicker('refresh');
+        $('#publish_count').bootstrapTable('hideColumn', 'site');
+        $('#publish_count').bootstrapTable('hideColumn', 'pool');
+        $('#publish_count').bootstrapTable('hideColumn', 'domainid');
+        $('#publish_count').bootstrapTable('hideColumn', 'domain');
+        $('#publish_count').bootstrapTable('hideColumn', 'department');
+
+        $('#publish_count').bootstrapTable('refresh', {
+            url: '{{ CMDBAPI_URL }}deploy/publish/count/?format=json&start_date=' + start_date_init + '&end_date=' + end_date_init
+        });
+    });
+
+    window.getDetailEvents = {
+        'click .poolDetail': function (e, value, row, index) {
+            var start_date = $('#start_date').val().trim();
+            var end_date = $('#end_date').val().trim();
+            var is_stagging = $('#is_stagging').val().trim();
+            var is_gray_release = $('#is_gray_release').val().trim();
+            var is_trident = $('#is_trident').val().trim();
+            var package_type = $('#package_type').val().trim();
+
+            var pool_api_url = '{{ CMDBAPI_URL }}deploy/publish/count/?';
+            var params = ['format=json'];
+            params.push('show_all_or_pool=1');
+            params.push('domain_id=' + row.domainid);
+            if (start_date !="") {
+                params.push('start_date=' + start_date)
+            }
+            if (end_date !="") {
+                params.push('end_date=' + end_date)
+            }
+            if (is_stagging !="") {
+                params.push('is_stagging=' + is_stagging)
+            }
+            if (package_type !="") {
+                params.push('package_type=' + package_type)
+            }
+            if (is_gray_release !="") {
+                params.push('is_gray_release=' + is_gray_release)
+            }
+            if (is_trident !="") {
+                params.push('is_trident=' + is_trident)
+            }
+            pool_api_url = pool_api_url + params.join('&');
+
+
+            $('#domain_title').find('h3').remove();
+            $('#domain_title').append("<h3 class='modal-title'><strong>"+row.domain+"</strong><h3>");
+
+            var pool_table = $('#pool_publish_count  tr').val();
+            if(pool_table == undefined){
+                $('#pool_publish_count').bootstrapTable({
+                    url: pool_api_url,
+                    method: 'get',
+                    ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+                    undefinedText: '-',
+                    cache: false,
+                    pagination: true,
+                    pageSize: 20,
+                    pageNumber: 1,
+                    sortable: true,
+                    sortName: 'all_count',
+                    sortOrder: 'desc',
+                    columns: [
+                        {
+                            field: 'pool',
+                            title: 'Pool',
+                        },
+                        {
+                            field: 'all_count',
+                            title: '总发布数',
+                            sortable: true,
+                        },
+                        {
+                            field: 'success_count',
+                            title: '发布成功数',
+                            sortable: true,
+                        },
+                        {
+                            field: 'rollback_count',
+                            title: '回滚数',
+                            sortable: true,
+                        },
+                        {
+                            field: 'failure_count',
+                            title: '未完成数',
+                            sortable: true,
+                        },
+                        {
+                            field: 'scrap_count',
+                            title: '废弃数',
+                            sortable: true,
+                        },
+                        {
+                            field: 'success_rate',
+                            title: '发布成功率',
+                            formatter: rateFormatter,
+                            sortable: true,
+                        },
+                        {
+                            field: 'rollback_rate',
+                            title: '发布回滚率',
+                            formatter: rateFormatter,
+                            sortable: true,
+                        },
+                        {
+                            field: 'publish_cycle',
+                            title: '发布周期（天/成功发布数）',
+                            sortable: true,
+                        }
+
+                    ],
+                });
+            }else{
+                $('#pool_publish_count').bootstrapTable('refresh', {
+                    url: pool_api_url
+                });
+            }
+            $('#showPoolPublish').modal('show');
+        },
+        'click #successDetail': function (e, value, row, index) {
+            findDetailByType(row, 'success');
+        },
+
+        'click #roolbackDetail': function (e, value, row, index) {
+            findDetailByType(row, 'rollback');
+        },
+
+        'click #unFinishDetail': function (e, value, row, index) {
+            findDetailByType(row, 'unfinish');
+        },
+
+        'click #scrapDetail': function (e, value, row, index) {
+            findDetailByType(row, 'scrap');
+        }
+
+    };
+
+    function findDetailByType(row,type) {
+        var show_all_or_pool = $('#show_all_or_pool').val().trim();
+        var pro_status = null;
+        var stg_status = null;
+        if(type == 'success'){
+            pro_status = 4;
+            stg_status = 2;
+        }else if(type == 'rollback'){
+            pro_status = 5;
+            stg_status = 3;
+        }else if(type == 'scrap'){
+            pro_status = 7;
+            stg_status = 5;
+        }else if(type == 'unfinish'){
+            pro_status = '0,1,2,3,6,8,9,10,11,12';
+            stg_status = 1;
+        }
+        if (show_all_or_pool =='1') {
+            $('#unsuccess_detail tbody').remove();
+            $('#unsuccess_detail').append('<tbody>');
+            findDeployDetail(row, row.id, pro_status, stg_status);
+            $('#unsuccess_detail').append('</tbody>');
+        }else{
+            var domainid = row.domainid;
+            $('#unsuccess_detail tbody').remove();
+            $('#unsuccess_detail').append('<tbody>');
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}cmdb/app/?format=json&page_size=1000&domainid=' + domainid,
+                dataType: 'json',
+                type: 'GET',
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (json) {
+                    $.each(json.results, function (key, val) {
+                        findDeployDetail(row, val.id, pro_status, stg_status);
+                    });
+                }
+            });
+            $('#unsuccess_detail').append('</tbody>');
+        }
+        $('#showRoolBackDetail').modal('show');
+    }
+
+    function findDeployDetail(row, appid, pro_status, stg_status){
+        var start_date = $('#start_date').val().trim();
+        var end_date = $('#end_date').val().trim();
+        var is_stagging = $('#is_stagging').val().trim();
+        var is_gray_release = $('#is_gray_release').val().trim();
+        var is_trident = $('#is_trident').val().trim();
+        var package_type = $('#package_type').val().trim();
+
+        if(is_stagging != "1"){
+            var inputdata = {
+                app_id: appid,
+                status: pro_status,
+                start_date: moment(start_date).format('X'),
+                end_date: parseInt(moment(end_date).format('X')) + 86400,
+            };
+            if(package_type !="") {
+                inputdata['packtype'] = package_type;
+            }
+            if(is_gray_release !="") {
+                inputdata['is_gray_release'] = is_gray_release;
+            }
+            if(is_trident !="") {
+                inputdata['is_trident'] = is_trident;
+            }
+           $.ajax({
+                url: '{{ CMDBAPI_URL }}deploy/main/list/?format=json&page_size=1000',
+                data: inputdata,
+                dataType: 'json',
+                type: 'GET',
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (json) {
+                    $.each(json.results, function(i, value) {
+                        if(value.is_gray_release == 1){
+                            $('#unsuccess_detail tbody').append('<tr><td>' + value.site_name + '/' + value.app_name + '</td><td>production</td><td>灰度</td><td><a href="{{ ROOT_URL }}prod/detail/?depid=' + value.depid +'" target="_blank">' + value.depid + '</a></td></tr>');
+                        }else{
+                            $('#unsuccess_detail tbody').append('<tr><td>' + value.site_name + '/' + value.app_name + '</td><td>production</td><td>一键</td><td><a href="{{ ROOT_URL }}prod/detail/?depid=' + value.depid + '" target="_blank">' + value.depid + '</a></td></tr>');
+                        }
+                    });
+                }
+            });
+        }
+        if(is_stagging != "0") {
+            var inputdata1 = {
+                app_id: appid,
+                status: stg_status,
+                start_date: moment(start_date).format('X'),
+                end_date: parseInt(moment(end_date).format('X')) + 86400,
+            };
+            if(package_type !="") {
+                inputdata1['deploy_type'] = package_type;
+            }
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}deploy/stg/list/?format=json&page_size=1000',
+                data: inputdata1,
+                dataType: 'json',
+                type: 'GET',
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (json) {
+                    $.each(json.results, function (i, value) {
+                        $('#unsuccess_detail tbody').append('<tr><td>' + value.site_name + '/' + value.app_name + '</td><td>stg</td><td>-</td><td><a href="{{ ROOT_URL }}stg/detail/?depid=' + value.depid + '" target="_blank">' + value.depid + '</a></td></tr>');
+                    });
+                }
+            });
+        }
+    }
+
+    $('#publish_count').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}deploy/publish/count/?format=json&start_date=' + start_date_init + '&end_date=' + end_date_init,
+        method: 'get',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        pagination: true,
+        pageSize: 20,
+        pageNumber: 1,
+        pageList: [10,20,50,100,500,800],
+        sidePagination: 'client',
+        showRefresh: true,
+        toolbar: "#toolbar",
+        showExport: true,
+        cache: false,
+        sortable: true,
+        sortName: 'all_count',
+        sortOrder: 'desc',
+        showFooter: true,
+        columns: [
+            {
+                field: 'id',
+                visible: false,
+            },
+            {
+                field: 'site',
+                title: 'site',
+                visible: false,
+            },
+            {
+                field: 'pool',
+                title: 'Pool',
+                visible: false,
+            },
+            {
+                field: 'domainid',
+                title: '编号',
+                visible: false,
+            },
+            {
+                field: 'domain',
+                title: 'Domain',
+                formatter: getPoolDetail,
+                events: getDetailEvents,
+                visible: false,
+            },
+            {
+                field: 'department',
+                title: '所属部门',
+                footerFormatter: totalFormatter,
+                visible: false,
+            },
+            {
+                field: 'all_count',
+                title: '总发布数',
+                sortable: true,
+                footerFormatter: getfooterFormatter
+            },
+            {
+                field: 'success_count',
+                title: '成功数',
+                sortable: true,
+{#                formatter: getSuccessDetail,#}
+{#                events: getDetailEvents,#}
+                footerFormatter: getfooterFormatter
+            },
+            {
+                field: 'rollback_count',
+                title: '回滚数',
+                sortable: true,
+{#                formatter: getRoolBackDetail,#}
+{#                events: getDetailEvents,#}
+                footerFormatter: getfooterFormatter
+            },
+            {
+                field: 'failure_count',
+                title: '未完成数',
+                sortable: true,
+{#                formatter: getUnFinishDetail,#}
+{#                events: getDetailEvents,#}
+                footerFormatter: getfooterFormatter
+            },
+            {
+                field: 'scrap_count',
+                title: '废弃数',
+                sortable: true,
+{#                formatter: getScrapDetail,#}
+{#                events: getDetailEvents,#}
+                footerFormatter: getfooterFormatter
+
+            },
+            {
+                field: 'success_rate',
+                title: '发布成功率',
+                sortable: true,
+                formatter: rateFormatter,
+                footerFormatter: successRateFormatter
+            },
+            {
+                field: 'rollback_rate',
+                title: '发布回滚率',
+                sortable: true,
+                formatter: rateFormatter,
+                footerFormatter: rollbackRateFormatter
+            },
+            {
+                field: 'publish_cycle',
+                title: '发布周期（天/成功数）',
+                sortable: true,
+                formatter: function cycleFormatter(value, row, index){
+                    return value + '天'
+                },
+                footerFormatter: function cycleRateFormatter(data){
+                    return '-'
+                }
+            }
+
+        ],
+    });
+
+    $('.fixed-table-footer').prop("hidden", 'hidden');
+    function totalFormatter(data){
+        return '总计：'
+    }
+
+    function getPoolDetail(value, row, index) {
+        return '<a href="#" class="poolDetail" data-toggle="tooltip"  title="点击查看该Domain所有Pool的发布统计">' +value +'</a>';
+    }
+
+    function rateFormatter(value, row, index){
+        return value + '%'
+    }
+
+    function getSuccessDetail(value, row, index){
+        if(value != 0){
+            return '<a href="#" id="successDetail" data-toggle="tooltip"  title="点击查看发布成功详情">' +value +'</a>';
+        }else{
+            return value;
+        }
+    }
+
+    function getRoolBackDetail(value, row, index){
+        if(value != 0){
+            return '<a href="#" id="roolbackDetail" data-toggle="tooltip"  title="点击查看回滚详情">' +value +'</a>';
+        }else{
+            return value;
+        }
+    }
+
+    function getUnFinishDetail(value, row, index){
+        if(value != 0){
+            return '<a href="#" id="unFinishDetail" data-toggle="tooltip"  title="点击查看未完成详情">' +value +'</a>';
+        }else{
+            return value;
+        }
+    }
+
+    function getScrapDetail(value, row, index){
+        if(value != 0){
+            return '<a href="#" id="scrapDetail" data-toggle="tooltip"  title="点击查看废弃详情">' +value +'</a>';
+        }else{
+            return value;
+        }
+    }
+
+    function getfooterFormatter(data){
+        field = this.field;
+        var sum = 0;
+        $.each(data,function(key,row){
+            sum = sum + row[field]
+        });
+        if(sum){
+            return sum;
+        }else{
+            return '0';
+        }
+    }
+    function successRateFormatter(data){
+        var roll = 0;
+        var suc = 0;
+        $.each(data,function(key,row){
+            roll = roll + row.rollback_count;
+            suc = suc + row.success_count;
+        });
+        if(suc + roll){
+            return parseFloat(suc/(suc + roll) * 100).toFixed(2) + '%';
+        }else{
+            return 0 + '%'
+        }
+    }
+
+    function rollbackRateFormatter(data){
+        var roll = 0;
+        var suc = 0;
+        $.each(data,function(key,row){
+            roll = roll + row.rollback_count;
+            suc = suc + row.success_count;
+        });
+        if(suc + roll){
+            return parseFloat(roll/(suc + roll) * 100).toFixed(2) + '%';
+        }else{
+            return 0 + '%'
+        }
+    }
+
+});
+</script>
+{% endblock %}

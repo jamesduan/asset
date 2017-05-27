@@ -1,0 +1,226 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block title %}发布趋势{% endblock %}
+
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/echarts-2.2.7/echarts.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+
+    <div class="inner-box inner-list-box">
+        <div class="form-inline" role="form" style="padding-top: 10px">
+            <label>开始日期：</label>
+            <input size="16" type="text" value="{{ start_date }}" name="start_date" id="start_date" class="form-control datepicker" readonly>
+            <label>结束日期：</label>
+            <input size="16" type="text" value="{{ end_date }}" name="end_date" id="end_date" class="form-control datepicker" readonly>
+            <select name="package_type" id="package_type" class="form-control update_api_url selectpicker">
+                        <option value="">发布包类型</option>
+                        <option value="0">webapps</option>
+                        <option value="3">static</option>
+                    </select>
+            <select name="is_stagging" id="is_stagging" class="form-control update_api_url selectpicker">
+                <option value="2">是否Stg发布</option>
+                <option value="1">Stg发布</option>
+                <option value="0">Production发布</option>
+            </select>
+            <select name="is_gray_release" id="is_gray_release" class="form-control update_api_url selectpicker" disabled>
+                <option value="">是否灰度发布</option>
+                <option value="0">一键发布</option>
+                <option value="1">灰度发布</option>
+            </select>
+            <select name="is_trident" id="is_trident" class="form-control update_api_url selectpicker" disabled>
+                <option value="">是否Trident发布</option>
+                <option value="523">Trident发布</option>
+                <option value="0">非Trident发布</option>
+            </select>
+            <button id="search" name="search" class="btn btn-green" type="button">查询</button>
+        </div>
+    </div>
+    <div id="trent_chart" style="height:480px; margin-top: 5px;"></div>
+<script type="application/javascript">
+$(document).ready(function() {
+$('.selectpicker').selectpicker({
+        'width': 'auto',
+    });
+
+$('.datepicker').datetimepicker({
+    format: 'yyyy-mm-dd',
+    autoclose: true,
+    showMeridian: true,
+    minView: 2
+});
+
+require.config({
+    paths : {
+        echarts : "{{ STATIC_URL }}libs/echarts-2.2.7/",
+    }
+});
+
+$("#is_gray_release").val('');
+$("#is_trident").val('');
+$("#is_gray_release").prop("disabled", true);
+$("#is_trident").prop("disabled", true);
+$('.selectpicker').selectpicker('refresh');
+
+$("#is_stagging").change(function(){
+    if ($('#is_stagging option:selected').val() == "0") {
+        $("#is_gray_release").prop("disabled", false);
+        $("#is_trident").prop("disabled", false);
+        $('#is_gray_release').selectpicker('refresh');
+        $('#is_trident').selectpicker('refresh');
+    }else {
+        $("#is_gray_release").val('');
+        $("#is_trident").val('');
+        $("#is_gray_release").prop("disabled", true);
+        $("#is_trident").prop("disabled", true);
+        $('#is_gray_release').selectpicker('refresh');
+        $('#is_trident').selectpicker('refresh');
+    }
+});
+
+$('#search').click(function() {
+    loadChartData();
+});
+
+loadChartData();
+
+function loadChartData(){
+    var start_date = $('#start_date').val();
+    var end_date = $('#end_date').val();
+    var package_type = $('#package_type option:selected').val();
+    var is_stagging = $('#is_stagging option:selected').val();
+    var is_gray_release = $('#is_gray_release option:selected').val();
+    var is_trident = $('#is_trident option:selected').val();
+    var api_url = '{{ CMDBAPI_URL }}deploy/publish/trend/?';
+    var params = ['format=json'];
+    if (start_date !="") {
+        params.push('start_date=' + start_date)
+    }
+    if (end_date !="") {
+        params.push('end_date=' + end_date)
+    }
+    if (package_type !="") {
+        params.push('package_type=' + package_type)
+    }
+    if (is_stagging !="") {
+        params.push('is_stagging=' + is_stagging)
+    }
+    if (is_gray_release !="") {
+        params.push('is_gray_release=' + is_gray_release)
+    }
+    if (is_trident !="") {
+        params.push('is_trident=' + is_trident)
+    }
+    api_url = api_url + params.join('&');
+
+    $.ajax({
+        url: api_url,
+        type: 'GET',
+        async: false,
+        dataType: "json",
+        cache: false,
+        headers:{'Authorization':'Token {{ API_TOKEN }}'},
+        success: function (json) {
+            var legend = json.legend;
+            var xAxis = json.xAxis;
+            var series = json.series;
+            require(
+            [
+                "echarts",
+                'echarts/theme/macarons',
+                "echarts/chart/line",
+                "echarts/chart/bar"
+            ],
+            function(ec){
+                var myChart = ec.init(document.getElementById('trent_chart'), 'macarons');
+                var option = {
+                    title: {
+                        text: '发布统计趋势图',
+                        x: 'center',
+                        itemGap: 8,
+                        textStyle: {
+                            fontSize: 22,
+                            fontWeight: 'normal',
+                        }
+                    },
+                    tooltip: {
+                        show: true,
+                        trigger: 'axis',
+
+                    },
+                    toolbox: {
+                        show : true,
+                        showTitle: true,
+                        feature : {
+                            dataView : {show: true, readOnly: false},
+                            magicType : {show: true, type: ['line', 'bar']},
+                            restore : {show: true},
+                            saveAsImage : {show: true},
+                        }
+                    },
+                    legend: {
+                        data: ['发布总数', '成功发布数', '回滚数', '未完成数', '废弃数'],
+                        y: 'bottom',
+                         textStyle: {
+                            fontSize: 14
+                        }
+                    },
+                    xAxis : [
+                        {
+                            name: '日期',
+                            type : 'category',
+                            boundaryGap : false,
+                            data :xAxis
+                        }
+                    ],
+                    yAxis : [
+                        {
+                            type : 'value',
+                            splitArea: { show: true },
+                            name: "发布次数（次数/每天）",
+                            splitNumber:20
+                        }
+                    ],
+                    series : [
+                        {
+                            name: '发布总数',
+                            type: 'line',
+                            data: series.all_count
+                        },
+                        {
+                            name: '成功发布数',
+                            type: 'line',
+                            data: series.success_count
+                        },
+                        {
+                            name: '回滚数',
+                            type: 'line',
+                            data: series.rollback_count
+                        },
+                        {
+                            name: '未完成数',
+                            type: 'line',
+                            data: series.unfinished_count
+                        },
+                        {
+                            name: '废弃数',
+                            type: 'line',
+                            data: series.scrap_count
+                        }
+                    ]
+                };
+                myChart.setOption(option);
+            }
+            );
+        },
+        error: function(json){
+
+        }
+    });
+};
+
+});
+</script>
+{% endblock %}

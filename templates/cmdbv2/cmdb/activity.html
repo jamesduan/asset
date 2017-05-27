@@ -1,0 +1,948 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css" rel="stylesheet">
+<script src="{{ STATIC_URL }}libs/bootstrap-select-1.12.0/dist/js/bootstrap-select.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-select-1.12.0/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-multiselect-0.9.13/dist/js/bootstrap-multiselect.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-multiselect-0.9.13/dist/css/bootstrap-multiselect.css" rel="stylesheet"/>
+<style>
+.modal-open{
+    overflow: hidden;
+    overflow-y: auto;
+}
+</style>
+{#<div class="inner-h1">值班活动创建</div>#}
+<div id="alert">
+</div>
+<div id="toolbar">
+<button id="createbtn" data-toggle="modal" data-target="#createmodal" class="btn btn-green">
+        <i class="glyphicon glyphicon-plus"></i> 创建活动
+</button>
+</div>
+<div class="modal fade" id="createmodal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="createform" method="POST">
+<div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="myModalLabel">创建活动</h4>
+</div>
+<div class="modal-body">
+    <div class="form-group">
+    <label for="activity_name" class="col-sm-3 control-label"><span style="color:red">* </span>活动名称</label>
+    <div class='col-sm-6'>
+        <input type="text"  id="activity_name" name="activity_name" class="form-control"  placeholder="活动名称" />
+    </div>
+    </div>
+    <div class="form-group">
+    <label class="col-sm-3 control-label"><span style="color:red">* </span>活动类型</label>
+    <div class='col-sm-6'>
+    <input type="radio" name="optionsRadios"  value="1" checked>&nbsp;大促
+    &nbsp;&nbsp;&nbsp;
+{#    <input type="radio" name="optionsRadios" value="0" >&nbsp;日常#}
+    <input type="radio" name="optionsRadios" value="2" >&nbsp;反馈
+    </div>
+    </div>
+    <div class="form-group">
+    <label for="description" class="col-sm-3 control-label">活动描述</label>
+    <div class='col-sm-6'>
+        <textarea  id="description" name="description" class="form-control"  placeholder="活动描述" ></textarea>
+    </div>
+    </div>
+    <div class="form-group">
+    <label for="activity_start" class="col-sm-3 control-label"><span style="color:red">* </span>活动开始时间</label>
+    <div class='col-sm-6'>
+        <input type="text"  id="activity_start" name="activity_start" class="form-control datepicker"  placeholder="活动开始时间" />
+    </div>
+    </div>
+    <div class="form-group">
+    <label for="activity_end" class="col-sm-3 control-label"><span style="color:red">* </span>活动结束时间</label>
+    <div class='col-sm-6'>
+        <input type="text"  id="activity_end" name="activity_end" class="form-control datepicker"  placeholder="活动结束时间" />
+    </div>
+    </div>
+
+    <div class="form-group" id="shift_time_div"  style="display:block">
+        <label for="shift" class="col-sm-3 control-label " ><span style="color:red">* </span>值班班次</label>
+    <div class='col-sm-9' id="shift_div">
+        <div class="input-group ">
+        <input type="text" id="shift_start_0" name="shift_start_0" class="form-control constraint" style="width: 150px" value="" placeholder="start">
+        <span style="text-align: center;float: left;width: 27px;height: 34px;line-height: 34px;">至</span><input type="text" id="shift_end_0" name="shift_end_0" class="form-control constraint" style="width: 150px" value="" placeholder="end">
+            <button id="shift_add" class="btn btn-green"  type="button">
+                 <i class="glyphicon glyphicon-plus"></i>
+               </button>
+
+        </div>
+    </div>
+    </div>
+    <div class="form-group">
+        <label for="duty_domain" class="col-sm-3 control-label"><span style="color:red">* </span>选择Domain</label>
+        <div class='col-sm-6'>
+        <select id="duty_domain" name="duty_domain" class="form-control " multiple="multiple">
+        <optgroup label="值班经理" >
+        <option value="{{ DOMAIN_HEAD_ID}}">值班经理</option>
+        </optgroup>
+        {% for key, value in department2_domain.items %}
+        <optgroup label="{{ key}}" >
+
+            {% for item in value %}
+                <option value="{{ item.id }}">{{ item.domainname }}</option>
+            {% endfor %}
+        </optgroup>
+        {% endfor %}
+
+         </select>
+
+        </div>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn  btn-green" id="submit">创建</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+{#修改#}
+<div class="modal fade" id="editmodal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="editform" method="POST">
+<input type="hidden" name="e_id" id="e_id">
+<input type="hidden" name="e_shiftid" id="e_shiftid">
+<div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="myModalLabel">修改活动</h4>
+</div>
+<div class="modal-body">
+    <div class="form-group">
+    <label for="eactivity_name" class="col-sm-3 control-label"><span style="color:red">* </span>活动名称</label>
+    <div class='col-sm-6'>
+        <input type="text"  id="eactivity_name" name="eactivity_name" class="form-control"  placeholder="活动名称" />
+    </div>
+    </div>
+    <div class="form-group" >
+    <label class="col-sm-3 control-label"><span style="color:red">* </span>类型</label>
+    <div class='col-sm-6'>
+    <input type="radio" name="eoptionsRadios"  value="1" disabled="true">&nbsp;大促
+    &nbsp;&nbsp;&nbsp;
+    <input type="radio" name="eoptionsRadios" value="0" disabled="true">&nbsp;日常
+    &nbsp;&nbsp;&nbsp;
+    <input type="radio" name="eoptionsRadios" value="2" disabled="true" >&nbsp;反馈
+    </div>
+    </div>
+    <div class="form-group">
+    <label for="edescription" class="col-sm-3 control-label">活动描述</label>
+    <div class='col-sm-6'>
+        <textarea  id="edescription" name="edescription" class="form-control"  placeholder="活动描述" ></textarea>
+    </div>
+    </div>
+    <div class="form-group">
+    <label for="eactivity_start" class="col-sm-3 control-label"><span style="color:red">* </span>活动开始时间</label>
+    <div class='col-sm-6'>
+        <input type="text"  id="eactivity_start" name="eactivity_start" class="form-control datepicker"  placeholder="活动开始时间" />
+    </div>
+    </div>
+    <div class="form-group">
+    <label for="eactivity_end" class="col-sm-3 control-label"><span style="color:red">* </span>活动结束时间</label>
+    <div class='col-sm-6'>
+        <input type="text"  id="eactivity_end" name="eactivity_end" class="form-control datepicker"  placeholder="活动结束时间" />
+    </div>
+    </div>
+    <div class="form-group" id="eshift_time_div">
+        <label for="eshift" class="col-sm-3 control-label"><span style="color:red">* </span>值班班次<span style="font-size: 11px;color: orangered">(班次删除后，相关值班信息将被删除)</span></label>
+    <div class='col-sm-9' id="eshift_div">
+    </div>
+    </div>
+    <div class="form-group">
+        <label for="eduty_domain" class="col-sm-3 control-label"><span style="color:red">* </span>选择Domain</label>
+        <div class='col-sm-6'>
+        <select id="eduty_domain" name="eduty_domain" class="form-control " multiple="multiple">
+{#            {% for item in roleadd %}#}
+{#                <option value="{{ item.id }}">{{ item.name }}</option>#}
+{#            {% endfor %}#}
+        <optgroup label="值班经理">
+        <option value="{{ DOMAIN_HEAD_ID }}">值班经理</option>
+        </optgroup>
+        {% for key, value in department2_domain.items %}
+        <optgroup label="{{ key}}" >
+            {% for item in value %}
+                <option value="{{ item.id }}">{{ item.domainname }}</option>
+            {% endfor %}
+        </optgroup>
+        {% endfor %}
+         </select>
+        </div>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn  btn-green" id="submit2">修改</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+{#删除确认modal#}
+<div class="modal fade" id="removeconfirm">
+<div class="modal-dialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                 <h4 class="modal-title">确认？</h4>
+        </div>
+        <div class="modal-body">
+             <input type="hidden" name="rmvid" id="rmvid" value="">
+
+            <p style="font-size:16px; " id="removetext"><i class="fa fa-warning"></i></p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" id="removebtn" class="btn btn-green">确定</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+        </div>
+    </div>
+</div>
+</div>
+
+{#发送邮件  #}
+<div class="modal fade" id="sendmail">
+<div class="modal-dialog">
+    <div class="modal-content">
+        <form class="form-horizontal" role="form" id="sendmailform" method="POST" action="{{ ROOT_URL }}cmdb/sendmail/" target="_blank" >
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                 <h4 class="modal-title" id="sendmailtitle"></h4>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" name="activityid" id="activityid" value="">
+               <div class="form-group">
+        <label for="recipient" class="col-sm-4 control-label" style="text-align:left">添加抄送人？(多收件人用";"隔开)</label>
+        <div class='col-sm-6'>
+            <input  name="recipient" id="recipient" class="form-control">
+{#        <select id="recipient" name="recipient" value="" class="form-control" multiple="multiple">#}
+{#            {% for item in users %}#}
+{#                <option value="{{ item.id }}">{{ item.display_name}}</option>#}
+{#            {% endfor %}#}
+{##}
+{#         </select>#}
+
+        </div>
+    </div>
+
+{#            <p style="font-size:16px; " ><i class="fa fa-warning"></i>确定发送邮件吗？</p>#}
+
+        </div>
+        <div class="modal-footer">
+            <button type="submit" id="sendmailbtn" class="btn btn-green" >确定</button>
+            <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+        </div>
+        </form>
+    </div>
+</div>
+</div>
+
+<table id="activity"></table>
+<script>
+$(document).ready(function() {
+    $('.datepicker').datetimepicker({
+        format: 'yyyy-mm-dd hh:00',
+        autoclose: true,
+        minView: 1,
+    })
+
+    $('.constraint').datetimepicker({
+        format: 'yyyy-mm-dd hh:00',
+        autoclose: true,
+        minView: 1,
+        startDate:$('#activity_start').val(), //开始时间，在这时间之前都不可选
+	    endDate:$('#activity_end').val(),//
+
+    });
+
+        $('#duty_domain,#eduty_domain').multiselect({
+            enableClickableOptGroups: true,
+            enableCollapsibleOptGroups: true,
+            enableFiltering: true,
+            includeSelectAllOption: true
+    });
+
+{#     $('#recipient').selectpicker({#}
+{#        'title':'--请选择--',#}
+{#        'liveSearch': true,#}
+{#		'liveSearchPlaceholder': '搜索',#}
+{#    });#}
+    $('#recipient').val('{{ useremail }}');
+{#    $('#recipient').selectpicker('refresh');#}
+    $('#sendmailbtn').click(function(){
+    $('#sendmail').modal('hide');
+    })
+
+{#    if ($('input[name=optionsRadios]:checked').val()!=1) {#}
+{#        $('#shift_time_div').css('display', 'none')#}
+{#    };#}
+        $('input[name=optionsRadios][value="1"]').prop("checked",true);
+        var defaultdomain=[];
+        {% for item in defaultdoamins %}
+            defaultdomain.push({{ item.domain.id }})
+        {% endfor %}
+
+        $('#duty_domain').val(defaultdomain);
+        $('#duty_domain').multiselect('refresh');
+
+
+    $(":radio").click(function(){
+    if ($(this).val()==1){
+       $('#shift_time_div').css('display','block');
+       $('#createform').data('bootstrapValidator').enableFieldValidators('shift_start_0',true);
+       $('#createform').data('bootstrapValidator').enableFieldValidators('shift_end_0',true);
+    }
+    else
+    {
+       $('#shift_time_div').css('display','none')
+       $('#createform').data('bootstrapValidator').enableFieldValidators('shift_start_0',false);
+       $('#createform').data('bootstrapValidator').enableFieldValidators('shift_end_0',false);
+    }
+  });
+
+
+    var mark=1;
+    var emark;
+    var activity_id;
+    var deleteshift=[];
+
+    $('#shift_add').click(function(){
+        if(mark < 20) {
+            var id_start = "shift_start_" + mark;
+            var id_end = "shift_end_" + mark;
+            newtext = [
+                    '<div class="input-group">',
+                    '<input id = '+ id_start + ' type="text" style="width: 150px" placeholder="start" class="form-control constraint" />',
+                    '<span style="text-align: center;float: left;width: 27px;height: 34px;line-height: 34px;">至</span>',
+                    '<input id =' + id_end +  ' type="text" style="width: 150px" placeholder="end"  class="form-control constraint" />',
+                    '<button class="btn btn-default removeclass"  type="button" ><i class="glyphicon glyphicon-minus" style="color:red"></i> </button>',
+                    '</div>'
+            ]
+            $('#shift_div').append( newtext.join(''));
+            mark++;
+        $('.removeclass').click(function(){
+        $(this).parent().remove();
+        });
+
+{#            id不能连续删#}
+        $('.constraint').datetimepicker({
+        format: 'yyyy-mm-dd hh:00',
+        autoclose: true,
+        minView: 1,
+        startDate:$('#activity_start').val(),
+	    endDate:$('#activity_end').val(),
+        })
+        }else{
+            alert("最多编辑20个")
+        }
+    })
+
+     $('#activity_start').change(function() {
+             $('.constraint').datetimepicker('setStartDate', $('#activity_start').val());
+        })
+        $('#activity_end').change(function() {
+             $('.constraint').datetimepicker('setEndDate', $('#activity_end').val());
+        });
+
+    window.operateEvents = {
+     'click .remove': function (e, value, row, index) {
+        $('#removeconfirm').modal();
+        $('#removetext').text('您确定要删除："'  + row.name +   '" 活动及所属信息' );
+                },
+     'click .envelope': function (e, value, row, index) {
+         $('#sendmail').modal();
+         $('#sendmailtitle').text('确认给'+row.name+'未录入的domain发送邮件？')
+         $("#activityid").val(row.id);
+     },
+
+     'click .edit': function (e, value, row, index) {
+            $("#e_id").val(row.id);
+
+            var list = [];
+            $.each(row.shift_times,function(key,val){
+                 list.push(val.id);
+            });
+
+            $('#e_shiftid').val(list);
+            $("#eactivity_name").val(row.name);
+            $('#edescription').val(row.description),
+            $("#eactivity_start").val(row.start_time.replace('T',' ').substring(0,16));
+            $("#eactivity_end").val(row.end_time.replace('T',' ').substring(0,16));
+            $("input[name='eoptionsRadios'][value="+row.promotion+"]").prop("checked",true);
+{#            清空#}
+            for (var j=0;j<20;j++){
+              $("#eshift_start_"+ j).parent().remove();
+            }
+            if ($('input[name=eoptionsRadios]:checked').val() !=1){
+                  $('#eshift_time_div').css('display','none')
+            }else {
+                $('#eshift_time_div').css('display', 'block')
+
+                newedit = [
+                    '<div class="input-group ">',
+                    '<input type="text" id="eshift_start_0" class="form-control constraint" style="width: 150px" value="" placeholder="start">',
+                    '<span style="text-align: center;float: left;width: 27px;height: 34px;line-height: 34px;">至</span>',
+                    '<input type="text" id="eshift_end_0" class="form-control constraint" style="width: 150px" value="" placeholder="end">',
+                                        '<button id="eshift_add" class="btn btn-green"  type="button"><i class="glyphicon glyphicon-plus"></i></button>',
+                    '</div>'
+                ]
+                $('#eshift_div').append(newedit.join(''));
+                {#            var emark= row.shift_times.length;#}
+                {#            $('#eshift_add').click(function() {#}
+                {#                if (emark < 20) {#}
+                {#                    var id_start = "eshift_start_" + emark;#}
+                {#                    var id_end = "eshift_end_" + emark;#}
+                {#                    newtext = [#}
+                {#                        '<div class="input-group">',#}
+                {#                        '<input id = ' + id_start + ' type="text" style="width: 150px" placeholder="start" class="form-control constraint" />',#}
+                {#                        '<span style="text-align: center;float: left;width: 27px;height: 34px;line-height: 34px;">至</span>',#}
+                {#                        '<input id =' + id_end + ' type="text" style="width: 150px" placeholder="end"  class="form-control constraint" />',#}
+                {#                        '<button id="delete-txt" class="btn btn-default removeclass"  type="button" ><i class="glyphicon glyphicon-minus" style="color:red"></i> </button>',#}
+                {#                        '</div>'#}
+                {#                    ]#}
+                {#                    $('#eshift_div').append(newtext.join(''));#}
+                {#                }#}
+                {#                emark++;#}
+                {#            })#}
+                var j = 0;
+                $.each(row.shift_times, function (key, val) {
+                    $('#eshift_start_' + j).val(val.start.replace('T', ' ').substring(0, 16));
+                    $('#eshift_end_' + j).val(val.end.replace('T', ' ').substring(0, 16));
+                    j++;
+                    if (j < row.shift_times.length) {
+                        var id_start = "eshift_start_" + j;
+                        var id_end = "eshift_end_" + j;
+                        newedit = [
+                            '<div class="input-group" id="'+j+'">',
+                            '<input id = ' + id_start + ' type="text" style="width: 150px" placeholder="start" class="form-control constraint" />',
+                            '<span style="text-align: center;float: left;width: 27px;height: 34px;line-height: 34px;">至</span>',
+                            '<input id =' + id_end + ' type="text" style="width: 150px" placeholder="end"  class="form-control constraint" />',
+                                                '<button  class="btn btn-default removeclass"  type="button" ><i class="glyphicon glyphicon-minus" style="color:red"></i> </button>',
+                            '</div>'
+                        ]
+                        $('#eshift_div').append(newedit.join(''));
+
+                        }
+                })
+                deleteshift=[];
+                 $('.removeclass').click(function(){
+                    $(this).parent().remove();
+                     var id=$(this).parent().attr("id");
+                     deleteshift.push(id);
+                 });
+                $('.constraint').datetimepicker({
+                    format: 'yyyy-mm-dd hh:00',
+                    autoclose: true,
+                    minView: 1,
+                    startDate: $('#eactivity_start').val(),
+                    endDate: $('#eactivity_end').val(),
+                });
+
+                emark=row.shift_times.length;
+                $('#eshift_add').click(function(){
+                if(emark < 20) {
+                    var id_start = "eshift_start_" + emark;
+                    var id_end = "eshift_end_" + emark;
+                    newtext = [
+                            '<div class="input-group">',
+                            '<input id = '+ id_start + ' type="text" style="width: 150px" placeholder="start" class="form-control constraint" />',
+                            '<span style="text-align: center;float: left;width: 27px;height: 34px;line-height: 34px;">至</span>',
+                            '<input id =' + id_end +  ' type="text" style="width: 150px" placeholder="end"  class="form-control constraint" />',
+                            '<button  class="btn btn-default removeclass"  type="button" ><i class="glyphicon glyphicon-minus" style="color:red"></i> </button>',
+                            '</div>'
+                    ]
+                    $('#eshift_div').append( newtext.join(''));
+                    emark++;
+                $('.removeclass').click(function(){
+                $(this).parent().remove();
+                });
+
+        {#            id不能连续删#}
+                $('.constraint').datetimepicker({
+                format: 'yyyy-mm-dd hh:00',
+                autoclose: true,
+                minView: 1,
+                startDate:$('#eactivity_start').val(),
+                endDate:$('#eactivity_end').val(),
+                })
+                }else{
+                    alert("最多编辑20个")
+                }
+            })
+
+            }
+
+            var list = [];
+            $.each(row.domains,function(key,val){
+                 list.push(val.id);
+            })
+{#            list=row.domains#}
+            $('#eduty_domain').val(list);
+            $('#eduty_domain').multiselect('refresh'),
+
+            $('#eactivity_start').change(function() {
+             $('.constraint').datetimepicker('setStartDate', $('#eactivity_start').val());
+            })
+            $('#eactivity_end').change(function() {
+             $('.constraint').datetimepicker('setEndDate', $('#eactivity_end').val());
+            });
+
+            $('#editmodal').modal('show');
+
+
+
+        }
+     };
+    $('#activity').on('click-row.bs.table', function (e, row, $element) {
+        $('#rmvid').val(row.id);
+    });
+<!--删除功能-->
+    $('#removebtn').click(function(){
+        var rmvid = $('#rmvid').val();
+         $.ajax({
+             url: '{{ CMDBAPI_URL }}cmdb/activity/' + rmvid + '/?format=json',
+             type: 'DELETE',
+             async: false,
+             headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+
+             success: function (json) {
+                 $('#removeconfirm').modal('hide');
+                 $('#activity').bootstrapTable('refresh',{silent:false});
+             },
+             error: function (json) {
+                $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>删除活动' + JSON.stringify(json.responseText) +'</div>');
+             }
+         });
+
+    });
+ $('#activity').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}cmdb/activity/?format=json',
+        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'name',
+                title: '活动名称',
+                align: 'center',
+                formatter:get_rota,
+            },
+            {
+                field: 'promotion_display',
+                title: '类型',
+                align: 'center',
+            },
+
+            {
+                field: 'start_time',
+                title: '活动开始时间',
+                align: 'center',
+                formatter:getExpire_date,
+            },
+            {
+                field: 'end_time',
+                title: '活动结束时间',
+                align: 'center',
+                formatter:getExpire_date,
+            },
+
+            {
+                field: 'operate ',
+                title: '操作',
+                align: 'left',
+                formatter:operateFormatter,
+                events: operateEvents
+            }
+        ],
+        responseHandler: function (res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset / p.limit + 1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 10,
+        pageList: [10, 20, 100],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false
+    });
+     function getExpire_date(value) {
+        str = value.replace('T',' ');
+        return str.substring(0,str.length-3)
+    };
+
+     function get_rota(value, row, index) {
+        if (row.name!=0 && row.name != null) {
+{#            return '<a href="{{ ROOT_URL }}cmdb/rotaenter/'+row.id +'/" target="_blank"  title="点击创建值班表详情">'  + row.name + '</a>';#}
+            return '<a href="{{ ROOT_URL }}cmdb/rotaenter/?activity_id='+row.id +'" target="_blank"  title="点击创建详情">'  + row.name + '</a>';
+        }else{
+            return "-";
+        }
+    }
+
+     function operateFormatter(value,row,index){
+       var op = [];
+         op.push(
+         '<a class="remove">',
+         '<span class="glyphicon glyphicon-remove" title="删除" style="cursor:pointer;margin-right:10px;color:red;"></span>',
+         '</a>');
+         if (row.promotion !=0){
+         op.push(
+         '<a class="edit">',
+         '<span class="glyphicon glyphicon-pencil" title="编辑" style="cursor:pointer;margin-right:10px;"></span>',
+         '</a>');
+          }
+          op.push(
+         '<a class="envelope">',
+         '<span class="glyphicon glyphicon-envelope" title="邮件" style="cursor:pointer;margin-right:10px;"></span>',
+         '</a>');
+
+        return op.join('');
+     };
+<!--新建-->
+$('#createform')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                activity_name: {
+                    validators: {
+                        notEmpty: {
+                            message: '活动不能为空。'
+                        }
+                    }
+                },
+                shift_start_0: {
+                    validators: {
+                        notEmpty: {
+                            message: '值班开始时间不能为空。'
+                        }
+                    }
+                },
+                shift_end_0: {
+                    validators: {
+                        notEmpty: {
+                            message: '值班结束时间不能为空。'
+                        }
+                    }
+                },
+                 activity_start: {
+                    validators: {
+                        notEmpty: {
+                            message: '活动开始时间不能为空。'
+                        }
+                    }
+                },
+                activity_end: {
+                    validators: {
+                        notEmpty: {
+                            message: '活动结束时间不能为空。'
+                        }
+                    }
+                },
+{#                 duty_domain: {#}
+{#                    validators: {#}
+{#                        notEmpty: {#}
+{#                            message: 'Domain不能为空。'#}
+{#                        }#}
+{#                    }#}
+{#                },#}
+
+            }
+        })
+        .on('success.form.bv', function (e) {
+                e.preventDefault();
+
+                var createdata = {
+                    'name': $("#activity_name").val(),
+                    'start_time': $("#activity_start").val(),
+                    'end_time': $("#activity_end").val(),
+                    'promotion':$('input[name=optionsRadios]:checked').val(),
+                    'description':$('#description').val(),
+                };
+               if ($('#duty_domain').val()){
+                    createdata['domains']=$('#duty_domain').val().join()
+               ;
+               }
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}cmdb/activity/',
+                    type: 'POST',
+                    async: false,
+                    data: createdata,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        {#                        $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>创建值班活动</div>');#}
+                        activity_id = json.id;
+                        if ($('input[name=optionsRadios]:checked').val() == 1) {
+
+                        for (var j = 0; j < mark; j++) {
+
+                            if ($("#shift_start_" + j).length == 0) {
+                                continue;
+                            }
+                            ;
+                            if ($("#shift_start_" + j).val() == '' || $("#shift_end_" + j).val() == '') {
+                                continue;
+                            }
+
+                            var shiftdata = {
+                                'start': $("#shift_start_" + j).val(),
+                                'end': $("#shift_end_" + j).val(),
+                                'activity': activity_id,
+                            };
+
+                            $.ajax({
+                                url: '{{ CMDBAPI_URL }}cmdb/shifttime/',
+                                type: 'POST',
+                                async: false,
+                                data: shiftdata,
+                                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                                success: function (json) {
+
+                                },
+                                error: function (json) {
+                                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>创建活动' + JSON.stringify(json.responseText) + '</div>');
+                                }
+
+                            });
+
+                        }
+                    }
+                        $('#activity').bootstrapTable('refresh', {
+                            silent: true
+                        });
+{#                        $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>创建值班活动</div>');#}
+
+                        $('#createmodal').modal('hide');
+                        $('#createform').bootstrapValidator('resetForm', true);
+                    },
+                    error: function (json) {
+                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>创建活动' + JSON.stringify(json.responseText) +'</div>');
+                        $('#createmodal').modal('hide');
+                        $('#createform').bootstrapValidator('resetForm', true);
+                    }
+
+                });
+                for (var j=1;j<20;j++){
+                    $("#shift_start_"+ j).parent().remove();
+                }
+                $("#shift_start_"+ 0).val('');
+                $("#shift_end_"+ 0).val('');
+
+{#            $('#duty_domain').val("");#}
+{#            $('#duty_domain').multiselect('refresh');#}
+            $('#duty_domain').val(defaultdomain);
+            $('#duty_domain').multiselect('refresh');
+            $('#description').val('');
+            });
+
+$('#editform')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                eactivity_name: {
+                    validators: {
+                        notEmpty: {
+                            message: '活动不能为空。'
+                        }
+                    }
+                },
+                 eactivity_start: {
+                    validators: {
+                        notEmpty: {
+                            message: '活动开始时间不能为空。'
+                        }
+                    }
+                },
+                eactivity_end: {
+                    validators: {
+                        notEmpty: {
+                            message: '活动结束时间不能为空。'
+                        }
+                    }
+                },
+{#                 eduty_domain: {#}
+{#                    validators: {#}
+{#                        notEmpty: {#}
+{#                            message: 'Domain不能为空。'#}
+{#                        }#}
+{#                    }#}
+{#                },#}
+
+            }
+            })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+
+            var url ='{{ CMDBAPI_URL }}cmdb/activity/'  + $("#e_id").val() + '/';
+            var editdata ={
+                'id':$("#e_id").val(),
+                 'name': $("#eactivity_name").val(),
+                 'start_time': $("#eactivity_start").val(),
+                 'end_time': $("#eactivity_end").val(),
+                 'promotion':$('input[name=eoptionsRadios]:checked').val(),
+{#                 'domains':$('#eduty_domain').val().join(),#}
+                 'description':$('#edescription').val(),
+            };
+             if ($('#eduty_domain').val()){
+                    editdata['domains']=$('#eduty_domain').val().join()
+               ;
+               }
+
+            $.ajax({
+                url: url,
+                type: 'PATCH',
+                data: editdata,
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+
+                    var list = $('#e_shiftid').val().split(',');
+{#                                        console.log(''.split(','),[].join(),$('#eduty_domain').val())#}
+                    if ($('input[name=eoptionsRadios]:checked').val() ==1){
+                    if (deleteshift){
+                        for(var j=0;j<deleteshift.length;j++){
+                             $.ajax({
+                                url: '{{ CMDBAPI_URL }}cmdb/shifttime/' + list[deleteshift[j]] + '/',
+                                type: 'DELETE',
+                                async: false,
+                                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+
+                                success: function (json) {
+{#                                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>删除值班班次</div>');#}
+                                },
+                                error: function (json) {
+                                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>删除值班班次' + JSON.stringify(json.responseText) + '</div>');
+                                }
+                            })
+                        };
+                        deleteshift=[];
+                    };
+                        for (var j = 0; j < list.length; j++) {
+                        if ($("#eshift_start_" + j).length == 0) {
+                            continue;
+                        };
+
+                            var eshiftdata = {
+                                'id': list[j],
+                                'start': $("#eshift_start_" + j).val(),
+                                'end': $("#eshift_end_" + j).val(),
+                            };
+
+                            $.ajax({
+                                url: '{{ CMDBAPI_URL }}cmdb/shifttime/' + list[j] + '/',
+                                type: 'PATCH',
+                                data: eshiftdata,
+                                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                                success: function (json) {
+                                },
+                                error: function (json) {
+                                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>修改值班班次' + JSON.stringify(json.responseText) + '</div>');
+                                }
+                            })
+                        };
+                        for (var j =list.length; j <emark; j++) {
+                        if ( $("#eshift_start_"+j).length == 0 ) {
+                            continue;
+                        };
+                        if ( $("#eshift_start_"+j).val()==''||$("#eshift_end_"+j).val()==''){
+                            continue;
+                        }
+
+                        var shiftdata = {
+                            'start': $("#eshift_start_"+j).val(),
+                            'end': $("#eshift_end_"+j).val(),
+                            'activity':$("#e_id").val() ,
+                        };
+
+                        $.ajax({
+                        url: '{{ CMDBAPI_URL }}cmdb/shifttime/',
+                        type: 'POST',
+                        async: false,
+                        data: shiftdata,
+                        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                        success: function (json) {
+
+                        },
+                        error: function (json) {
+                            $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>创建值班班次' + JSON.stringify(json.responseText) +'</div>');
+                        }
+                        });
+
+                        }
+
+
+                }
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>修改活动</div>');
+                    $('#editform').bootstrapValidator('resetForm', true);
+                    $('#editmodal').modal('hide');
+                    $('#activity').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>修改活动' + JSON.stringify(json.responseText) +'</div>');
+                    $('#editform').bootstrapValidator('resetForm', true);
+                    $('#editmodal').modal('hide');
+                }
+            });
+        });
+
+    $("#activity_start").change(function(){
+        $('#createform').data('bootstrapValidator')
+                .updateStatus('activity_start', 'NOT_VALIDATED').validateField('activity_start');
+    });
+    $("#activity_end").change(function(){
+        $('#createform').data('bootstrapValidator')
+                .updateStatus('activity_end', 'NOT_VALIDATED').validateField('activity_end');
+    });
+    $("#eactivity_start").change(function(){
+        $('#editform').data('bootstrapValidator')
+                .updateStatus('eactivity_start', 'NOT_VALIDATED').validateField('eactivity_start');
+    });
+    $("#eactivity_end").change(function(){
+        $('#editform').data('bootstrapValidator')
+                .updateStatus('eactivity_end', 'NOT_VALIDATED').validateField('eactivity_end');
+    });
+    $("#shift_start_0").change(function(){
+        $('#createform').data('bootstrapValidator')
+                .updateStatus('shift_start_0', 'NOT_VALIDATED').validateField('shift_start_0');
+    });
+    $("#shift_end_0").change(function(){
+        $('#createform').data('bootstrapValidator')
+                .updateStatus('shift_end_0', 'NOT_VALIDATED').validateField('shift_end_0');
+    });
+
+
+
+});
+</script>
+{%  endblock %}

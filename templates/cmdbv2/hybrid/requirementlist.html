@@ -1,0 +1,334 @@
+{% extends "common/bootstrap3.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+
+<div class="page-header">
+  <h1>第三方云主机申请平台  </h1>
+</div>
+
+<div id="alert">
+</div>
+
+<form class="form-horizontal" role="form" id="attributeForm" method="POST" action="">
+  <div class="modal fade" id="addValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="myModalLabel">新申请记录</h4>
+      </div>
+      <div class="modal-body">
+          <div class="form-group">
+            <label for="inputEmail3" class="col-sm-3 control-label">申请原因</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="cname" id="cname" placeholder="" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">数量</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="total" id="total" placeholder="数字，如：100" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">服务器配置</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="machine_config" id="machine_config" placeholder="" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">模版</label>
+            <div class=' col-sm-6'>
+                <input type='text' class="form-control" name="server_template" id="server_template" placeholder="" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">IDC</label>
+            <div class='col-sm-6'>
+                <select name="idc" class="form-control" id="idc" >
+                    <option value="" selected>请选择</option>
+                    <option value="cds">cds</option>
+                </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">期限类型</label>
+            <div class='col-sm-6'>
+                <select name="is_long" class="form-control" id="is_long" >
+                    <option value="" selected>请选择</option>
+                    <option value="0">短期</option>
+                    <option value="1">长期</option>
+                </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">开始时间</label>
+            <div class='col-sm-6'>
+                <input type="text" value="" readonly size="16" name="start_time" id="start_time" class=" form-control form_datetime">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">结束时间</label>
+            <div class='col-sm-6'>
+                <input type="text" value="" readonly size="16" name="end_time" id="end_time" class=" form-control form_datetime">
+            </div>
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-primary" id="submit1">保存</button>
+      </div>
+    </div>
+  </div>
+  </div>
+</form>
+
+<div id="toolbar">
+    <button id="create" data-toggle="modal" data-target="#addValue" class="btn btn-primary">
+        <i class="glyphicon glyphicon-plus"></i> 新增
+    </button>
+    <button id="apply" class="btn btn-primary" disabled>
+        提交申请
+    </button>
+</div>
+
+<table id="asset">
+</table>
+
+
+<script>
+$(document).ready(function() {
+    $('.form_datetime').datetimepicker({
+        format: 'yyyy-mm-dd',
+        autoclose: true,
+        showMeridian: true,
+        minView: 2
+    });
+
+    $('#asset').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}hybrid/requirement/?format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'state',
+                checkbox: true
+            },
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'cname',
+                title: '原因'
+            },
+            {
+                field: 'total',
+                title: '申请数量'
+            },
+            {
+                field: 'real_total',
+                title: '实际数量'
+            },
+            {
+                field: 'machine_config',
+                title: '配置'
+            },
+            {
+                field: 'server_template',
+                title: '模板'
+            },
+            {
+                field: 'idc',
+                title: '运厂商'
+            },
+            {
+                field: 'task_id',
+                visible: false
+            },
+            {
+                field: 'is_long',
+                visible: false
+            },
+            {
+                field: 'start_time',
+                title: '开始时间'
+            },
+            {
+                field: 'is_long_name',
+                title: '期限'
+            },
+            {
+                field: 'status_name',
+                title: '状态',
+                formatter: getstatus
+            }
+        ],
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 20,
+        pageList: [10,20,100],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false
+    });
+
+    function getstatus(value, row, index) {
+        if(row.status != 1) {
+            return '<a href="{{ hybrid_url }}'+row.task_id+' " target="_blank">' + row.status_name + '</a>';
+        } else{
+            return row.status_name;
+        }
+    };
+
+    $('#asset').on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+        $('#apply').prop('disabled', !$("#asset").bootstrapTable('getSelections').length);
+    })
+
+    $('#attributeForm')
+        .bootstrapValidator({
+            fields: {
+                cname: {
+                    validators: {
+                        notEmpty: {
+                            message: '原因不能为空。'
+                        }
+                    }
+                },
+                total: {
+                    validators: {
+                        notEmpty: {
+                            message: '数量不能为空。'
+                        }
+                    }
+                },
+                machine_config: {
+                    validators: {
+                        notEmpty: {
+                            message: '服务器配置不能为空。'
+                        }
+                    }
+                },
+                idc: {
+                    validators: {
+                        notEmpty: {
+                            message: 'IDC不能为空。'
+                        }
+                    }
+                },
+                is_long: {
+                    validators: {
+                        notEmpty: {
+                            message: '期限类型不能为空。'
+                        }
+                    }
+                },
+                server_template: {
+                    validators: {
+                        notEmpty: {
+                            message: '模版不能为空。'
+                        }
+                    }
+                },
+                start_time: {
+                    validators: {
+                        notEmpty: {
+                            message: '开始时间不能为空。'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            if($("#end_time").val() !="") {
+                var end_tt = moment($("#end_time").val()).format('YYYY-MM-DD hh:mm:ss');
+            }else{
+                var end_tt = "";
+            }
+            var inputdata = {
+                'cname': $("#cname").val(),
+                'total': $("#total").val(),
+                'machine_config': $("#machine_config").val(),
+                'server_template': $("#server_template").val(),
+                'idc': $("#idc").val(),
+                'is_long': $("#is_long option:selected").val(),
+                'start_time': moment($("#start_time").val()).format('YYYY-MM-DD hh:mm:ss'),
+                'end_time': end_tt
+            };
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}hybrid/requirement/',
+                type: 'POST',
+                async:  false,
+                data: inputdata,
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>添加混合云请求' + json.cname +'</div>');
+                    $('#addValue').modal('hide');
+                    $('#attributeForm').bootstrapValidator('resetForm', true);
+                    $('#asset').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加混合云请求' + JSON.stringify(json.responseText) +'</div>');
+                    $('#addValue').modal('hide');
+                }
+            });
+        });
+
+    $('#apply').click(function () {
+        $.map($('#asset').bootstrapTable('getSelections'), function (row) {
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}hybrid/requirement/' + row.id + '/',
+                type: 'PATCH',
+                async:  false,
+                data: {
+                    'status': 2
+                },
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>提交申请' + json.cname +'</div>');
+                    $('#asset').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>提交申请' + JSON.stringify(json.responseText) +'</div>');
+                }
+            });
+
+        });
+    });
+});
+</script>
+{% endblock %}

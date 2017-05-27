@@ -1,0 +1,50 @@
+{% extends "ycc/base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}ycc/css/ycc.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}ycc/js/status.js"></script>
+
+
+<div class="page-header">
+  <h1>配置组状态</h1>
+</div>
+
+<div id="alert">
+</div>
+
+<div>
+    <div class="col-sm-6">
+        <label for="s_group" style="width:12%;">配置组:</label>
+        <input type="text" id="s_group" class="zInputTxt" />
+    </div>
+    <div class="col-sm-6">
+        <label for="s_idc" style="width:12%;">IDC:</label>
+        <input type="text" id="s_idc" class="zInputTxt" />
+    </div>
+    <div class="col-sm-6">
+        <label for="s_status" style="width:12%;">状态:</label>
+        <input type="text" id="s_status" class="zInputTxt" />
+    </div>
+    <div class="col-sm-6">
+        <label for="s_auditor" style="width:12%;">审核人:</label>
+        <input type="text" id="s_auditor" class="zInputTxt" />
+    </div>
+</div>
+
+<div id="toolbar" style="margin:5px 0 10px 0">
+    <button id="query_btn" class="btn btn-primary">
+        <i class="glyphicon glyphicon-list"></i>查询
+    </button>
+</div>
+
+<table id="group">
+</table>
+
+<script>
+    $(function(){
+      main("{{ CMDBAPI_URL }}", "{{ API_TOKEN }}");
+    })
+</script>
+
+{% endblock %}

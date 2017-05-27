@@ -1,0 +1,259 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<style>
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+</style>
+<!-- <div class="inner-h1">宿主机管理</div> -->
+
+<div class="modal fade" id="addValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="attributeForm" method="POST">
+  <input type="hidden" name="parent" id="parent" value="">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="myModalLabel">新建虚拟机</h4>
+  </div>
+  <div class="modal-body">
+    <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">CPU</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="cpu" id="cpu" />
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">内存</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="mem" id="mem" />
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">硬盘</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="disk" id="disk" />
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">创建数量</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="count" id="count" />
+        </div>
+    </div>
+
+  </div>
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn btn-green" id="submit1">保存</button>
+  </div>
+</form>
+</div>
+</div>
+</div>
+
+<div id="alert">
+</div>
+
+<table id="asset">
+</table>
+
+
+<script>
+$(document).ready(function() {
+    var server_env_id = null;
+    $(function () { $("[data-toggle='tooltip']").tooltip(); });
+    window.operateEvents = {
+        'click .edit': function (e, value, row, index) {
+            server_env_id = row.server_env_id;
+            $('#cpu').val({{ vm_install_configuration.cpu }});
+            $('#mem').val({{ vm_install_configuration.mem }});
+            $('#disk').val({{ vm_install_configuration.disk }});
+            $('#count').val({{ vm_install_configuration.count }});
+            $('#addValue').modal('show');
+        }
+    };
+
+    $('#asset').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}server/server/?app_id={{ vm_host_app_id_list }}&format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'state',
+                checkbox: true
+            },
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                title: 'Pool',
+                formatter: function (value, row, index) {
+                    return [row.site_name, row.app_name].join('/')
+                }
+            },
+            {
+                field: 'assetid',
+                title: '资产号'
+            },
+            {
+                field: 'ip',
+                title: 'IP'
+            },
+            {
+                field: 'server_status_name',
+                title: '状态',
+                formatter: get_server_status
+            },
+            {
+                field: 'server_env_name',
+                title: '环境'
+            },
+            {
+                field: 'room',
+                title: '机房'
+            },
+            {
+                field: 'rack_name',
+                title: '机架'
+            },
+            {
+                field: 'vm_count',
+                title: '虚拟机数量'
+            },
+            {
+                field: 'operate',
+                title: '操作',
+                align: 'center',
+                formatter: operateFormatter,
+                events: operateEvents
+            }
+        ],
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [10,20,100],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false
+    });
+
+    $('#asset').on('click-row.bs.table', function (e, row, $element) {
+        $("#parent").val(row.assetid);
+    })
+
+    function operateFormatter(value, row, index) {
+        return [
+            '<a href="#" class="edit" data-toggle="tooltip" title="新建虚拟机">',
+            '<span class="glyphicon glyphicon-pencil"></span>',
+            '</a>'
+
+        ].join('');
+    };
+
+    function get_server_status(value, row, index) {
+        if(row.server_type_id==0) {
+            return '<a href="{{ ROOT_URL }}server/log/detail/?type=server&action=virtual&index='+ row.ip +'" target="_blank">' + value + '</a>';
+        }else{
+            return '<a href="{{ ROOT_URL }}server/log/detail/?type=server&action=install&index='+ row.ip +'" target="_blank">' + value + '</a>';
+        }
+
+    }
+
+    $('#attributeForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                cpu: {
+                    validators: {
+                        notEmpty: {
+                            message: 'CPU不能为空。'
+                        }
+                    }
+                },
+                mem: {
+                    validators: {
+                        notEmpty: {
+                            message: '内存不能为空。'
+                        }
+                    }
+                },
+                disk: {
+                    validators: {
+                        notEmpty: {
+                            message: '硬盘不能为空。'
+                        }
+                    }
+                },
+                server_env_id: {
+                    validators: {
+                        notEmpty: {
+                            message: '环境不能为空。'
+                        }
+                    }
+                },
+                count: {
+                    validators: {
+                        notEmpty: {
+                            message: '数量不能为空。'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}server/install/',
+                type: 'POST',
+                async:  false,
+                data: {
+                    'count': $("#count").val(),
+                    'parent': $("#parent").val(),
+                    'template_id': $("#cpu").val() + '-' + $("#mem").val() + '-' + $("#disk").val(),
+                    'server_env_id': server_env_id
+                },
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>新增虚拟机记录' + json.assetid +'</div>');
+                    $('#asset').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#addValue').modal('hide');
+                    $('#attributeForm').bootstrapValidator('resetForm', true);
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>新增虚拟机记录' + JSON.stringify(json.responseText) +'</div>');
+                    $('#addValue').modal('hide');
+                    $('#attributeForm').bootstrapValidator('resetForm', true);
+                }
+            });
+        });
+});
+</script>
+{% endblock %}

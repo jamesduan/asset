@@ -1,0 +1,109 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %}回滚原因展示页面{% endblock %}
+{% block content %}
+
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/jquery-treetable-v3.2.0/css/jquery.treetable.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/extensions/group-by/bootstrap-table-group-by.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-slider-v7.1.1/css/bootstrap-slider.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+    <style>
+        div.slide {
+            padding-top: 7px;
+        }
+    </style>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/queryParser/jquery-queryParser.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/date-format/js/date.format.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-treetable-v3.2.0/jquery.treetable.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/extensions/group-by/bootstrap-table-group-by.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-timer-v1.0.1/js/jquery.timer.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-slider-v7.1.1/js/bootstrap-slider.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-json/js/jquery.json.min.js"></script>
+
+    <div class="inner-h1" style="margin-bottom: 0px">
+        <h1>
+            回滚原因展示页面
+        </h1>
+    </div>
+    <div id="rollback_reason_list">
+        <label>回滚原因列表</label>
+    </div>
+
+    <table id="rollback_table"></table>
+
+    <script>
+        $(document).ready(function () {
+            var query = $.getQuery(), depid = query.depid, button_target;
+            $('#rollback_table').bootstrapTable({
+                url: '/api/deploy/rollback/reason/list/?format=json',
+                ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+                columns: [
+{#                    {#}
+{#                        field: 'id',#}
+{#                        title: 'id',#}
+{#                        align: 'center'#}
+{#                    },#}
+                    {
+                        field: 'depid',
+                        title: '发布号',
+                        align: 'center'
+
+                    },
+                    {
+                        field: 'uid_name',
+                        title: '操作人',
+                        align: 'center'
+                    },
+                    {
+                        field: 'verifier',
+                        title: '确认人',
+                        align: 'center'
+                    },
+                    {
+                        field: 'reason',
+                        title: '回滚原因',
+                        align: 'center'
+                    },
+                    {
+                        field: 'category_name',
+                        title: '回滚分类',
+                        align: 'center'
+
+                    },
+                    {
+                        field: 'created',
+                        title: '创建时间',
+                        align: 'center'
+
+                    }
+                ],
+                responseHandler: function(res){
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        depid: depid,
+                        format: 'json',
+                    };
+                },
+                pagination: true,
+                pageSize: 5,
+                pageList: [5,10,50],
+                sidePagination: 'server',
+                toolbar: "#rollback_reason_list",
+                cache: false
+            });
+        });
+    </script>
+{% endblock %}

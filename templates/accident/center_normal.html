@@ -1,0 +1,145 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %} 事故中心 {% endblock %}
+{% block content %}
+<style>
+/*整体内容*/
+.main_cont{margin: 0 auto;font-family: "Microsoft YaHei";}
+.accident_center_empty{max-width: 510px;padding-top: 130px;}
+/*图片*/
+.image_placeholder{width: 100%;max-width: 333px;margin: 0 auto;}
+
+.empty_tip{width: 100%;height: 24px;margin-top: 55px;color: #666;font-size: 24px;font-weight: bold;line-height: 24px;text-align: center;}
+/*表单*/
+.create_accident{margin: 35px 0 104px;text-align: center;}
+.create_accident .form-control{min-width: 320px;height: 40px;color: #999;}
+.btn_create,.btn_create:hover{width: 100px;height: 40px;margin-left: 6px;background: #01a992;color: #fff;font-size: 16px;}
+
+@media (min-width: 768px) {
+  .create_accident .form-control{width: 390px;}
+}
+
+#createAccidentForm .form-group {
+    margin-bottom: 10px;
+}
+</style>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-sweetalert/sweetalert.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-sweetalert/sweetalert.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+
+<div class="main_cont accident_center_empty">
+    <div class="image_placeholder">
+        <img src="{{ STATIC_URL }}accident/img/empty_img.jpg" width="100%" />
+    </div>
+    <p class="empty_tip">系统健康，暂无事故</p>
+    <form class="form-inline create_accident" id="createAccidentForm" role="form" method="POST">
+      <div class="form-group">
+        <div class="col-sm-9">
+            <input type="text" class="form-control" id="title" name="title" placeholder="输入事故名称">
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="col-sm-9">
+            <input name="happen_time" id="happen_time" class="form-control" type="text" placeholder="选择事故发生时间">
+        </div>
+      </div>
+      <div class="form-group">
+        <button type="submit" class="btn btn_create">开启事故</button>
+      </div>
+    </form>
+</div>
+
+<script>
+//时间选择初始化
+$('#happen_time').datetimepicker({
+    format: 'yyyy-mm-dd hh:ii:ss',
+    autoclose: true,
+    minView: 0,
+    minuteStep:1
+}).on('change show', function(e) {
+    $('#createAccidentForm').bootstrapValidator('revalidateField', 'happen_time');
+});
+$('#happen_time').datetimepicker('setStartDate', '2014-07-01 00:00:00');
+
+//判断是否事故中，重刷页面
+setInterval(is_accident, 5000);
+
+//开启事故
+$('#createAccidentForm')
+    .bootstrapValidator({
+        excluded: ':disabled',
+        fields: {
+            title: {
+                validators: {
+                    notEmpty: {
+                        message: '事故名称不能为空。'
+                    }
+                }
+            },
+            happen_time: {
+                validators: {
+                    notEmpty: {
+                        message: '事故发生时间不能为空。'
+                    },
+                    callback: {
+                        message: '发生时间格式为YYYY-MM-DD HH:mm:ss',
+                        callback: function(value) {
+                            var m = new moment(value, 'YYYY-MM-DD HH:mm:ss', true);
+                            if (!m.isValid()) {
+                                return false;
+                            }else {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    })
+    .on('success.form.bv', function(e) {
+        e.preventDefault();
+        $.ajax({
+            url:'{{ CMDBAPI_URL }}accident/accident/',
+            type: 'POST',
+            async:  false,
+            data: {
+                'title': $('#title').val(),
+                'find_user_name':'{{ USER.username }}',
+                'happened_time': moment($('#happen_time').val()).format('X'),
+                'level': 0,
+            },
+            headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+            success: function( json ) {
+                $('#title').val('');
+                $('#createAccidentForm').bootstrapValidator('resetForm', true);
+                location.reload();
+            },
+            error: function( json ) {
+                swal("开启事故失败", JSON.stringify(JSON.parse(json.responseText)['detail']), "error");
+                $('#createAccidentForm').bootstrapValidator('resetForm', true);
+            }
+        });
+
+    });
+
+//判断当前是否事故中
+function is_accident() {
+    $.ajax({
+        url: '{{ CMDBAPI_URL }}accident/current/?format=json',
+        type: "GET",
+        async: false,
+        timeout : 3000,
+        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+        success: function (res) {
+            if(res.count > 0) {
+                location.reload()
+            }
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,591 @@
+{% extends "common/common_menu_base.html" %}
+{#{% block title %}查询DB实例关联{% endblock %}#}
+{% block content %}
+    <script src="{{ STATIC_URL }}libs/echarts-2.2.7/echarts.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/strathausen/js/raphael-min.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/strathausen/js/dracula_graffle.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/strathausen/js/dracula_graph.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/strathausen/js/dracula_algorithms.js"></script>
+    <link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-multiselect/css/bootstrap-multiselect.css" rel="stylesheet"/>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery/spin.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-multiselect/js/bootstrap-multiselect.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-json/js/jquery.json.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+
+    <style>
+        .node circle {
+            fill: #fff;
+            stroke: steelblue;
+            stroke-width: 3px;
+        }
+
+        .node text {
+            font: 12px sans-serif;
+        }
+
+        .link {
+            fill: none;
+            stroke: #ccc;
+            stroke-width: 2px;
+        }
+    </style>
+
+ <!--    <div class="inner-h1">
+        <h1>查询DB实例关联 </h1>
+    </div> -->
+
+    <div id="alert">
+    </div>
+
+    <div id="loading">
+    </div>
+
+    <div class="container-fluid">
+        <div class="row-fluid">
+            <div class="span12">
+                <div class="tabbable" id="tabs-440310">
+                    <ul class="nav nav-tabs">
+                        <li class="active">
+                            <a href="#panel-571556" data-toggle="tab">按照配置组查询</a>
+                        </li>
+                        <li>
+                            <a href="#panel-271195" data-toggle="tab">按照DB实例查询</a>
+                        </li>
+                    </ul>
+                    <div class="tab-content">
+                        <div class="tab-pane active" id="panel-571556">
+                            <div id="toolbar" style="margin-top: 10px">
+                                <div class="form-inline" role="form">
+                                    <select name="params_idc" id="params_idc" class="form-control">
+                                        <option value="">IDC</option>
+                                        {% for item in idc %}
+                                            <option value="{{ item.id }}">{{ item.name_ch }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <select name="params_group_id" id="params_group_id" class="form-control">
+                                        <option value="">配置组</option>
+                                    </select>
+                                    <button id="group_sel_table" data-toggle="modal" data-target="#addValue"
+                                            class="btn btn-green">
+                                        <i class=""></i> 表格
+                                    </button>
+                                    <button id="group_sel" data-toggle="modal" data-target="#addValue"
+                                            class="btn btn-green">
+                                        <i class=""></i> 关联图
+                                    </button>
+                                </div>
+                                <div id="main1" style="width:100%;height:600px" class=“clearfix”></div>
+                                <div class="modal fade" id="groupValue" tabindex="-1" role="dialog"
+                                     aria-labelledby="groupValueTitle"
+                                     aria-hidden="true">
+                                    <div class="modal-dialog" style="width:800px;">
+                                        <div class="modal-content">
+                                            <form class="form-horizontal" role="form" id="groupValueForm1"
+                                                  method="POST">
+                                                <input type="hidden" name="edit_id" id="edit_id" value="">
+
+                                                <div class="modal-header">
+                                                    <button type="button" class="close" data-dismiss="modal"><span
+                                                            aria-hidden="true">&times;</span><span
+                                                            class="sr-only">Close</span></button>
+                                                    <h4 class="modal-title" id=""><span
+                                                            id="groupValueTitle"></span></h4>
+                                                </div>
+
+                                                <div class="modal-body">
+                                                    <div id="show_db_instance_div">
+                                                        <table id="show_db_instance"></table>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="reset" class="btn btn-default" data-dismiss="modal">
+                                                        取消
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tab-pane" id="panel-271195">
+                            <div id="toolbar" style="margin-top: 10px">
+                                <div class="form-inline" role="form">
+                                    <select name="params_db_id" id="params_db_id" class="form-control">
+                                        <option value="">DB标示符</option>
+                                        {% for di in db_insts %}
+                                            <option value="{{ di.id }}">{{ di.cname }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button id="db_sel_table" data-toggle="modal" data-target="#addValue1"
+                                            class="btn btn-green">
+                                        <i class=""></i> 表格
+                                    </button>
+                                    <button id="db_sel" data-toggle="modal" data-target="#addValue1"
+                                            class="btn btn-green">
+                                        <i class=""></i> 关联图
+                                    </button>
+                                </div>
+                                <div id="main2" style="width:100%;height:700px" class=“clearfix”></div>
+                                <div class="modal fade" id="descriptionValue" tabindex="-1" role="dialog"
+                                     aria-labelledby="descriptionValueTitle"
+                                     aria-hidden="true">
+                                    <div class="modal-dialog" style="width:800px;">
+                                        <div class="modal-content">
+                                            <form class="form-horizontal" role="form" id="descriptionValueForm1"
+                                                  method="POST">
+                                                <input type="hidden" name="edit_id" id="edit_id" value="">
+
+                                                <div class="modal-header">
+                                                    <button type="button" class="close" data-dismiss="modal"><span
+                                                            aria-hidden="true">&times;</span><span
+                                                            class="sr-only">Close</span></button>
+                                                    <h4 class="modal-title" id=""><span
+                                                            id="descriptionValueTitle"></span></h4>
+                                                </div>
+
+                                                <div class="modal-body">
+                                                    <div id="show_db_group1_div">
+                                                        <table id="show_db_group1"></table>
+                                                    </div>
+                                                    <div style="display: none" id="show_db_group2_div">
+                                                        <table id="show_db_group2"></table>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <input type="button" class="btn btn-info" id="di_btn" value="配置文件">
+                                                    <button type="reset" class="btn btn-default" data-dismiss="modal">
+                                                        取消
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">
+        $(document).ready(function () {
+            initBtn();
+
+            require.config({
+                paths : {
+                    echarts : "{{ STATIC_URL }}libs/echarts-2.2.7/",
+                }
+            });
+
+            function initBtn() {
+                $("#params_group_id").combobox({});
+                $("#params_db_id").combobox({});
+                $("#params_idc").combobox({});
+            }
+
+            $('#group_sel').click(function () {
+                var group_id = $('#params_group_id').val()
+                var url = '{{ CMDBAPI_URL }}ycc/get_db_instance/?format=json&page_size=10000&group_id=' + group_id + '&ct_type=association';
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    async: false,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (response) {
+                        if (response) {
+{#                            showChart('main1', response, $(document).width() - 100, 600)#}
+                            showchart_force('main1', response)
+                        } else {
+                            $('#main1').empty()
+                        }
+                        $("#params_group_id").data('combobox').refresh();
+                        $("#params_idc").data('combobox').refresh();
+                    }
+                });
+            });
+
+            $('#group_sel_table').click(function () {
+                var group_id = $('#params_group_id').val()
+                $('#groupValue').modal('show');
+                $('#groupValueTitle').text('关联DB实例')
+                var pool_table = $('#show_db_instance  tr').val();
+                var url = '{{ CMDBAPI_URL }}ycc/get_db_instance/?format=json&page_size=10000&group_id=' + group_id + '&ct_type=instance';
+                if (pool_table == undefined) {
+                    $('#show_db_instance').bootstrapTable({
+                        url: url,
+                        method: 'get',
+                        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                        undefinedText: '-',
+                        cache: false,
+                        pagination: true,
+                        pageSize: 20,
+                        pageNumber: 1,
+                        sortable: true,
+                        sortName: 'id',
+                        sortOrder: '',
+                        columns: [
+                            {
+                                field: 'cname',
+                                title: 'DB标示符',
+                            },
+                        ],
+                    });
+                } else {
+                    $('#show_db_instance').bootstrapTable('refresh', {
+                        url: url
+                    });
+                }
+            });
+
+            $('#db_sel').click(function () {
+                var db_instance_id = $('#params_db_id').val()
+                var url = '{{ CMDBAPI_URL }}cmdb/db/instanes_group/?format=json&page_size=10000&id=' + db_instance_id + '&ct_type=association';
+                $.ajax({
+                    url: url,
+                    type: 'GET',
+                    async: false,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (response) {
+                        if (response) {
+{#                            showChart('main2', response, $(document).width() - 100, 700)#}
+                            showchart_force('main2', response)
+                        } else {
+                            $('#main2').empty()
+                        }
+                        $("#params_db_id").data('combobox').refresh();
+                    }
+                });
+            });
+
+            $('#db_sel_table').click(function () {
+                var db_instance_id_table = $('#params_db_id').val()
+                $('#descriptionValue').modal('show');
+                $('#di_btn').val('配置文件')
+                $('#descriptionValueTitle').text('关联配置组')
+                $('#show_db_group1_div').css('display', '');
+                $('#show_db_group2_div').css('display', 'none');
+                var pool_table = $('#show_db_group1  tr').val();
+                var url1 = '{{ CMDBAPI_URL }}cmdb/db/instanes_group/?id=' + db_instance_id_table + '&ct_type=instance'
+                if (pool_table == undefined) {
+                    $('#show_db_group1').bootstrapTable({
+                        url: url1,
+                        method: 'get',
+                        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                        undefinedText: '-',
+                        cache: false,
+                        pagination: true,
+                        pageSize: 20,
+                        pageNumber: 1,
+                        sortable: true,
+                        sortName: 'app_name',
+                        sortOrder: '',
+                        columns: [
+                            {
+                                field: 'site_name',
+                                title: '站点名',
+                            },
+                            {
+                                field: 'app_name',
+                                title: '应用名',
+                                sortable: true,
+                            },
+                            {
+                                field: 'group_id',
+                                title: '配置组',
+                                sortable: true,
+                            },
+                            {
+                                field: 'idc',
+                                title: 'IDC',
+                                sortable: true,
+                            },
+                            {
+                                field: 'domain_name',
+                                title: 'Domain',
+                                sortable: true,
+                            },
+                            {
+                                field: 'domain_leader',
+                                title: '负责人',
+                                sortable: true,
+                            },
+                            {
+                                field: 'domain_email_group',
+                                title: 'Email',
+                                sortable: true,
+                            },
+                        ],
+                    });
+                } else {
+                    $('#show_db_group1').bootstrapTable('refresh', {
+                        url: url1
+                    });
+                }
+                var pool_table2 = $('#show_db_group2  tr').val();
+                var url2 = '{{ CMDBAPI_URL }}cmdb/db/instanes_configinfo/?id=' + db_instance_id_table + '&ct_type=instance'
+                if (pool_table2 == undefined) {
+                    $('#show_db_group2').bootstrapTable({
+                        url: url2,
+                        method: 'get',
+                        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                        undefinedText: '-',
+                        cache: false,
+                        pagination: true,
+                        pageSize: 20,
+                        pageNumber: 1,
+                        sortable: true,
+                        sortName: 'group_id',
+                        sortOrder: '',
+                        columns: [
+                            {
+                                field: 'data_id',
+                                title: '配置文件',
+                            },
+                            {
+                                field: 'group_id',
+                                title: '配置组',
+                                sortable: true,
+                            },
+                            {
+                                field: 'idc',
+                                title: 'IDC',
+                                sortable: true,
+                            },
+                            {
+                                field: 'env',
+                                title: '环境',
+                                sortable: true,
+                            },
+                            {
+                                field: 'domain_name',
+                                title: '部门',
+                                sortable: true,
+                            },
+                            {
+                                field: 'domain_leader',
+                                title: '负责人',
+                                sortable: true,
+                            },
+                            {
+                                field: 'domain_email_group',
+                                title: 'Email',
+                                sortable: true,
+                            },
+                        ],
+                    });
+                } else {
+                    $('#show_db_group2').bootstrapTable('refresh', {
+                        url: url2
+                    });
+                }
+            });
+
+            $('#di_btn').click(function () {
+                if ($('#show_db_group1_div').css('display') == 'block') {
+                    $('#show_db_group1_div').css('display', 'none');
+                    $('#show_db_group2_div').css('display', '');
+                    $('#di_btn').val('配置组')
+                    $('#descriptionValueTitle').text('关联配置文件')
+                } else {
+                    $('#show_db_group1_div').css('display', '');
+                    $('#show_db_group2_div').css('display', 'none');
+                    $('#di_btn').val('配置文件')
+                    $('#descriptionValueTitle').text('关联配置组')
+                }
+            });
+
+            $("#params_idc").change(function () {
+                if ($(this).val()) {
+                    $('#params_group_id').find('option').remove();
+                    $('#params_group_id').append($('<option>').text('请选择配置组').attr('value', ''));
+                    $.ajax({
+                        url: '{{ CMDBAPI_URL }}ycc/status_normal/?format=json&page_size=10000&idc=' + $(this).val(),
+                        type: 'GET',
+                        async: false,
+                        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                        success: function (json) {
+                            $.each(json.results, function (i, value) {
+                                $('#params_group_id').append($('<option>').text(value.group_id_desc).attr('value', value.group_id));
+                            });
+                            $("#params_group_id").data('combobox').refresh();
+                        }
+                    });
+                }
+            });
+
+            function showChart(divname, cont1, width, height) {
+                var render_base = function (r, n) {
+                    var label = r.text(0, 30, n.label).attr({opacity: 0});
+                    //the Raphael set is obligatory, containing all you want to display
+                    var set = r.set().push(
+                            r.rect(-30, -13, 62, 86)
+                                    .attr({
+                                        "fill": "#0cc799",
+                                        "stroke-width": 2
+                                        , r: 9,
+                                    }))
+                            .push(label);
+                    // make the label show only on hover
+                    set.hover(
+                            function mouseIn() {
+                                label.animate({opacity: 1, "fill-opacity": 1}, 500);
+                            },
+                            function mouseOut() {
+                                label.animate({opacity: 0}, 300);
+                            }
+                    );
+                    return set;
+                };
+
+                var render_node = function (r, n) {
+                    var label = r.text(-15, -10, n.label).attr({opacity: 1});
+                    //the Raphael set is obligatory, containing all you want to display
+                    var set = r.set().push(
+                            r.rect(-50, -70, 70, 50)
+                                    .attr({
+                                        "fill": "#9ACD32",
+                                        "stroke-width": 1
+                                        , r: 60,
+                                    }))
+                            .push(label);
+                    return set;
+                };
+
+                $('#' + divname).empty()
+                var width = width;
+                var height = height;
+                var g = new Graph();
+                g.edgeFactory.template.style.directed = true;
+                g.addNode(cont1['par'], {
+                    label: cont1['par'],
+                    render: render_base,
+                });
+                $.each(cont1['val'], function (i, val) {
+                    g.addNode(val, {
+                        label: val,
+                        render: render_node,
+                    });
+                    g.addEdge(cont1['par'], val, {
+                        stroke: "#bfa",
+                        fill: "#56f",
+                        label: "",
+                    });
+                });
+                var layouter = new Graph.Layout.Ordered(g, topological_sort(g));
+                var renderer = new Graph.Renderer.Raphael(divname, g, width, height);
+            }
+
+            function showchart_force(divid,response){
+
+                var nodesdata = [{category: 0, name:response['par'] , symbolSize: 35}];
+                var linksdata =[];
+                $.each(response['val'], function (i, val) {
+                    nodesdata.push({category: 1, name: val, value: 10, symbolSize: 20})
+                    linksdata.push({
+                             source: val,
+                             target: response['par'],
+                             weight: 20
+                         })
+                })
+                require(
+                     [
+                         'echarts',
+                         'echarts/chart/force' // 使用柱状图就加载bar模块，按需加载
+                     ],
+                     function (ec) {
+                         var myChart = ec.init(document.getElementById(divid));
+
+                         option = {
+{#                             title: {#}
+{#                                 text: 'Pool配置组依赖关系图',#}
+{#                                 x: 'center',#}
+{#                                 y: 'bottom'#}
+{#                             },#}
+                             tooltip: {
+                                 trigger: 'item',
+                                 formatter: '{b}'
+                             },
+                             toolbox: {
+                                 show: true,
+                                 feature: {
+                                     {#                        restore : {show: true},#}
+                                     {#                        magicType: {show: true, type: ['force', 'chord']},#}
+                                     saveAsImage: {show: true}
+                                 }
+                             },
+{#                             legend: {#}
+{#                                 x: 'left',#}
+{#                                 data: ['Pool', '配置组']#}
+{#                             },#}
+                             series: [
+                                 {
+                                     type: 'force',
+                                     name: "DB实例关联",
+                                     ribbonType: false,
+                                     categories: [
+                                         {
+                                             name: '主'
+                                         },
+                                         {
+                                             name: '从'
+                                         },
+
+                                     ],
+                                     itemStyle: {
+                                         normal: {
+                                             label: {
+                                                 show: true,
+                                                 textStyle: {
+                                                     color: '#333',
+                                                     fontWeight: 'bold',
+                                                 }
+                                             },
+                                             nodeStyle: {
+                                                 brushType: 'both',
+                                                 borderColor: 'rgba(255,215,0,0.4)',
+                                                 borderWidth: 1
+                                             },
+                                             linkStyle: {
+                                                 type: 'curve'
+                                             }
+                                         },
+                                         emphasis: {
+                                             label: {
+                                                 show: false
+                                                 // textStyle: null      // 默认使用全局文本样式，详见TEXTSTYLE
+                                             },
+                                             nodeStyle: {
+                                                 //r: 30
+                                             },
+                                             linkStyle: {}
+                                         }
+                                     },
+                                     useWorker: false,
+                                     minRadius: 15,
+                                     maxRadius: 25,
+                                     gravity: 1.5,
+                                     scaling: 1.8,
+                                     roam: 'true',
+                                     nodes: nodesdata,
+                                     links: linksdata,
+                                 }
+                             ]
+                         };
+                         myChart.setOption(option);
+                     }
+             );
+            }
+        });
+    </script>
+
+{% endblock %}

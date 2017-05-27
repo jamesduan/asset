@@ -1,0 +1,47 @@
+<!DOCTYPE html><html><head>
+<meta charset="UTF-8">
+<title>同步脚本报错通知</title>
+    
+</head>
+<style>
+/*公用样式 */
+*{ margin:0;
+-webkit-box-sizing: border-box;
+-moz-box-sizing: border-box;
+box-sizing: border-box;
+font-family:SimSun, Arial,tahoma,sans-serif;
+font-size:12px;
+color:#333;
+}
+table{
+border-bottom: 1px solid #ccc;
+border-collapse: collapse !important;
+border-radius: 1px;
+border-spacing: 0;
+table-layout:fixed;
+}
+table td,table th{ font-size:14px;font-family:SimSun;vertical-align:top; padding:8px; line-height:20px;border:1px solid #ccc;}
+table th,table th div{ font-size:14px;font-family: 'Microsoft YaHei'; color:#fff;}
+
+/*table*/
+.table3 th{ background-color:#C3C3C3; color:#000; }
+
+.h3 { background-color:#bd0b0b;color:#fff;font-weight:bold;font-size:16px;font-family: 'Microsoft YaHei'; line-height:30px; padding-left:10px;}
+
+</style>
+<body>
+<div class="h3" style="text-align:left;!important;">{{ title }}</div>
+<div>
+    <ul>
+        {% for log in message %}
+            <li>{{ log }}</li>
+        {% endfor %}
+    </ul>
+</div>
+
+
+<br>
+</body>
+</html>
+
+

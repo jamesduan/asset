@@ -1,0 +1,688 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+
+<style>
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+       .table{
+        width: 100%;
+        table-layout: fixed;
+    }
+   .table tr:hover td{
+       overflow: visible;
+       white-space: normal;
+   }
+    .table td {
+        word-wrap: break-word;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .table th {
+        text-align: center;
+    }
+    .table > tbody > tr > td{
+        vertical-align: middle;
+    }
+</style>
+
+<div id="alert">
+</div>
+<div id="toolbar">
+<div class="form-inline" role="form">
+
+    <button id="create_btn" data-toggle="modal" data-target="#addModal" class="btn btn-green">
+        <i class="glyphicon glyphicon-plus"></i> 新增
+    </button>
+    <button id="delete_btn" class="btn btn-danger" disabled>
+        <i class="glyphicon glyphicon-remove"></i> 删除
+    </button>
+
+    <select id="eventsource_select" class="form-control select_api_url selectpicker1">
+        <option value="">请选择源</option>
+        {%  for item in event_source_list %}
+            <option value="{{ item.id }}">{{ item.name }}</option>
+        {%  endfor %}
+    </select>
+
+    <select id="eventtype_select" class="form-control select_api_url selectpicker1">
+        <option value="">请选择类型</option>
+        {%  for item in event_type_list %}
+            <option value="{{ item.id }}">{{ item.name }}</option>
+        {%  endfor %}
+    </select>
+
+</div>
+</div>
+
+<table id="event_convergence_rule_table">
+</table>
+
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="addForm" method="POST" action="">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="addRule">新增收敛规则</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="add_eventsource_select" class="col-sm-3 control-label"><span style="color:red">* </span>来源</label>
+                        <div class='col-sm-6'>
+                            <select id="add_eventsource_select" name="source"class="form-control selectpicker">
+                                <option value="">请选择来源</option>
+                                {%  for item in event_source_list %}
+                                    <option value="{{ item.id }}">{{ item.name }}</option>
+                                {%  endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="add_eventtype_select" class="col-sm-3 control-label"><span style="color:red">* </span>类型</label>
+                        <div class='col-sm-6'>
+                                <select id="add_eventtype_select" name="type" class="form-control selectpicker">
+                                    <option value="">请选择类型</option>
+                                    {%  for item in event_type_list %}
+                                        <option value="{{ item.id }}">{{ item.name }}</option>
+                                    {%  endfor %}
+                                </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="add_app_select" class="col-sm-3 control-label">Pool</label>
+                        <div class='col-sm-6'>
+                            <select id="add_app_select" name="pool" class="form-control selectpicker">
+                                <option value="">请选择Site/Pool</option>
+                                {%  for item in app_list %}
+                                    <option value="{{ item.id }}">{{ item.site.name }}/{{ item.name }}</option>
+                                {%  endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="add_same_ip_select" class="col-sm-3 control-label">相同IP限制</label>
+                        <div class='col-sm-6'>
+                            <select id="add_same_ip_select" class="form-control selectpicker">
+                                <option value="1">是</option>
+                                <option value="0">否</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="add_eventlevel_select" class="col-sm-3 control-label">等级</label>
+                        <div class='col-sm-6'>
+                            <select id="add_eventlevel_select" name="level" class="form-control selectpicker">
+                                <option value="">请选择等级</option>
+                                {%  for item in event_level_list %}
+                                    <option value="{{ item.id }}">{{ item.name }}</option>
+                                {%  endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="keyword" class="col-sm-3 control-label">关键字</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="keyword" id="keyword" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="add_time_select" class="col-sm-3 control-label"><span style="color:red">* </span>时间限制</label>
+                        <div class='col-sm-6'>
+                            <select id="add_time_select" class="form-control selectpicker">
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="add_comment_content" class="col-sm-3 control-label">备注</label>
+                        <div class='col-sm-6'>
+                            <textarea type='text' class="form-control" name="add_comment_content" id="add_comment_content" ></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal" id="add_cancel">取消</button>
+                    <button type="submit" class="btn btn-green" id="add_submit">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="editForm" method="POST" action="">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="editRule">修改收敛规则</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="edit_id" class="col-sm-3 control-label">ID</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="edit_id" id="edit_id" readonly/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_source_select" class="col-sm-3 control-label"><span style="color:red">* </span>来源</label>
+                        <div class='col-sm-6'>
+                            <select id="edit_source_select" name="source"class="form-control selectpicker">
+                                <option value="">请选择来源</option>
+                                {%  for item in event_source_list %}
+                                    <option value="{{ item.id }}">{{ item.name }}</option>
+                                {%  endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_type_select" class="col-sm-3 control-label"><span style="color:red">* </span>类型</label>
+                        <div class='col-sm-6'>
+                                <select id="edit_type_select" name="type" class="form-control selectpicker">
+                                    <option value="">请选择类型</option>
+                                    {%  for item in event_type_list %}
+                                        <option value="{{ item.id }}">{{ item.name }}</option>
+                                    {%  endfor %}
+                                </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_app_select" class="col-sm-3 control-label">Pool</label>
+                        <div class='col-sm-6'>
+                            <select id="edit_app_select" name="pool" class="form-control selectpicker">
+                                <option value="">请选择Site/Pool</option>
+                                {%  for item in app_list %}
+                                    <option value="{{ item.id }}">{{ item.site.name }}/{{ item.name }}</option>
+                                {%  endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_same_ip_select" class="col-sm-3 control-label">相同IP限制</label>
+                        <div class='col-sm-6'>
+                            <select id="edit_same_ip_select" class="form-control selectpicker">
+                                <option value="0">否</option>
+                                <option value="1">是</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_level_select" class="col-sm-3 control-label">等级</label>
+                        <div class='col-sm-6'>
+                            <select id="edit_level_select" name="level" class="form-control selectpicker">
+                                <option value="">请选择等级</option>
+                                {%  for item in event_level_list %}
+                                    <option value="{{ item.id }}">{{ item.name }}</option>
+                                {%  endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_keyword" class="col-sm-3 control-label">关键字</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="keyword" id="edit_keyword" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_time_select" class="col-sm-3 control-label"><span style="color:red">* </span>时间限制</label>
+                        <div class='col-sm-6'>
+                            <select id="edit_time_select" class="form-control selectpicker">
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit_comment_content" class="col-sm-3 control-label">备注</label>
+                        <div class='col-sm-6'>
+                            <textarea type='text' class="form-control" name="edit_comment_content" id="edit_comment_content" ></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal" id="edit_cancel">取消</button>
+                    <button type="submit" class="btn btn-green" id="edit_submit">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+var $table = $('#event_convergence_rule_table');
+
+$('#add_app_select').selectpicker({
+    'liveSearch': true,
+    'liveSearchPlaceholder': '搜索'
+});
+
+$('#edit_app_select').selectpicker({
+    'liveSearch': true,
+    'liveSearchPlaceholder': '搜索'
+});
+
+$('.selectpicker1').selectpicker({
+    'width': 'auto'
+});
+
+$('.select_api_url').change(function() {
+    refresh_by_url();
+});
+
+function get_url() {
+    var source = $("#eventsource_select").val().trim();
+    var type = $("#eventtype_select").val().trim();
+
+    var api_url_base = '{{ CMDBAPI_URL }}notification/eventconvergence/?';
+    var params = ['format=json'];
+
+    if (source !="") {
+        params.push('source__id='+source)
+    }
+    if (type !="") {
+        params.push('type__id=' + type)
+    }
+
+    var api_url = api_url_base + params.join('&');
+    return api_url;
+}
+
+function refresh_by_url() {
+    var api_url = get_url();
+    $table.bootstrapTable('refresh', {
+        url: api_url
+    });
+}
+
+function delete_rule(row){
+        $.ajax({
+            url:'{{ CMDBAPI_URL }}notification/eventconvergence/' + row.id + '/?format=json',
+            type: 'DELETE',
+            async: false,
+            headers:{'Authorization':'Token {{ API_TOKEN }}'},
+            success: function( json ) {
+                $('#event_convergence_rule_table').bootstrapTable('refresh', {
+                    silent: true
+                });
+                $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>删除成功!</strong></div>');
+                $('#delete_btn').prop('disabled', true);
+                setTimeout(function(){$('#alert').empty();}, 1000);
+            },
+            error: function( json ) {
+                $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>删除失败!</strong>原因：' + JSON.stringify(json.responseText) +'</div>');
+            }
+
+        });
+}
+
+function confirm_delete(row){
+    var msg = "确认要删除吗？";
+    if(confirm(msg)==true) {
+        delete_rule(row);
+    }
+}
+
+$('#delete_btn').click(function(){
+     var msg = "确认要删除这些规则吗？";
+    if(confirm(msg)==true) {
+        rows = $table.bootstrapTable('getSelections');
+        for(i in rows){
+            delete_rule(rows[i]);
+        }
+    }
+
+});
+
+$(document).ready(function(){
+    $('.datetimepicker').datetimepicker({
+        format: 'yyyy-mm-dd hh:ii:ss',
+        autoclose: true,
+        minView: 0,
+        minuteStep:1
+    });
+
+    $(function () { $("[data-toggle='tooltip']").tooltip(); });
+
+    window.operateEvents = {
+        'click .edit': function (e, value, row) {
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}notification/eventconvergence/' + row.id + '/?format=json',
+                type: 'GET',
+                async:   false,
+                headers:{'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $("#edit_id").val(json.id);
+                    $("#edit_source_select").selectpicker('val', json.source_id);
+                    $("#edit_type_select").selectpicker('val', json.type_id);
+
+                    var pool = json.pool_id;
+                    if (pool == -1){
+                        pool = '';
+                    }
+                    $("#edit_app_select").selectpicker('val', pool);
+
+                    $("#edit_same_ip_select").selectpicker('val', json.same_ip);
+
+                    var level = json.level_id;
+                    if (level == -1){
+                        level = '';
+                    }
+                    $("#edit_level_select").selectpicker('val', level);
+                    $("#edit_keyword").val(json.key);
+                    $("#edit_time_select").selectpicker('val', json.interval);
+                    $("#edit_comment_content").val(json.comment);
+                }
+            });
+            $('#editModal').modal('show');
+        },
+        'click .delete': function (e, value, row) {
+            confirm_delete(row);
+        }
+    };
+
+
+    var display_columns = [
+        {
+            field: 'state',
+            checkbox: true,
+            width:'2px'
+        },
+        {
+            field: 'id',
+            visible: false
+        },
+        {
+            field: 'source_name',
+            title: '来源',
+            width:"6%"
+        },
+        {
+            field: 'type_name',
+            title: '类型',
+            width:"8%"
+        },
+        {
+            field: 'pool_name',
+            title: 'Pool',
+            formatter:formatPoolname,
+            width:"10%"
+        },
+        {
+            field: 'same_ip_name',
+            title: '相同IP限制',
+            align: 'center',
+            width:"6%"
+        },
+        {
+            field: 'level_name',
+            title: '等级',
+            align:'center',
+            width:'4%'
+        },
+        {
+            field: 'key',
+            title: '关键字'
+        },
+        {
+            field: 'interval',
+            title: '时间限制',
+            align: 'center',
+            width:"5%"
+        },
+        {
+            field: 'comment',
+            title: '备注',
+            width:"6%"
+        },
+        {
+            field: 'user',
+            title: '操作人',
+            width: '7%'
+        },
+        {
+            field: 'operate',
+            title: '操作',
+            align: 'center',
+            formatter: operateFormatter,
+            events: operateEvents,
+            width:"6%"
+        }
+    ];
+
+    var urlAddr = get_url();
+    $('#event_convergence_rule_table').bootstrapTable({
+        url: urlAddr,
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: display_columns,
+        responseHandler: function(res){
+            var result = {};
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 30,
+        pageList: [10,30,50],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false,
+        clickToSelect:true
+    });
+
+
+    $('#addForm').bootstrapValidator({
+        excluded: ':disabled',
+        fields: {
+            source: {
+                validators: {
+                    notEmpty: {
+                        message: '来源不能为空。'
+                    }
+                }
+            },
+            type: {
+                validators: {
+                    notEmpty: {
+                        message: '类型不能为空。'
+                    }
+                }
+            }
+        }
+    }).on('success.form.bv', function(e) {
+        e.preventDefault();
+        var inputdata = {
+            'source_id': $.trim($("#add_eventsource_select").val()),
+            'type_id': $.trim($("#add_eventtype_select").val()),
+            'same_ip': $.trim($("#add_same_ip_select").val()),
+            'interval':$.trim($("#add_time_select").val()),
+            'comment': $.trim($("#add_comment_content").val())
+        };
+
+        var pool = $.trim($("#add_app_select").val());
+        if (pool!=''){
+            inputdata['pool_id']= pool;
+        }
+
+        var level = $.trim($("#add_eventlevel_select").val());
+        if (level!=''){
+            inputdata['level_id']= level;
+        }
+
+        var key = $.trim($("#keyword").val());
+        if (key!=''){
+            inputdata['key']= key;
+        }
+
+        $.ajax({
+            url: '{{ CMDBAPI_URL }}notification/eventconvergence/',
+            type: 'POST',
+            async: false,
+            data: inputdata,
+            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+            success: function (json) {
+                $('#addModal').modal('hide');
+                $('#event_convergence_rule_table').bootstrapTable('refresh', {
+                    silent: true
+                });
+                $('#addForm').bootstrapValidator('resetForm', true);
+                clear_add_form_states();
+                $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>添加成功!</strong></div>');
+                setTimeout(function(){$('#alert').empty();}, 1000);
+            },
+            error: function (json) {
+                $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>添加错误!</strong>添加关键字' + JSON.stringify(json.responseText) + '</div>');
+                $('#addModal').modal('hide');
+            }
+        });
+    });
+
+    $("#add_cancel").click(function(){
+        $('#addForm').bootstrapValidator('resetForm', true);
+        clear_add_form_states();
+    });
+
+    $('#editForm').bootstrapValidator({
+        excluded: ':disabled',
+        fields: {
+            source: {
+                validators: {
+                    notEmpty: {
+                        message: '来源不能为空。'
+                    }
+                }
+            },
+            type: {
+                validators: {
+                    notEmpty: {
+                        message: '类型不能为空。'
+                    }
+                }
+            }
+        }
+    }).on('success.form.bv', function(e) {
+        e.preventDefault();
+        var inputdata = {
+            'source_id': $.trim($("#edit_source_select").val()),
+            'type_id': $.trim($("#edit_type_select").val()),
+            'same_ip': $.trim($("#edit_same_ip_select").val()),
+            'key': $.trim($("#edit_keyword").val()),
+            'interval':$.trim($("#edit_time_select").val()),
+            'comment': $.trim($("#edit_comment_content").val())
+        };
+
+        var pool = $.trim($("#edit_app_select").val());
+        if (pool==''){
+            pool = -1;
+        }
+        inputdata['pool_id'] = pool;
+
+        var level = $.trim($("#edit_level_select").val());
+        if (level==''){
+            level = -1;
+        }
+        inputdata['level_id'] = level;
+
+        $.ajax({
+            url: '{{ CMDBAPI_URL }}notification/eventconvergence/' + $("#edit_id").val() + '/',
+            type: 'PATCH',
+            async: false,
+            data: inputdata,
+            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+            success: function (json) {
+                $('#editModal').modal('hide');
+                $('#event_convergence_rule_table').bootstrapTable('refresh', {
+                    silent: true
+                });
+                $('#editForm').bootstrapValidator('resetForm', true);
+                $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>修改成功!</strong></div>');
+                setTimeout(function(){$('#alert').empty();}, 1000);
+            },
+            error: function (json) {
+                $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>修改错误!</strong>修改规则' + JSON.stringify(json.responseText) + '</div>');
+                $('#editModal').modal('hide');
+            }
+        });
+    });
+
+    $("#edit_cancel").click(function(){
+        $('#editForm').bootstrapValidator('resetForm', true);
+    });
+
+    function operateFormatter(value, row, index) {
+        return [
+            '<a href="#" class="edit" data-toggle="tooltip" title="修改">',
+            '<span class="glyphicon glyphicon-pencil"></span>',
+            '</a>&nbsp;&nbsp;&nbsp;&nbsp; ',
+
+            '<a href="#" class="delete" data-toggle="tooltip" title="删除">',
+            '<span class="glyphicon glyphicon-trash"></span>',
+            '</a>&nbsp;&nbsp;&nbsp;&nbsp; '
+        ].join('');
+    }
+
+    $table.on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+        $('#delete_btn').prop('disabled', !$table.bootstrapTable('getSelections').length);
+    });
+
+});
+
+$(function set_time_select_value(){
+    var max_time = 61;
+    var add_obj  = document.getElementById("add_time_select");
+    var edit_obj  = document.getElementById("edit_time_select");
+    for (var i=10; i < max_time; i+=10){
+        add_obj.options.add(new Option(i, i));
+        edit_obj.options.add(new Option(i, i));
+    }
+
+    add_obj.options[1].selected =true;
+});
+
+
+function clear_add_form_states(){
+    $("#add_eventsource_select").selectpicker('refresh');
+    $("#add_eventtype_select").selectpicker('refresh');
+    $("#add_app_select").selectpicker('val', '');
+    $("#add_same_ip_select").selectpicker('val', '1');
+    $("#add_eventlevel_select").selectpicker('refresh');
+    $("#keyword").val('');
+    $("#add_time_select").selectpicker('val', '20');
+    $("#add_comment_content").val('');
+
+}
+
+function formatPoolname(value, row, index) {
+    var site='', pool='';
+    if (row.site_name){
+        site = row.site_name;
+    }
+
+    if (row.pool_name){
+        pool = site + "/" + row.pool_name;
+    }
+    return pool;
+}
+
+</script>
+{% endblock %}

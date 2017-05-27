@@ -1,0 +1,2133 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %}配置文件管理{% endblock %}
+{% block content %}
+
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.css" rel="stylesheet"
+          xmlns="http://www.w3.org/1999/html"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-fileinput/css/fileinput.min.css" rel="stylesheet"/><!--fileinput-->
+    <link href="{{ STATIC_URL }}libs/jsdifflib/diffview.css" rel="stylesheet"/>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}ycc/js/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-fileinput/js/fileinput.min.js"></script><!--fileinput-->
+    <script src="{{ STATIC_URL }}libs/bootstrap-fileinput/js/fileinput_locale_zh.js"></script><!--fileinput-->
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/difflib.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/diffview.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/jsdiff.js"></script>
+
+    <div class="modal fade" id="confirmrmv">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">确认？</h4>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="rmvid" id="rmvid" value="">
+                    <input type="hidden" name="rmv_group" id="rmv_group" value="">
+                    <input type="hidden" name="rmv_env" id="rmv_env" value="">
+                    <input type="hidden" name="rmv_dataid" id="rmv_dataid" value="">
+                    <input type="hidden" name="rmv_idc" id="rmv_idc" value="">
+
+                    <p style="font-size:16px; color:#f00000;" id="rmtext"><i class="fa fa-warning"></i></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="confirmrmvbtn" class="btn btn-warning">删除</button>
+                    <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                </div>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <div class="modal fade" id="selectValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="myModalLabel">选择配置文件类型</h4>
+                </div>
+                <div class="modal-body">
+                    <fieldset>
+                        <legend>普通配置文件</legend>
+                        <button id="create_nor" data-toggle="modal" data-target="#addValue" class="btn btn-green">
+                            新建
+                        </button>
+                        <button id="upload_nor" data-toggle="modal" data-target="#uploadValue" class="btn btn-green">
+                            上传
+                        </button>
+                    </fieldset>
+                    <fieldset>
+                        <legend>DB配置文件</legend>
+                        <button id="create_db" data-toggle="modal" data-target="#adddbValue" class="btn btn-green">
+                            新建
+                        </button>
+                    </fieldset>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="descriptionValue" tabindex="-1" role="dialog"
+         aria-labelledby="descriptionValueValueTitle"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:1200px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="descriptionValueForm1" method="POST">
+                    <input type="hidden" name="edit_id" id="edit_id" value="">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="">配置文件</h4>
+                    </div>
+
+                    <div class="modal-body">
+                        <div id="show_cmp_div">
+                            <table id="show_cmp"></table>
+                        </div>
+                    </div>
+                    <div class="modal-footer" id="view_button">
+{#                        <input type="button" class="btn btn-info" id="di_btn" value="配置文件">#}
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!--新建普通配置文件-->
+    <div class="modal fade" id="addValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog" style="width:1020px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="attributeForm" method="POST">
+                    <input type="hidden" name="parent" id="parent" value="">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">新建普通配置文件</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="idc" class="col-sm-2 control-label">IDC</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="idc" id="idc"
+                                       readonly="readonly"/>
+{#                                <select name="idc" id="idc" class="form-control" readonly>#}
+{#                                    <option value="1"></option>#}
+{#                                    {% for item in idc %}#}
+{#                                        <option value="{{ item.id }}">{{ item.name_ch }}</option>#}
+{#                                    {% endfor %}#}
+{#                                </select>#}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="env" class="col-sm-2 control-label">环境</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="env" id="env"
+                                       readonly="readonly"/>
+{#                                <select name="env" id="env" class="form-control">#}
+{#                                    <option value="">请选择环境</option>#}
+{#                                    {% for item in env %}#}
+{#                                        {% if not env_obj or item.id == env_obj.id or item.id == 8 %}#}
+{#                                            <option value="{{ item.id }}">{{ item.name }}</option>#}
+{#                                        {% endif %}#}
+{#                                    {% endfor %}#}
+{#                                </select>#}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="group_id" class="col-sm-2 control-label">所属配置组</label>
+                            <div class='col-sm-10'>
+                                <select name="group_id" id="group_id" class="form-control">
+                                    <option value="">请选择配置组</option>
+                                    {% for item in group_show_list %}
+                                        <option value="{{ item.group_status_id }}">{{ item.group_id }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="data_id" class="col-sm-2 control-label">文件名称</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="data_id" id="data_id"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="content" class="col-sm-2 control-label">内容</label>
+
+                            <div class='col-sm-10'>
+                                <textarea class="form-control" rows="18" name="content" id="content"
+                                          class="resizable"></textarea>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green" id="submit1">保存</button>
+                        {% if env_obj and env_obj.id == 6 %}
+{#                            <button type="submit" class="btn btn-green deploy">保存并发布代码</button>#}
+                        {% elif env_obj and env_obj.id == 7 %}
+                            <button type="submit" class="btn btn-green commit">保存并提交审核</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!--新建DB配置文件-->
+    <div class="modal fade" id="adddbValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:1020px";>
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="attributeForm2" method="POST">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">新建DB配置文件</h4>
+                        <input type="hidden" name="addconfid" id="addconfid">
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-4 control-label">IDC</label>
+
+                            <div class='col-sm-7'>
+                                 <input type='text' class="form-control" name="db_idc" id="db_idc"
+                                       readonly="readonly"/>
+{#                                <select name="db_idc" id="db_idc" class="form-control">#}
+                                    {#                                    <option value="1">SH</option>#}
+                                    {#                                    <option value="4">JQ</option>#}
+{#                                    {% for item in idc %}#}
+{#                                        <option value="{{ item.id }}">{{ item.name_ch }}</option>#}
+{#                                    {% endfor %}#}
+{#                                </select>#}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-4 control-label">环境</label>
+
+                            <div class='col-sm-7'>
+                                <input type='text' class="form-control" name="db_env" id="db_env"
+                                       readonly="readonly"/>
+{#                                <select name="db_env" id="db_env" class="form-control">#}
+{#                                    <option value="">请选择环境</option>#}
+{#                                    {% for item in env %}#}
+{#                                        {% if not env_obj or item.id == env_obj.id or item.id == 8 %}#}
+{#                                            <option value="{{ item.id }}">{{ item.name }}</option>#}
+{#                                        {% endif %}#}
+{#                                    {% endfor %}#}
+{#                                </select>#}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-4 control-label">所属配置组</label>
+
+                            <div class='col-sm-7'>
+{#                                <select name="db_group_id" id="db_group_id" class="form-control">#}
+{#                                </select>#}
+                                <select name="db_group_id" id="db_group_id" class="form-control">
+                                    <option value="">请选择配置组</option>
+                                    {% for item in group_show_list %}
+                                        <option value="{{ item.group_status_id }}">{{ item.group_id }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-4 control-label">文件名称</label>
+
+                            <div class='col-sm-7'>
+                                <input type='text' class="form-control" name="db_data_id" id="db_data_id"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-4 control-label">DB标识符
+                                [<a href="/cmdbv2/cmdb/db/instances/" target="_blank">查询</a>]
+                            </label>
+
+                            <div class='col-sm-7'>
+                                <select name="db_instance_id" id="db_instance_id" class="form-control">
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="jdbc" style="display: none">
+
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+{#                        <input type="button" class="btn btn-primary" value="查询DB实例" id="view_db_instance1">#}
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green" id="submit2">保存</button>
+                        {% if env_obj and env_obj.id == 6 %}
+{#                            <button type="submit" class="btn btn-green deploy">保存并发布代码</button>#}
+                        {% elif env_obj and env_obj.id == 7 %}
+                            <button type="submit" class="btn btn-green commit">保存并提交审核</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!--修改配置文件-->
+    <div class="modal fade" id="editValue" tabindex="-1" role="dialog" aria-labelledby="editValueTitle"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:1020px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="attributeForm1" method="POST">
+                    <input type="hidden" name="edit_id" id="edit_id" value="">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="editValueTitle">修改配置文件</h4>
+                    </div>
+                    <input type="hidden" name="editviewtype" id="editviewtype" value="default">
+                    <input type="hidden" name="edit_idc_id" id="edit_idc_id">
+                    <div class="modal-body">
+                        <div id="alert1" class="alert1">
+                        </div>
+                        <div class="form-group" style="display: none" id="edit_idc_div">
+                            <label for="inputPassword3" class="col-sm-2 control-label">IDC</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="edit_idc" id="edit_idc"
+                                       readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-2 control-label">所属配置组</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="edit_group_id" id="edit_group_id"
+                                       readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-2 control-label">文件名称</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="edit_data_id" id="edit_data_id"
+                                       readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="display: none" id="edit_env_div">
+                            <label for="inputPassword3" class="col-sm-2 control-label">环境</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="edit_env" id="edit_env"
+                                       readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-2 control-label">内容</label>
+
+                            <div class='col-sm-10'>
+                                <textarea class="form-control" rows="18" name="edit_content"
+                                          id="edit_content"></textarea>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer" id="view_button">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-green save" id="submit4">保存</button>
+                        {% if env_obj and env_obj.id == 6 %}
+                            <button type="button" class="btn btn-green restart">保存并重启应用</button>
+{#                            <button type="button" class="btn btn-green deploy">保存并发布代码</button>#}
+                        {% elif env_obj and env_obj.id == 7 %}
+                            <button type="button" class="btn btn-green commit">保存并提交审核</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!--修改DB配置文件-->
+    <div class="modal fade" id="editdbValue" tabindex="-1" role="dialog" aria-labelledby="editdbValueTitle"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="attributeForm3" method="POST">
+                    <input type="hidden" name="editdb_id" id="editdb_id" value="">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="editdbValueTitle">修改DB配置文件</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div id="alert1" class="alert1">
+                        </div>
+                        <div class="form-group" style="display: none" id="edit_idc_db_div">
+                            <label for="inputPassword3" class="col-sm-4 control-label">IDC</label>
+
+                            <div class='col-sm-7'>
+                                <input type='text' class="form-control" name="editdb_idc" id="editdb_idc"
+                                       readonly="readonly"/>
+                            </div>
+                            <input type="hidden" name="editdb_idc_id" id="editdb_idc_id">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-4 control-label">所属配置组</label>
+
+                            <div class='col-sm-7'>
+                                <input type='text' class="form-control" name="editdb_group_id" id="editdb_group_id"
+                                       readonly="readonly"/>
+                                <input type="hidden" name="editdb_group_id_hid" id="editdb_group_id_hid">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-4 control-label">文件名称</label>
+
+                            <div class='col-sm-7'>
+                                <input type='text' class="form-control" name="editdb_data_id" id="editdb_data_id"
+                                       readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="display: none" id="edit_env_db_div">
+                            <label for="inputPassword3" class="col-sm-4 control-label">环境</label>
+
+                            <div class='col-sm-7'>
+                                <input type='text' class="form-control" name="editdb_env" id="editdb_env"
+                                       readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-4 control-label">DB标识符
+                                [<a href="/cmdbv2/cmdb/db/instances/" target="_blank">查询</a>]
+                            </label>
+
+                            <div class='col-sm-7'>
+                                <select name="editdb_instance_id" id="editdb_instance_id" class="form-control">
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="editjdbc" style="display: none">
+
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+{#                        <input type="button" class="btn btn-primary" value="查询DB实例" id="view_db_instance2">#}
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="button" class="btn btn-green save" id="submit4">保存</button>
+                        {% if env_obj and env_obj.id == 6 %}
+                            <button type="button" class="btn btn-green restart">保存并重启应用</button>
+{#                            <button type="button" class="btn btn-green deploy">保存并发布代码</button>#}
+                        {% elif env_obj and env_obj.id == 7 %}
+                            <button type="button" class="btn btn-green commit">保存并提交审核</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!--上传配置文件-->
+    <div class="modal fade" id="uploadValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:1020px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="uploadForm" method="POST">
+                    <input type="hidden" name="parent" id="parent" value="">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">上传配置文件</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="idc" class="col-sm-2 control-label">IDC</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="upidc" id="upidc"
+                                       readonly="readonly"/>
+{#                                <select name="upidc" id="upidc" class="form-control">#}
+                                    {#                                    <option value="1">SH</option>#}
+                                    {#                                    <option value="4">JQ</option>#}
+{#                                    {% for item in idc %}#}
+{#                                        <option value="{{ item.id }}">{{ item.name_ch }}</option>#}
+{#                                    {% endfor %}#}
+{#                                </select>#}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="env" class="col-sm-2 control-label">环境</label>
+
+                            <div class='col-sm-10'>
+{#                                <select name="upenv" id="upenv" class="form-control">#}
+{#                                    <option value="">请选择环境</option>#}
+{#                                    {% for item in env %}#}
+{#                                        {% if not env_obj or item.id == env_obj.id or item.id == 8 %}#}
+{#                                            <option value="{{ item.id }}">{{ item.name }}</option>#}
+{#                                        {% endif %}#}
+{#                                    {% endfor %}#}
+{#                                </select>#}
+                                <input type='text' class="form-control" name="upenv" id="upenv"
+                                       readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="upgroup_id" class="col-sm-2 control-label">所属配置组</label>
+
+                            <div class='col-sm-10'>
+{#                                <select name="upgroup_id" id="upgroup_id" class="form-control">#}
+{#                                </select>#}
+                                <select name="upgroup_id" id="upgroup_id" class="form-control">
+                                    <option value="">请选择配置组</option>
+                                    {% for item in group_show_list %}
+                                        <option value="{{ item.group_status_id }}">{{ item.group_id }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="env" class="col-sm-2 control-label"></label>
+
+                            <div class='col-sm-10'>
+                                <input id="input-4" name="input-4" type="file" multiple class="file-loading"
+                                       data-preview-file-type="text">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="env" class="col-sm-2 control-label"></label>
+
+                            <div id="kv-error-1" style="margin-top:10px;display:none" class='col-sm-10'></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="env" class="col-sm-2 control-label"></label>
+
+                            <div class='col-sm-10'>
+                                <div id="kv-success-1" class="alert alert-success fade in"
+                                     style="margin-top:10px;display:none"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer" id="view_upload_button">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!--更新上传配置文件-->
+    <div class="modal fade" id="editUploadValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:1020px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="editUploadForm" method="POST">
+                    <input type="hidden" name="parent" id="parent" value="">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">更新上传配置文件</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div id="alert1" class="alert1">
+                        </div>
+                        <div class="form-group" style="display: none" id="edit_idc_upload_div">
+                            <label for="inputPassword3" class="col-sm-2 control-label">IDC</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="edit_upload_idc"
+                                       id="edit_upload_idc" readonly="readonly"/>
+                            </div>
+                            <input type="hidden" id="edit_upload_idc_id" name="edit_upload_idc_id">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-2 control-label">所属配置组</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="edit_upload_group_id"
+                                       id="edit_upload_group_id" readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-2 control-label">文件名称</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="edit_upload_data_id"
+                                       id="edit_upload_data_id" readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="display: none" id="edit_env_upload_div">
+                            <label for="inputPassword3" class="col-sm-2 control-label">环境</label>
+
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" name="edit_upload_env" id="edit_upload_env"
+                                       readonly="readonly"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="env" class="col-sm-2 control-label"></label>
+
+                            <div class='col-sm-10'>
+                                <input id="euinput-4" name="euinput-4" type="file" class="file-loading"
+                                       data-preview-file-type="text">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="env" class="col-sm-2 control-label"></label>
+
+                            <div id="eukv-error-1" style="margin-top:10px;display:none" class='col-sm-10'></div>
+                        </div>
+                        <div class="form-group">
+                            <label for="env" class="col-sm-2 control-label"></label>
+
+                            <div class='col-sm-10'>
+                                <div id="eukv-success-1" class="alert alert-success fade in"
+                                     style="margin-top:10px;display:none"></div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-2 control-label">原内容</label>
+
+                            <div class='col-sm-10'>
+                                <textarea class="form-control" rows="18" name="edit_upload_content"
+                                          id="edit_upload_content" readonly="readonly"></textarea>
+                            </div>
+                        </div>
+                        <input type="hidden" name="euid" id="euid">
+                    </div>
+                    <div class="modal-footer" id="eu_view_upload_button">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modal_diff">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">对比文件差异</h4>
+                </div>
+                <div class="modal-body">
+                    <div id="diff" style="clear:both;width:100%;"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div><!-- /.modal-content -->
+        </div><!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <div id="alert">
+    </div>
+
+    <div id="toolbar">
+        <div class="form-inline" role="form">
+            {% if is_commit %}
+                <button id="create" data-toggle="modal" data-target="#selectValue" class="btn btn-green">
+                    新建配置文件
+                </button>
+            {% endif %}
+            <button id="switch" class="btn btn-green">
+                <i class="glyphicon glyphicon-share-alt"></i>配置组管理
+            </button>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <select name="params_group_id" id="params_group_id" class="form-control">
+                <option value="">配置组</option>
+                {% for item in group %}
+                    <option value="{{ item.group_id }}">{{ item.group_id }}</option>
+                {% endfor %}
+            </select>
+            <select name="params_configtype" id="params_configtype" class="form-control">
+                <option value="">文件类型</option>
+                {% for item in config_types %}
+                    <option value="{{ item.id }}">{{ item.type_name }}</option>
+                {% endfor %}
+            </select>
+            <span style="color: red; font-size: large">点击<a href="/deploy/yccv2/proconfiginfo/v2/">这里</a>查看其他Domain的配置文件</span>
+        </div>
+    </div>
+
+    <table id="asset" style="line-height:900px;">
+    </table>
+
+    <script type="text/javascript">
+        function checkkv(cond) {
+            if (cond == 1) {
+                cond = ''
+            } else if (cond == 2) {
+                cond = 'edit'
+            }
+            var byname = cond + 'jdbckv'
+            var checkbox1 = document.getElementsByName(byname)
+            var len = checkbox1.length;
+            for (var i = 0; i < len; i++) {
+                var tmpid = checkbox1[i].id.split('_')[0]
+                if (checkbox1[i].checked) {
+                    document.getElementById(tmpid).disabled = false
+                } else {
+                    document.getElementById(tmpid).disabled = true
+                }
+            }
+        }
+    </script>
+    <script>
+        $(document).ready(function () {
+            var app_id = null;
+
+            function init_select(id, idc) {
+                var url = ''
+                if (id.val() != 0) {
+                    if (idc != '') {
+{#                        var idc = idc.val();#}
+                        url = "{{ CMDBAPI_URL }}ycc/status_normal/?group_name=YCC_ADMIN&format=json&page_size=100000&idc=" + idc;
+                        id.find('option').remove();
+                        id.append($('<option>').text('请选择配置组').attr('value', ''));
+                    } else {
+                        url = "{{ CMDBAPI_URL }}cmdb/db/instances/?format=json&page_size=100000";
+                        id.find('option').remove();
+                        id.append($('<option>').text('请选择DB标示符').attr('value', ''));
+                    }
+                    $.ajax({
+                        url: url,
+                        idc: 'GET',
+                        async: false,
+                        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                        success: function (json) {
+                            if (idc != '') {
+                                $.each(json.results, function (i, value) {
+                                    id.append($('<option>').text(value.group_id_desc).attr({value: value.id, app_id: value.app_id}));
+                                });
+                            } else {
+                                $.each(json.results, function (i, value) {
+                                    id.append($('<option>').text(value.cname).attr('value', value.id));
+                                });
+                            }
+                            id.combobox({});
+                        }
+                    });
+                }
+            }
+            var select_env_name = '{{ select_env_name }}'.replace('amp;', '');
+            var select_idc_name = '{{ select_idc_name }}'.replace('amp;', '');
+            $("#create_nor").click(function () {
+{#                $("#group_id").data('combobox').clearElement();#}
+{#                $("#group_id").data('combobox').refresh();#}
+                $("#env").val(select_env_name)
+                $("#idc").val(select_idc_name)
+                $("#group_id").combobox({});
+                init_select($('#group_id'), 1)
+            });
+            $("#create_db").click(function () {
+                $("#db_env").val(select_env_name)
+                $("#db_idc").val(select_idc_name)
+                $("#db_group_id").combobox({});
+                init_select($('#db_group_id'), 1)
+                init_select($('#db_instance_id'), '')
+            });
+            $("#upload_nor").click(function () {
+                $("#upenv").val(select_env_name)
+                $("#upidc").val(select_idc_name)
+                init_select($('#upgroup_id'), 1)
+            });
+
+            $("#switch").click(function () {
+                window.open("/deploy/yccv2/group/")
+            })
+            $('#db_instance_id').change(function () {
+                jdbcView($('#jdbc'), $('#db_instance_id'), 1, 1);
+            });
+            $('#editdb_instance_id').change(function () {
+                jdbcView($('#editjdbc'), $('#editdb_instance_id'), 1, 2);
+            });
+
+            function selectJdbcLab(num) {
+                if (num == 1) {
+                    return ''
+                } else if (num == 2) {
+                    return 'edit'
+                }
+                return false
+            }
+
+            /**
+             * sel:#1 is add
+             *     #2 is edit
+             */
+            function jdbcView(jdbcdiv, conid, sel, divname) {
+                var selname = selectJdbcLab(divname)
+                var dbname = ''
+                var jdbcurl = ''
+                var jdbcurl_add = ''
+                var apiurl = ''
+                var div_view_flag = 1;
+
+                if (conid.find("option:selected").val() != '') {
+                    var d1 = conid.find("option:selected").text();
+                    var d2 = d1.split('//');
+                    if (d1.toLowerCase().indexOf('oracle') >= 0) {
+                        dbname = 'oracle'
+                        jdbcurl_add = 'jdbc:oracle:thin:@//' + d2[1]
+                    } else if (d1.toLowerCase().indexOf('mysql') >= 0) {
+                        dbname = 'mysql'
+                        jdbcurl_add = 'jdbc:mysql://' + d2[1] + '?useUnicode=true&characterEncoding=utf-8&autoReconnect=true&autoReconnectForPools=true&failOverReadOnly=false&rewriteBatchedStatements=true&allowMultiQueries=true'
+                    } else if (d1.toLowerCase().indexOf('mongo') >= 0) {
+                        dbname = 'mongodb'
+                        jdbcurl_add = 'jdbc:mongo://' + d2[1] + ''
+                    } else if (d1.toLowerCase().indexOf('postgresql') >= 0) {
+                        dbname = 'postgresql'
+                        jdbcurl_add = 'jdbc:postgresql://' + d2[1]
+                    }
+                }
+                if (sel == 1) {
+                    apiurl = "cmdb/db/kvdefault/?dbtype=" + dbname + "&page_size=1000&format=json"
+                } else if (sel == 2) {
+                    apiurl = "cmdb/db/kvcustom/?dataid=" + $('#editdb_data_id').val() + "&env=" + $('#editdb_env').val() + "&group_status=" + $('#editdb_group_id_hid').val() + "&dbtype=" + dbname + "&action=one&page_size=1000&format=json"
+                }
+                jdbcdiv.css('display', 'block');
+                jdbcdiv.empty()
+                $.ajax({
+                    url: "{{ CMDBAPI_URL }}" + apiurl,
+                    type: 'GET',
+                    async: false,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        $.each(json.results, function (i, value) {
+                            var jdbckey = value.jdbckey == null ? 'url' : value.jdbckey.split('.')[1];
+                            var jdbcval = value.jdbcval == null ? '' : value.jdbcval;
+                            var id = 0;
+                            if (sel == 1) {
+                                id = value.id
+                                if (div_view_flag == 1) {
+                                    jdbcdiv.append(
+                                            '<div class="form-group">' +
+                                            '<label title="jdbcurl" id="' + selname + 'jdbcurl_lab" for="inputPassword3" class="col-sm-4 control-label">jdbcurl</label>' +
+                                            '<div class="col-sm-7">' +
+                                            '<input readonly="readonly" title=' + jdbcurl_add + ' type="text" class="form-control" name="' + selname + 'jdbcurl" id="' + selname + 'jdbcurl" value="' + jdbcurl_add + '"/>' +
+                                            '</div>' +
+                                            '<input style="display:none" onclick="checkkv(' + divname + ')" type="checkbox" id="' + selname + 'jdbcurl_chk" name="' + selname + 'jdbckv" class="' + selname + 'jdbckv">' +
+                                            '<input type="hidden" name="' + selname + 'jdbcurl_dbtype" id="' + selname + 'jdbcurl_dbtype" value=' + dbname + '>' +
+                                            '</div>'
+                                    )
+                                    div_view_flag += 1;
+                                }
+                            } else if (sel == 2) {
+                                id = value.kv_id
+                                div_view_flag = 3
+                            }
+                            if (id != 1 && div_view_flag != 2 || div_view_flag >= 3) {
+                                if (jdbckey.toLowerCase().indexOf('url') >= 0) {
+                                    jdbcdiv.append(
+                                            "<div class='form-group'>" +
+                                            "<label title=" + jdbckey + " id='" + selname + jdbckey + "_lab' for='inputPassword3' class='col-sm-4 control-label'>" + jdbckey + "</label>" +
+                                            "<div class='col-sm-7'>" +
+                                            "<input readonly='readonly' title=" + jdbcval + " disabled='disabled' type='text' class='form-control' name='" + selname + jdbckey + "' id='" + selname + jdbckey + "' value='" + jdbcval + "'/>" +
+                                            "</div>" +
+                                            "<input style='display:none' onclick='checkkv(" + divname + ")' type='checkbox' id='" + selname + jdbckey + "_chk' name='" + selname + "jdbckv' class='" + selname + "jdbckv'>" +
+                                            "<input type='hidden' name='" + selname + jdbckey + "_dbtype' id='" + selname + jdbckey + "_dbtype' value=" + dbname + ">" +
+                                            "</div>"
+                                    )
+                                } else {
+                                    jdbcdiv.append(
+                                            "<div class='form-group'>" +
+                                            "<label title=" + jdbckey + " id='" + selname + jdbckey + "_lab' for='inputPassword3' class='col-sm-4 control-label'>" + jdbckey + "</label>" +
+                                            "<div class='col-sm-7'>" +
+                                            "<input title=" + jdbcval + " disabled='disabled' type='text' class='form-control' name='" + selname + jdbckey + "' id='" + selname + jdbckey + "' value='" + jdbcval + "'/>" +
+                                            "</div>" +
+                                            "<input onclick='checkkv(" + divname + ")' type='checkbox' id='" + selname + jdbckey + "_chk' name='" + selname + "jdbckv' class='" + selname + "jdbckv'>" +
+                                            "<input type='hidden' name='" + selname + jdbckey + "_dbtype' id='" + selname + jdbckey + "_dbtype' value=" + dbname + ">" +
+                                            "</div>"
+                                    )
+                                }
+                                div_view_flag = 3;
+                            }
+                            div_view_flag += 1;
+                        });
+                    }
+                });
+            }
+
+            function showSuccess(info) {
+                var msg = '<div class="alert alert-success text-center" role="alert">' +
+                        '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                        '<span aria-hidden="true">&times;</span>' +
+                        '</button>' +
+                        '<strong>成功</strong>' + info +
+                        '</div>'
+                $('#alert').empty().append(msg);
+            }
+
+            function showError(err) {
+                var msg = '<div class="alert alert-danger text-center" role="alert">' +
+                        '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                        '<span aria-hidden="true">&times;</span>' +
+                        '</button>' +
+                        '<strong>错误!</strong>' + err +
+                        '</div>'
+                $('#alert').empty().append(msg);
+            }
+
+            function initBtn() {
+                $('#confirmrmvbtn').bind('click', function () {
+                    var rmvid = $('#rmvid').val();
+                    var rmv_group = $('#rmv_group').val();
+                    var rmv_env = $('#rmv_env').val();
+                    var rmv_dataid = $('#rmv_dataid').val();
+                    var rmv_idc = $('#rmv_idc').val();
+                    $.ajax({
+                        url: '{{ CMDBAPI_URL }}ycc/configinfo/v3/' + rmvid + '/',
+                        type: 'DELETE',
+                        async: false,
+                        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                        data: {
+                            'configinfo_id': rmvid,
+                            'rmv_group': rmv_group,
+                            'rmv_env': rmv_env,
+                            'rmv_dataid': rmv_dataid,
+                            'rmv_idc': rmv_idc,
+                        },
+                        success: function (json) {
+                            showSuccess('删除配置文件');
+                            $('#asset').bootstrapTable('refresh', {
+                                silent: false
+                            });
+                            $('#show_cmp').bootstrapTable('refresh', {
+                                silent: false
+                            });
+                            $('#confirmrmv').modal('hide');
+                        },
+                        error: function (json) {
+                            showError('删除配置文件' + JSON.stringify(json.responseText));
+                            $('#confirmrmv').modal('hide');
+                        }
+                    });
+                });
+            }
+
+            initBtn();
+            $("#group_id").combobox({});
+            $("#upgroup_id").combobox({});
+            $("#db_group_id").combobox({});
+            $("#params_group_id").combobox({});
+
+            $("#db_group_id").change(function () {
+                $('#attributeForm2').data('bootstrapValidator')
+                        .updateStatus('db_group_id', 'NOT_VALIDATED').validateField('db_group_id');
+                if($(this).find('option:selected').val())
+                    app_id = $(this).find('option:selected').attr('app_id');
+            });
+            $("#db_instance_id").change(function () {
+                $('#attributeForm2').data('bootstrapValidator')
+                        .updateStatus('db_instance_id', 'NOT_VALIDATED').validateField('db_instance_id');
+            });
+
+            $("#group_id").change(function () {
+                $('#attributeForm').data('bootstrapValidator')
+                        .updateStatus('group_id', 'NOT_VALIDATED').validateField('group_id');
+                if($(this).find('option:selected').val())
+                    app_id = $(this).find('option:selected').attr('app_id');
+            });
+
+            $('#env4shift').change(function () {
+                window.location = '/deploy/yccv2/configinfo/v3/?env_id=' + $('#env4shift').val();
+            });
+
+            function detailConfig (data_id, group_id, is_cmp_type) {
+                $('#descriptionValue').modal('show');
+                $('#show_cmp_div').css('display', '');
+                var pool_table = $('#show_cmp  tr').val();
+                var url1 = '{{ CMDBAPI_URL }}ycc/configinfo/parm_list/?data_id=' + data_id + '&group_id=' + group_id
+                var columns = [
+                    {
+                        field: 'data_id',
+                        title: '配置文件',
+                    },
+                    {
+                        field: 'group_id',
+                        title: '配置组',
+                        sortable: true,
+                    },
+                    {
+                        field: 'env_name',
+                        title: '环境',
+                        sortable: true,
+                    },
+                    {
+                        field: 'idc',
+                        title: 'IDC',
+                        sortable: true,
+                    },
+                    {
+                        field: 'content_md5',
+                        title: 'MD5',
+                        sortable: true,
+                        visible: true
+                    },
+                    {
+                        field: 'modified_by',
+                        title: '修改人',
+                        visible: true
+                    },
+                    {
+                        field: 'modified_time',
+                        formatter: timeformat,
+                        title: '修改时间'
+                    },
+                    {
+                        field: 'operate',
+                        title: '操作',
+                        align: 'left',
+                        formatter: operateDetailConfig,
+                        events: 'operateEvents'
+                    }
+                ]
+                {#                if (is_cmp_type == 1) {#}
+                {#                    alert(1)#}
+                {#                    columns[4]['visible'] = true#}
+                {#                } else if (is_cmp_type == 0) {#}
+                {#                    alert(2)#}
+                {#                    columns[4]['visible'] = false#}
+                {#                } else {#}
+                {#                    alert('Please check is_cmp_type.')#}
+                {#                }#}
+                if (pool_table == undefined) {
+                    $('#show_cmp').bootstrapTable({
+                        url: url1,
+                        method: 'get',
+                        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                        undefinedText: '-',
+                        cache: false,
+                        pagination: true,
+                        pageSize: 20,
+                        pageNumber: 1,
+                        sortable: true,
+                        sortName: 'data_id',
+                        sortOrder: '',
+                        columns: columns
+                    });
+                } else {
+                    $('#show_cmp').bootstrapTable('refresh', {
+                        url: url1,
+                    });
+                }
+            };
+
+            function showStatusMsg(alert_class, env_name) {
+                var msg = '<div class="alert alert-danger text-center" role="alert">' +
+                        '提示：该配置组';
+                if (env_name) {
+                    msg = msg + '(' + env_name + ')';
+                }
+                msg = msg + '已提交过审核，如需新内容<strong>生效</strong>，请先<strong>取消提交</strong>并<strong>重新发布</strong>。</div>';
+                $('.' + alert_class).empty().append(msg);
+            }
+
+            function clickEditAction (row, type, cond) {
+                $('#view_button button[type="button"]').show();
+                if (cond == 'edit') {
+                    if (row.is_cmp == 1 || type == 'detail') {
+                        if (row.config_type == 1 || row.config_type == 3) {
+                            $('#editValueTitle').text('编辑配置文件');
+                            $('#editValue').modal('show');
+                            $('#editviewtype').val('default');
+                        } else if (row.config_type == 2) {
+                            $('#editviewtype').val('default');
+                            $('#editValueTitle').text('编辑DB配置文件');
+                            init_select($('#editdb_instance_id'), '')
+                            $('#editdb_instance_id').find('option').removeAttr('selected');
+                            var count = $("#editdb_instance_id option").length;
+                            for (var i = 0; i < count; i++) {
+                                if ($("#editdb_instance_id").get(0).options[i].value == row.db_instance_id) {
+                                    $("#editdb_instance_id").get(0).options[i].selected = true;
+                                    break;
+                                }
+                            }
+                            $("#editdb_instance_id").data('combobox').refresh();
+                            $('#editdbValue').modal('show');
+                        }
+                    } else if (row.is_cmp == 0 && type == 'default') {
+                        detailConfig(row.data_id, row.group_id, row.is_cmp_type)
+                    } else {
+                        alert('未初始化，请联系张载彬(zhangzaibin)!')
+                    }
+                } else if (cond == 'upload') {
+                    clickUploadAction(row)
+                }
+            }
+
+            function clickUploadAction (row) {
+                if (row.config_type == 1 || row.config_type == 3) {
+                    $('#editValueTitle').text('修改上传配置文件');
+                    $('#editUploadValue').modal('show');
+                    $('#editviewtype').val('default')
+                }
+            }
+
+            function clickViewAction (row, type) {
+                $('#view_button button[type="button"]').hide();
+                if (row.is_cmp == 1 || type == 'detail') {
+                    if (row.config_type == 1 || row.config_type == 3) {
+                        $('#editValueTitle').text('浏览配置文件');
+                        $('#editValue').modal('show');
+                        $('#editviewtype').val('default')
+                    } else if (row.config_type == 2) {
+                        $('#editviewtype').val('viewkv')
+                        $('#editValueTitle').text('浏览配置文件');
+                        $('#editValue').modal('show');
+                    }
+                } else if (row.is_cmp == 0 && type == 'default') {
+                    detailConfig(row.data_id, row.group_id, row.is_cmp_type)
+                } else {
+                    alert('clickViewAction Warning!')
+                }
+            }
+
+            window.operateEvents = {
+                'click .view': function (e, value, row, index) {
+                    clickViewAction(row, 'default')
+                }, 'click .edit': function (e, value, row, index) {
+                    $('.alert1').empty();
+                    if (row.is_cmp == 1 && row.is_group_status)
+                        showStatusMsg('alert1', '');
+                    $("#edit_idc_div").css('display', 'none');
+                    $("#edit_env_div").css('display', 'none');
+                    $("#edit_idc_db_div").css('display', 'none');
+                    $("#edit_env_db_div").css('display', 'none');
+                    clickEditAction(row , 'default', 'edit')
+                }, 'click .remove': function (e, value, row, index) {
+                    $('#confirmrmv').modal();
+                    $('#rmtext').text('您确定要删除<配置文件：“' + row.data_id + '”><配置组：“' + row.group_id + '”>中的所有配置文件吗？');
+                }, 'click .edit_upload': function (e, value, row, index) {
+{#                    clickUploadAction(row)#}
+                    $('.alert1').empty();
+                    if (row.is_cmp == 1)
+                        showStatusMsg('alert1', '');
+                    $("#edit_idc_upload_div").css('display', 'none');
+                    $("#edit_env_upload_div").css('display', 'none');
+                    clickEditAction(row , 'default', 'upload')
+                }, 'click .revert': function (e, value, row, index) {
+                    bootbox.confirm("是否进行还原操作？", function (result) {
+                        if (result) {
+                            revert(row.id);
+                            $('#asset').bootstrapTable('refresh', {
+                                silent: false
+                            });
+                            $('#show_cmp').bootstrapTable('refresh', {
+                                silent: false
+                            });
+                        }
+                    });
+                }, 'click .compare': function (e, value, row, index) {
+                    compare(row.id);
+                }, 'click .editDetail': function (e, value, row, index) {
+                    $('.alert1').empty();
+                    if (row.env == 7 && row.is_configinfo_status) {
+                        showStatusMsg('alert1', row.idc);
+                    }
+                    $("#edit_idc_div").css('display', 'block');
+                    $("#edit_env_div").css('display', 'block');
+                    $("#edit_idc_db_div").css('display', 'block');
+                    $("#edit_env_db_div").css('display', 'block');
+                    clickEditAction(row , 'detail', 'edit')
+                }, 'click .edit_uploadDetail': function (e, value, row, index) {
+                    $('.alert1').empty();
+                    if (row.env == 7 && row.is_configinfo_status) {
+                        showStatusMsg('alert1', row.idc);
+                    }
+                    clickUploadAction(row)
+                }, 'click .viewDetail': function (e, value, row, index) {
+                    clickViewAction(row, 'detail')
+                },
+            };
+
+            function exactlyFilter() {
+                var params_idc = $("#params_idc option:selected").val();
+                var params_env_id = $("#params_env_id option:selected").val();
+                var params_group_id = $("#params_group_id").val();
+                var api_url_base = '{{ CMDBAPI_URL }}ycc/configinfo/v3/?';
+{#                var params_is_cmp = $("#params_is_cmp").val();#}
+                var params_configtype = $("#params_configtype").val();
+                var params = ['format=json'];
+                if (params_idc != "") {
+{#                    params.push('group_status__group__idc__id=' + params_idc);#}
+                    params.push('group_status__group__idc__id=1');
+                }
+                if (params_env_id != "") {
+{#                    params.push('env=' + params_env_id);#}
+                    params.push('env={{ YCC_CMP_ENV }}');
+                }
+                if (params_group_id != "") {
+                    params.push('group_status__group__group_id=' + params_group_id);
+                }
+{#                if (params_is_cmp != "") {#}
+{#                    params.push('is_cmp=' + params_is_cmp);#}
+{#                }#}
+                if (params_configtype != "") {
+                    params.push('config_type=' + params_configtype);
+                }
+                var api_url = api_url_base + params.join('&')
+                $('#asset').bootstrapTable('refresh', {
+                    url: api_url
+                });
+            }
+
+{#            $("#params_is_cmp").change(function () {#}
+{#                exactlyFilter();#}
+{#            });#}
+
+            $("#params_configtype").change(function () {
+                exactlyFilter();
+            });
+
+            $("#params_idc").change(function () {
+                exactlyFilter();
+            });
+
+            $("#params_env_id").change(function () {
+                exactlyFilter();
+            });
+
+            $("#params_group_id").change(function () {
+                if ($("#params_group_id").val() != '')
+                    exactlyFilter();
+            });
+
+            $('#asset').bootstrapTable({
+                url: '{{ CMDBAPI_URL }}ycc/configinfo/v3/',
+                ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                columns: [
+                    {
+                        field: 'id',
+                        visible: false
+                    },
+                    {
+                        field: 'data_id',
+                        title: '配置文件'
+                    },
+                    {
+                        field: 'group_id',
+                        title: '配置组'
+                    },
+                    {
+                        field: 'idc',
+                        title: 'IDC',
+                        visible: false
+                    },
+                    {
+                        field: 'env',
+                        visible: false
+                    },
+                    {
+                        field: 'env_name',
+                        title: '环境',
+                        visible: false
+                    },
+                    {
+                        field: 'content_nopwd',
+                        visible: false
+                    },
+                    {
+                        field: 'content',
+                        visible: false
+                    },
+                    {
+                        field: 'created_time',
+                        formatter: timeformat,
+                        title: '创建时间',
+                        visible: false
+                    },
+                    {
+                        field: 'created_by',
+                        title: '创建人',
+                        visible: false
+                    },
+                    {
+                        field: 'modified_time',
+                        formatter: timeformat,
+                        title: '修改时间',
+                        visible: false
+                    },
+                    {
+                        field: 'modified_by',
+                        title: '修改人',
+                        visible: false
+                    },
+                    {
+                        field: 'config_type_name',
+                        title: '文件类型',
+                        visible: true
+                    },
+                    {
+                        field: 'is_cmp',
+                        title: '是否一致化',
+                        formatter: iscmpFormatter,
+                        visible: true
+                    },
+                    {
+                        field: 'operate',
+                        title: '操作',
+                        align: 'left',
+                        formatter: operateFormatter,
+                        events: operateEvents
+                    }
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                    {% if app_id %}
+                        group_status__group__app_id: {{ app_id }},
+                    {% endif %}
+                        group_name: 'YCC_ADMIN',
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search,
+                        format: 'json',
+                    };
+                },
+                pagination: true,
+                pageSize: 50,
+                pageList: [10, 20, 100],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: true,
+                showColumns: true,
+                toolbar: "#toolbar",
+                cache: false
+            });
+
+            function refresh_table(id) {
+                if (id == 'upload1') {
+                    $("#" + id).bind("click", function () {
+                        $('#asset').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#show_cmp').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#uploadForm').bootstrapValidator('resetForm', true);
+                        $('#uploadValue').modal('hide');
+                        $('#selectValue').modal('hide');
+                    });
+                } else if (id == 'upload2') {
+                    $("#" + id).bind("click", function () {
+                        $('#asset').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#show_cmp').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#editUploadForm').bootstrapValidator('resetForm', true);
+                        $('#editUploadValue').modal('hide');
+                        $('#selectValue').modal('hide');
+                    });
+                }
+            }
+
+            function getLocalTime(nS) {
+                var date = new Date(nS * 1000);
+                var Y = date.getFullYear() + '-';
+                var M = date.getMonth() + 1;
+                M = (M < 10 ? '0' + M : M) + '-';
+                var D = date.getDate();
+                D = (D < 10 ? '0' + D : D) + ' ';
+                var h = date.getHours();
+                h = (h < 10 ? '0' + h : h) + ':';
+                var m = date.getMinutes()
+                m = (m < 10 ? '0' + m : m) + ':';
+                var s = date.getSeconds()
+                s = s < 10 ? '0' + s : s;
+                return Y + M + D + h + m + s;
+            }
+
+            function timeformat(value, row, index) {
+                if (value == 0)
+                    return '';
+                else
+                    return getLocalTime(value);
+            }
+
+            function operateDetailConfig(value, row, index) {
+                var hrefarr = [];
+                if (row.app_status == 1 || row.config_type == 3) {
+                    hrefarr.push(
+                        '<a class="viewDetail">',
+                        '<span class="glyphicon glyphicon glyphicon-eye-open" title="浏览" style="cursor:pointer;margin-right:10px;"></span>',
+                        '</a>');
+                }
+                {% if is_commit %}
+                    if ((row.config_type == 1 || row.config_type == 2) && row.app_status == 0) {
+                        hrefarr.push(
+                                '<a class="editDetail">',
+                                '<span class="glyphicon glyphicon-pencil" title="编辑" style="cursor:pointer;margin-right:10px;"></span>',
+                                '</a>');
+                    }
+                    if (row.config_type == 1 && row.app_status == 0) {
+                        hrefarr.push(
+                                '<a class="edit_uploadDetail">',
+                                '<span class="glyphicon glyphicon-upload" title="上传" style="cursor:pointer;margin-right:10px;"></span>',
+                                '</a>');
+                    }
+                {% endif %}
+                return hrefarr.join('');
+            }
+
+            function iscmpFormatter(value, row, index) {
+                var hrefarr = '';
+                if (row.is_cmp == 1) {
+                    hrefarr = '是'
+                } else if (row.is_cmp == 0) {
+                    hrefarr = '否'
+                } else {
+                    hrefarr = '未知'
+                }
+                return hrefarr
+            }
+
+            function operateFormatter(value, row, index) {
+                var hrefarr = [];
+                if (row.app_status == 1 || row.config_type == 3) {
+                    hrefarr.push(
+                        '<a class="view">',
+                        '<span class="glyphicon glyphicon glyphicon-eye-open" title="浏览" style="cursor:pointer;margin-right:10px;"></span>',
+                        '</a>');
+                }
+                {% if is_commit %}
+                    if ((row.config_type == 1 || row.config_type == 2) && row.app_status == 0) {
+                        hrefarr.push(
+                                '<a class="edit">',
+                                '<span class="glyphicon glyphicon-pencil" title="编辑" style="cursor:pointer;margin-right:10px;"></span>',
+                                '</a>');
+                    }
+                    if (row.config_type == 1 && row.app_status == 0 && row.is_cmp == 1) {
+                        hrefarr.push(
+                                '<a class="edit_upload">',
+                                '<span class="glyphicon glyphicon-upload" title="上传" style="cursor:pointer;margin-right:10px;"></span>',
+                                '</a>');
+                    }
+                    if (row.app_status == 0) {
+                        hrefarr.push(
+                                '<a class="remove">',
+                                '<span class="glyphicon glyphicon-remove" title="删除" style="cursor:pointer;margin-right:10px;color:red;"></span>',
+                                '</a>');
+                    }
+                {% endif %}
+                return hrefarr.join('');
+            };
+
+
+            $('#show_cmp').on('click-row.bs.table', function (e, row, $element) {
+                app_id = row.app_id;
+                $('#rmvid').val(row.id);
+                $('#rmv_group').val(row.group_id);
+                $('#rmv_env ').val(row.env_name);
+                $('#rmv_dataid').val(row.data_id);
+                $('#rmv_idc').val(row.idc_id);
+                if (row.config_type == 1 || row.config_type == 3) {
+                    $('#edit_id').val(row.id);
+                    $('#edit_group_id').val(row.group_id);
+                    $("#edit_data_id").val(row.data_id);
+                    $('#edit_env').val(row.env_name);
+                    $('#edit_content').val(row.content || row.content_nopwd);
+                    $('#edit_upload_group_id').val(row.group_id);
+                    $("#edit_upload_data_id").val(row.data_id);
+                    $('#edit_upload_env').val(row.env_name);
+                    $('#edit_upload_content').val(row.content || row.content_nopwd);
+                    $('#euid').val(row.id);
+                    $('#edit_idc').val(row.idc);
+                    $('#edit_upload_idc').val(row.idc)
+                    $('#edit_upload_idc_id').val(row.idc_id)
+                    $('#edit_idc_id').val(row.idc_id)
+                } else if (row.config_type == 2) {
+                    if ($('#editviewtype').val() == 'default') {
+                        $('#editdb_idc').val(row.idc);
+                        $('#editdb_idc_id').val(row.idc_id);
+                        $('#editdb_env').val(row.env_name);
+                        $('#editdb_id').val(row.id);
+                        $("#editdb_data_id").val(row.data_id);
+                        $('#editdb_group_id').val(row.group_id);
+                        $('#editdb_group_id_hid').val(row.group_status);
+                        jdbcView($('#editjdbc'), $('#editdb_instance_id'), 2, 2);
+                    } else {
+                        $('#edit_id').val(row.id);
+                        $('#edit_group_id').val(row.group_id);
+                        $("#edit_data_id").val(row.data_id);
+                        $('#edit_env').val(row.env_name);
+                        $('#edit_content').val(row.content);
+                        if (row.content == null) {
+                            $('#edit_content').val(row.content_nopwd);
+                        }
+                        $('#edit_upload_group_id').val(row.group_id);
+                        $("#edit_upload_data_id").val(row.data_id);
+                        $('#edit_upload_env').val(row.env_name);
+                        $('#edit_upload_content').val(row.content);
+                        $('#euid').val(row.id);
+                        $('#edit_idc').val(row.idc);
+                    }
+                }
+            });
+
+            $('#asset').on('click-row.bs.table', function (e, row, $element) {
+                app_id = row.app_id;
+                $('#rmvid').val(row.id);
+                $('#rmv_group').val(row.group_id);
+                $('#rmv_env ').val(row.env_name);
+                $('#rmv_dataid').val(row.data_id);
+                $('#rmv_idc').val(row.idc_id);
+                if (row.is_cmp == 1) {
+                    if (row.config_type == 1 || row.config_type == 3) {
+                        $('#edit_id').val(row.id);
+                        $('#edit_group_id').val(row.group_id);
+                        $("#edit_data_id").val(row.data_id);
+                        $('#edit_env').val(row.env_name);
+                        $('#edit_content').val(row.content || row.content_nopwd);
+                        $('#edit_upload_group_id').val(row.group_id);
+                        $("#edit_upload_data_id").val(row.data_id);
+                        $('#edit_upload_env').val(row.env_name);
+                        $('#edit_upload_content').val(row.content || row.content_nopwd);
+                        $('#euid').val(row.id);
+                        $('#edit_idc').val(row.idc);
+                        $('#edit_upload_idc').val(row.idc)
+                        $('#edit_upload_idc_id').val(row.idc_id)
+                        $('#edit_idc_id').val(row.idc_id)
+                    } else if (row.config_type == 2) {
+                        if ($('#editviewtype').val() == 'default') {
+                            $('#editdb_idc').val(row.idc);
+                            $('#editdb_idc_id').val(row.idc_id);
+                            $('#editdb_env').val(row.env_name);
+                            $('#editdb_id').val(row.id);
+                            $("#editdb_data_id").val(row.data_id);
+                            $('#editdb_group_id').val(row.group_id);
+                            $('#editdb_group_id_hid').val(row.group_status);
+                            jdbcView($('#editjdbc'), $('#editdb_instance_id'), 2, 2);
+                        } else {
+                            $('#edit_id').val(row.id);
+                            $('#edit_group_id').val(row.group_id);
+                            $("#edit_data_id").val(row.data_id);
+                            $('#edit_env').val(row.env_name);
+                            $('#edit_content').val(row.content);
+                            if (row.content == null) {
+                                $('#edit_content').val(row.content_nopwd);
+                            }
+                            $('#edit_upload_group_id').val(row.group_id);
+                            $("#edit_upload_data_id").val(row.data_id);
+                            $('#edit_upload_env').val(row.env_name);
+                            $('#edit_upload_content').val(row.content);
+                            $('#euid').val(row.id);
+                            $('#edit_idc').val(row.idc);
+                        }
+                    }
+                }
+            });
+
+            $('#attributeForm')
+                    .bootstrapValidator({
+                        excluded: ':disabled',
+                        fields: {
+                            group_id: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '配置组不能为空。'
+                                    }
+                                }
+                            },
+{#                            env: {#}
+{#                                validators: {#}
+{#                                    notEmpty: {#}
+{#                                        message: '环境不能为空。'#}
+{#                                    }#}
+{#                                }#}
+{#                            },#}
+                            data_id: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '文件名称不能为空。'
+                                    }
+                                }
+                            },
+                            content: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '内容不能为空。'
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        if(create()){
+                            var $form = $(e.target), $button = $form.data('bootstrapValidator').getSubmitButton();
+                            if($button.hasClass('deploy'))
+                                deploy();
+                            else if($button.hasClass('commit'))
+                                commit();
+                        }
+                    });
+
+            $('#attributeForm2')
+                    .bootstrapValidator({
+                        excluded: ':disabled',
+                        fields: {
+                            db_group_id: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '配置组不能为空。'
+                                    }
+                                }
+                            },
+                            db_env: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '环境不能为空。'
+                                    }
+                                }
+                            },
+                            db_data_id: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '文件名称不能为空。'
+                                    }
+                                }
+                            },
+                            db_instance_id: {
+                                validators: {
+                                    notEmpty: {
+                                        message: 'DB标识符不能为空。'
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        if(create_db()){
+                            var $form = $(e.target), $button = $form.data('bootstrapValidator').getSubmitButton();
+                            if($button.hasClass('deploy'))
+                                deploy();
+                            else if($button.hasClass('commit'))
+                                commit();
+                        }
+                    });
+
+            $("#input-4").fileinput({
+                showUpload: true,
+                showPreview: true,
+                showCaption: false,
+                overwriteInitial: true,
+                uploadAsync: true,
+                language: 'zh',
+                allowedFileTypes: ['text', 'html', 'jpg'],
+                allowedFileExtensions: ['txt', 'sql', 'properties', 'xml', 'html', 'cfg', 'ini', 'log', 'jpg'],
+                maxFileSize: 1024,
+                maxFileCount: 20,
+                textEncoding: 'utf8',
+                uploadUrl: "{{ CMDBAPI_URL }}ycc/configinfouploadv3/",
+                enctype: 'multipart/form-data',
+                uploadExtraData: function () {
+                    return {
+                        'group_status_upload': $("#upgroup_id option:selected").val(),
+                        'group_name': $("#upgroup_id option:selected").text(),
+                        'env': $("#upenv option:selected").val(),
+                        'op_type': 'add',
+                        'input_name': this.id,
+                        'upload_idc': $("#upidc option:selected").val(),
+                        'username': "{{ user_for_upload_tmp }}"
+                    }
+                },
+                ajaxSettings: {
+                    'ajaxOptions': {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                    'dataType': 'json',
+                    success: function (response) {
+                        if (response['success'] == true) {
+                            $("#upgroup_id").data('combobox').refresh();
+{#                            $("#upenv").data('combobox').refresh();#}
+{#                            $("#upidc").data('combobox').refresh();#}
+                        } else if (response['success'] == false) {
+                            alert('Error: ' + response['msg'])
+                        } else {
+                            alert('gun')
+                        }
+                    }
+                }
+            }).on('filebatchpreupload', function (event, data, id, index) {
+                $('#kv-success-1').html('')
+                $('#kv-success-1').html('<h4>Upload Status</h4><ul></ul>').hide()
+                $('#view_upload_button').empty();
+                $('#view_upload_button').append('<input type="button" class="btn btn-green" id="upload1" value="确定">');
+                refresh_table('upload1')
+            }).on('fileuploaded', function (event, data, id, index) {
+                var fname = data.files[index].name,
+                        out = '<li>' + '上传配置文件 # ' + (index + 1) + ' - ' +
+                                fname + ' 成功！' + '</li>';
+                $('#kv-success-1 ul').append(out);
+                $('#kv-success-1').fadeIn('slow');
+            }).on('fileloaded', function (event, file, previewId, index, reader) {
+
+            }).on('filebatchuploadcomplete', function (event, files, extra) {
+                $('#view_upload_button').empty();
+                $('#view_upload_button').append('<input type="button" class="btn btn-green" id="upload1" value="确定">');
+                refresh_table('upload1')
+            });
+
+            $("#euinput-4").fileinput({
+                showUpload: true,
+                showPreview: true,
+                showCaption: false,
+                overwriteInitial: true,
+                uploadAsync: true,
+                language: 'zh',
+                allowedFileTypes: ['text', 'html', 'jpg'],
+                allowedFileExtensions: ['txt', 'sql', 'properties', 'xml', 'html', 'cfg', 'ini', 'log', 'jpg'],
+                maxFileSize: 1024,
+                maxFileCount: 20,
+                textEncoding: 'utf8',
+                uploadUrl: "{{ CMDBAPI_URL }}ycc/configinfouploadv3/",
+                enctype: 'multipart/form-data',
+                uploadExtraData: function () {
+                    return {
+                        'group_status_upload': $('#edit_upload_group_id').val(),
+                        'group_name': $("#edit_upload_group_id option:selected").text(),
+                        'env': $('#edit_upload_env').val(),
+                        'upload_data_id': $('#edit_upload_data_id').val(),
+                        'op_type': 'edit',
+                        'input_name': this.id,
+                        'euid': $('#euid').val(),
+                        'upload_idc': $("#edit_upload_idc_id").val(),
+                        'username': "{{ user_for_upload_tmp }}"
+                    }
+                },
+                ajaxSettings: {
+                    'ajaxOptions': {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                }
+            }).on('filebatchpreupload', function (event, data, id, index) {
+                $('#eukv-success-1').html('')
+                $('#eukv-success-1').html('<h4>Upload Status</h4><ul></ul>').hide()
+            }).on('fileuploaded', function (event, data, id, index) {
+                var fname = data.files[index].name,
+                        out = '<li>' + '更新配置文件 # ' + (index + 1) + ' - ' +
+                                fname + ' 成功！' + '</li>';
+                $('#eukv-success-1 ul').append(out);
+                $('#eukv-success-1').fadeIn('slow');
+            }).on('fileloaded', function (event, file, previewId, index, reader) {
+            }).on('filebatchuploadcomplete', function (event, files, extra) {
+                $('#eu_view_upload_button').empty();
+                $('#eu_view_upload_button').append('<input type="button" class="btn btn-green" id="upload2" value="确定">');
+                refresh_table('upload2')
+            });
+            function revert(edit_config_info_id) {
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}ycc/revert/',
+                    async: false,
+                    method: 'put',
+                    data: {
+                        edit_config_info_id: edit_config_info_id
+                    },
+                    headers: {
+                        Authorization: 'Token {{ API_TOKEN }}'
+                    },
+                    success: function (json) {
+                        bootbox.alert('还原成功');
+                    },
+                    error: function (json) {
+                        bootbox.alert(json.responseText);
+                    }
+                });
+            }
+
+            function compare(edit_config_info_id) {
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}ycc/compare/',
+                    async: false,
+                    method: 'get',
+                    data: {
+                        edit_config_info_id: edit_config_info_id
+                    },
+                    headers: {
+                        Authorization: 'Token {{ API_TOKEN }}'
+                    },
+                    success: function (json) {
+                        diffUsingJS('diff', json.published, json.edit, 'Published', 'Edit');
+                        $('#modal_diff').modal('show');
+                    },
+                    error: function (json) {
+                        bootbox.alert(json.responseText);
+                    }
+                });
+            }
+
+            function init_alert(alert_class, alert) {
+                $('#alert').empty();
+                $('<div>').attr({
+                    class: ['alert', alert_class, 'alert-dismissible', 'text-center'].join(' '),
+                    role: 'alert'
+                }).append($('<button>').attr({
+                            type: 'button',
+                            class: 'close',
+                            'data-dismiss': 'alert',
+                            'aria-label': 'Close'
+                        }).append($('<span>').attr('aria-hidden', 'true').html('&times;'))
+                ).append($('<strong>').text(alert)).prependTo($('#alert'));
+            }
+
+            function diffUsingJS(id, content1, content2, baseTextName, newTextName) {
+                content1 = content1 == '' ? [] : difflib.stringAsLines(content1);
+                content2 = content2 == '' ? [] : difflib.stringAsLines(content2);
+                var sm = new difflib.SequenceMatcher(content1, content2);
+                var opcodes = sm.get_opcodes();
+                var diffoutputdiv = document.getElementById(id);
+                while (diffoutputdiv.firstChild)
+                    diffoutputdiv.removeChild(diffoutputdiv.firstChild);
+                var contextSize = 1;
+                contextSize = contextSize ? contextSize : null;
+                diffoutputdiv.appendChild(diffview.buildView({
+                    baseTextLines: content1,
+                    newTextLines: content2,
+                    opcodes: opcodes,
+                    baseTextName: baseTextName,
+                    newTextName: newTextName,
+                    contextSize: contextSize,
+                    viewType: 0
+                }));
+            }
+
+            function save() {
+                var edit_id = $('#edit_id').val();
+                var content = $('#edit_content').val();
+                var success = false;
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}ycc/configinfo/v3/' + edit_id + '/',
+                    type: 'PATCH',
+                    async: false,
+                    data: {
+                        'config_type': 1,
+                        'content': content,
+                        'group_name': $('#edit_group_id').val(),
+                        'data_id': $('#edit_data_id').val(),
+                        'env_name': $('#edit_env').val(),
+                        'idc': $('#edit_idc_id').val(),
+                    },
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        init_alert('alert-success', '修改配置文件成功')
+                        $('#asset').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#show_cmp').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#editValue').modal('hide');
+                        success = true;
+                    },
+                    error: function (json) {
+                        init_alert('alert-danger', '修改配置文件失败：' + JSON.stringify(json.responseText))
+                        $('#editValue').modal('hide');
+                    }
+                });
+                return success;
+            }
+            function save_db(){
+                var editdb_id = $('#editdb_id').val();
+                var checkbox1 = document.getElementsByName('editjdbckv');
+                var data_id = $('#editdb_data_id').val();
+                var arrays1 = new Array()
+                var flag = 0//default 1
+                var success = false;
+                for (var i = 0; i < checkbox1.length; i++) {
+                    var tmpid = checkbox1[i].id.split('_')[0]
+                    var dbtype = document.getElementById(tmpid + '_dbtype').value;
+                    var jdbc_key = 'jdbc.' + tmpid.toString().substr(4)
+                    if (document.getElementById(tmpid).value != '') {
+                        arrays1[flag] = dbtype + '^^^^^^^' + jdbc_key + '^^^^^^^' + document.getElementById(tmpid).value;
+                        flag += 1
+                    }
+                }
+                var jdbckv_string = arrays1.join(',,,,,,,')
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}ycc/configinfo/v3/' + editdb_id + '/',
+                    type: 'PATCH',
+                    async: false,
+                    data: {
+                        'config_type': 2,
+                        'content': $("#editdb_instance_id").val(),
+                        'jdbckv_string': jdbckv_string,
+                        'data_id': data_id,
+                        'env_name': $('#editdb_env').val(),
+                        'group_status': $("#editdb_group_id_hid").val(),
+                        'group_name': $("#editdb_group_id").val(),
+                        'db_type': dbtype,
+                        'idc': $('#editdb_idc_id').val(),
+                        'db_instance_id': $("#editdb_instance_id option:selected").val()
+                    },
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+{#                        showSuccess('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>修改配置文件</div>')#}
+                        $('#alert').empty()
+                        $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>修改配置文件</div>');
+                        $('#asset').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#show_cmp').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#editdbValue').modal('hide');
+                        $('#attributeForm3').bootstrapValidator('resetForm', true);
+                        success = true;
+                    },
+                    error: function (json) {
+                        showError('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>修改配置文件' + JSON.stringify(json.responseText) + '</div>')
+{#                        $('#alert').empty()#}
+{#                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>修改配置文件' + JSON.stringify(json.responseText) + '</div>');#}
+                        $('#editdbValue').modal('hide');
+                    }
+                });
+                return success;
+            }
+
+            function create() {
+                var success = false;
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}ycc/configinfo/v3/',
+                    type: 'POST',
+                    async: false,
+                    data: {
+                        'group_status': $("#group_id option:selected").val(),
+                        'group_name': $("#group_id option:selected").text(),
+                        'idc_name': $("#idc option:selected").text(),
+                        'data_id': $.trim($("#data_id").val()),
+{#                        'env': $("#env option:selected").val(),#}
+                        'env': {{ YCC_CMP_ENV }},
+                        'config_type': 1,
+                        'content': $("#content").val()
+                    },
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+{#                        showSuccess('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>添加配置文件</div>')#}
+                        $('#alert').empty()
+                        $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>添加配置文件</div>');
+                        $('#asset').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#show_cmp').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#addValue').modal('hide');
+                        $('#selectValue').modal('hide');
+                        success = true;
+                    },
+                    error: function (json) {
+                        showError('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加配置文件' + JSON.stringify(json.responseText) + '</div>')
+{#                        $('#alert').empty()#}
+{#                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加配置文件' + JSON.stringify(json.responseText) + '</div>');#}
+                        $('#addValue').modal('hide');
+                        $('#selectValue').modal('hide');
+                    }
+                });
+                return success;
+            }
+            function create_db(){
+                var success = false;
+                var checkbox1 = document.getElementsByName('jdbckv');
+                var arrays1 = new Array()
+                var flag = 0//default 1
+                for (var i = 0; i < checkbox1.length; i++) {
+                    var tmpid = checkbox1[i].id.split('_')[0]
+                    var dbtype = document.getElementById(tmpid + '_dbtype').value;
+                    var jdbc_key = 'jdbc.' + tmpid.toString()
+                    if (document.getElementById(tmpid).value != '') {
+                        arrays1[flag] = dbtype + '^^^^^^^' + jdbc_key + '^^^^^^^' + document.getElementById(tmpid).value;
+                        flag += 1
+                    }
+                }
+                var jdbckv_string = arrays1.join(',,,,,,,')
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}ycc/configinfo/v3/',
+                    type: 'POST',
+                    async: false,
+                    data: {
+                        'group_status': $("#db_group_id option:selected").val(),
+                        'group_name': $("#db_group_id option:selected").text(),
+                        'idc_name': $("#db_idc option:selected").text(),
+                        'data_id': $.trim($("#db_data_id").val()),
+{#                        'env': $("#db_env option:selected").val(),#}
+                        'env': 8,
+                        'config_type': 2,
+                        'db_instance_id': $("#db_instance_id option:selected").val(),
+                        'jdbckv_string': jdbckv_string,
+                        'db_type': dbtype,
+                    },
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+{#                        showSuccess('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>添加配置文件</div>')#}
+                        $('#alert').empty()
+                        $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>添加配置文件</div>');
+                        $('#asset').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#show_cmp').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#adddbValue').modal('hide');
+                        $('#selectValue').modal('hide');
+                        success = true;
+                    },
+                    error: function (json) {
+                        showError('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加配置文件' + JSON.stringify(json.responseText) + '</div>')
+{#                        $('#alert').empty()#}
+{#                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加配置文件' + JSON.stringify(json.responseText) + '</div>');#}
+                        $('#adddbValue').modal('hide');
+                        $('#selectValue').modal('hide');
+                    }
+                });
+                return success;
+            }
+            function restart(){
+                $.ajax({
+                    url: '/ticket/api/index.php/',
+                    type: 'get',
+                    async: false,
+                    data: {
+                        action: 'ticket',
+                        method: 'restartTomcat',
+                        pool_id: app_id,
+                        env_id: 1,
+                        reason: 'ycc',
+                        reset_type: 2,
+                        reset_time: 1,
+                        reason_type: 2,
+                        from_user: '{{ user_for_upload_tmp.username }}'
+                    },
+                    success: function (json) {
+                        json = $.parseJSON(json);
+                        if(json.code == 100)
+                            bootbox.alert(['打开'+$('<a>').attr({
+                                href: '/ticket/?action=ticket&method=newGetMyticketSmarty',
+                                target: '_blank'
+                            }).text('已发流程')[0].outerHTML, '点击流程编号为<font color="red">'+json.uniq_id+'</font>的<font color="red">进度</font>'].join('，'));
+                        else
+                            bootbox.alert(json.msg);
+                    },
+                    error: function (json) {
+                        bootbox.alert(JSON.stringify(json.responseText));
+                    }
+                });
+            }
+            function deploy(){
+                window.open('/deploy/jenkins/')
+            }
+            function commit(){
+                window.open('/deploy/yccv2/group/');
+            }
+            function ajax(url, type, data){
+                var result = null;
+                $.ajax({
+                    url: url,
+                    type: type,
+                    async: false,
+                    data: data,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        result = json;
+                    },
+                    error: function(json){
+                        result = json.responseText;
+                    }
+                });
+                return result;
+            }
+
+            $('#attributeForm3 div.modal-footer button[type="button"]').bind('click', function () {
+                if (save_db()) {
+                    if ($(this).hasClass('restart'))
+                        restart();
+                    else if ($(this).hasClass('deploy'))
+                        deploy();
+                    else if ($(this).hasClass('commit'))
+                        commit();
+                }
+            })
+            $('#view_button button[type="button"]').bind('click', function () {
+                if (save()) {
+                    if ($(this).hasClass('restart'))
+                        restart();
+                    else if ($(this).hasClass('deploy'))
+                        deploy();
+                    else if ($(this).hasClass('commit'))
+                        commit();
+                }
+            })
+            $('#modal_diff>div.modal-dialog').width($(document).width());
+            $('#addValue').on('hidden.bs.modal', function (e) {
+                $("#group_id").data('combobox').clearElement();
+{#                $("#group_id").data('combobox').refresh()#}
+{#                $("#env").data('combobox').clearElement();#}
+                $('#attributeForm').bootstrapValidator('resetForm', true);
+            });
+            $('#adddbValue').on('hidden.bs.modal', function (e) {
+                $("#db_group_id").data('combobox').clearElement();
+{#                $("#db_env").data('combobox').clearElement();#}
+                $("#db_instance_id").data('combobox').clearElement();
+                $("#jdbc").css('display', 'none');
+                $('#attributeForm2').bootstrapValidator('resetForm', true);
+            });
+            $('#uploadValue').on('hidden.bs.modal', function (e) {
+                $("#upgroup_id").data('combobox').clearElement();
+{#                $("#upenv").data('combobox').clearElement();#}
+                $('#uploadForm').bootstrapValidator('resetForm', true);
+            });
+            $('#editdbValue').on('hidden.bs.modal', function (e) {
+                $('#editdb_instance_id').data('combobox').clearElement();
+            });
+            {% if not domains %}
+                var a = $('<a>')
+                        .attr({href: 'http://oms.yihaodian.com.cn/home/myInfo.action', target: '_blank'})
+                        .text('此处')[0].outerHTML;
+                bootbox.alert('无domain信息，请点击' + a + '查看修复方法，或者联系SA');
+            {% endif %}
+        });
+    </script>
+{% endblock %}

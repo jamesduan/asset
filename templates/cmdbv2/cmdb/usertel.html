@@ -1,0 +1,87 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<script src="{{ STATIC_URL }}libs/jquery/spin.min.js" ></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css" rel="stylesheet">
+
+{#        <div  style="margin-top: 10px">#}
+    <div class="inner-h1">用户手机号码查询</div>
+            <div class="form-inline" role="form">
+                <label for="user_tel" class="control-label">用户/手机号码查询：</label>
+                <input type="text" name="user_tel" id="user_tel"  class="form-control" placeholder="用户/手机号码查询" />
+                <button id="userbtn"  class="btn btn-green">
+                查询
+                </button>
+            </div>
+
+                <div id="usertel" style="display:none" >
+                <table id="userteltable"  >
+                </table>
+                </div>
+        </div>
+
+<script>
+       $('#user_tel').val('')
+        $('#userbtn').on("click",function(){
+        var usertel = $('#user_tel').val().trim();
+        if(usertel){
+        var url = '{{ CMDBAPI_URL }}cmdb/users/?format=json&usertel=' + usertel;
+        $('#userteltable').bootstrapTable('refresh' , {url: url,});
+        $('#usertel').show();
+        };
+    })
+
+    $('#userteltable').bootstrapTable({
+        url: '',
+        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'display_name',
+                title: '用户名',
+                align: 'center'
+            },
+            {
+                field: 'email',
+                title: '邮箱',
+                align: 'center',
+            },
+            {
+                field: 'telephone',
+                title: '电话',
+                align: 'center'
+            },
+
+        ],
+        responseHandler: function (res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset / p.limit + 1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [10, 50, 100],
+        sidePagination: 'server',
+{#        showRefresh: true,#}
+{#        search: true,#}
+{#        showColumns: true,#}
+        toolbar: "#toolbar",
+        cache: false
+    });
+
+</script>
+{% endblock %}

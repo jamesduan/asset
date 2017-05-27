@@ -1,0 +1,918 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css" rel="stylesheet">
+<script src="{{ STATIC_URL }}libs/bootstrap-select-1.12.0/dist/js/bootstrap-select.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-select-1.12.0/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+<div class="inner-h1">{{ activity_select.name}}活动录入 <br> <span style="font-size: 15px">{{ activity_select.description}}</span> </div>
+
+<div class="inner-box inner-list-box">
+    <div id="alert1" class="text-center">
+        <strong><span style="color:forestgreen">需要填写Domain数为{{ domains.count}} , 未填写/未填写完整domain数为</span> <span  style="color:red">{{ detail_count}}</span></strong><a href="#">点击详情</a>
+        <div id="detail" style="display: none;color:red">
+        未填写Domain：
+            {% for item in detail_notfil %}
+            {{ item }},
+            {% endfor %}
+        <p>
+        未填写完整Domain：
+            {% for item in detail_notcom %}
+            {{ item }},
+            {% endfor %}
+            </div>
+        </p>
+    </div>
+    <div id="alert">
+    {% if result %}
+    <div class="alert alert-danger text-center" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button><strong>导入完成</strong>{{ info }}
+        <ul>{{ result_str|safe }}</ul>
+    </div>
+    {% endif %}
+    </div>
+</div>
+
+<div id="toolbar" >
+<div class="form-inline"  role="form">
+    <button id="createbtn" data-toggle="modal" data-target="#createmodal" class="btn btn-green">
+        <i class="glyphicon glyphicon-plus"></i> 新增
+    </button>
+    <button id="batchdelete" class="btn btn-danger" data-toggle="modal" data-target="#batchdeletemodal" disabled>
+            <i class="glyphicon glyphicon-trash"></i> 删除
+    </button>
+{% if activity_select.promotion != 2 %}
+    <button id="import" data-toggle="modal" data-target="#importmodal" class="btn btn-green">
+            批量导入
+    </button>
+<small style="font-size: 14px; color: #777777;">导入模板
+    <a href="{{ ROOT_URL }}cmdb/gettemplate/{{ activity_id }}/" target="_blank">下载</a>
+</small>
+{% endif %}
+</div>
+</div>
+<div class="modal fade" id="createmodal" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="createform" method="POST">
+<div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="myModalLabel">新增</h4>
+</div>
+<div class="modal-body">
+        <div class="form-group">
+        <label for="duty_activity" class="col-sm-3 control-label "><span style="color:red">* </span>活动：</label>
+        <div class='col-sm-6'>
+        <select id="duty_activity" name="duty_activity" class="form-control" disabled="true">
+            <option value="{{ activity_id }}">{{ activity_select.name}}</option>
+         </select>
+        </div>
+        </div>
+        <div class="form-group" id="start" >
+        <label for="date_start" class="col-sm-3 control-label"><span style="color:red">* </span>值班开始时间:</label>
+        <div class='col-sm-6'>
+        <input type="text"  id="date_start" name="date_start" class="form-control datepicker"  placeholder="起始时间" />
+        </div>
+        </div>
+        <div class="form-group" id="end" >
+        <label for="date_end" class="col-sm-3 control-label"><span style="color:red">* </span>值班结束时间:</label>
+        <div class='col-sm-6'>
+        <input type="text"  id="date_end" name="date_end" class="form-control datepicker"   placeholder="结束时间" />
+        </div>
+        </div>
+        <div class="form-group" id="shiftid">
+        <label for="shift" class="col-sm-3 control-label "><span style="color:red">* </span>值班班次：</label>
+        <div class='col-sm-6'>
+        <select id="shift" name="shift" class="form-control" >
+            <option value="" >--请选择--</option>
+            {% for item in shift_times %}
+                <option value="{{ item.id }}">{{ item.start|date:"Y-m-d H:i"}}~{{ item.end|date:"Y-m-d H:i"}}</option>
+            {% endfor %}
+         </select>
+        </div>
+        </div>
+        <div class="form-group">
+        <label for="duty_domain" class="col-sm-3 control-label "><span style="color:red">* </span>{% if activity_select.promotion != 2 %}值班Domain{% endif %}{% if activity_select.promotion == 2 %}参与Domain：{% endif %}</label>
+        <div class='col-sm-6'>
+        <select id="duty_domain" name="duty_domain" class="form-control" >
+            <option value="" >--请选择--</option>
+            {% for item in domains %}
+                <option value="{{ item.id }}">{{ item.domainname }}</option>
+            {% endfor %}
+         </select>
+        </div>
+        </div>
+        <div class="form-group">
+        <label for="duty_man" class="col-sm-3 control-label"><span style="color:red">* </span>值班人员/负责人:</label>
+        <div class='col-sm-6'>
+         <select  id="duty_man" name="duty_man" class="form-control" multiple="multiple" >
+{#            <option value="">--请选择--</option>#}
+             {% for item in user %}
+                <option  value="{{ item.id }}">{{ item.display_name }}</option>
+             {% endfor %}
+         </select>
+         </div>
+        </div>
+        <div class="form-group" id="way">
+        <label for="duty_way" class="col-sm-3 control-label"><span style="color:red">* </span>值班方式:</label>
+        <div class='col-sm-6'>
+        <select id="duty_way" name="duty_way" class="form-control selectpicker" >
+             <option value="0">on call</option>
+             <option value="1">on site</option>
+             <option value="2">at home</option>
+        </select>
+        </div>
+        </div>
+        <div class="form-group" id="backup">
+        <label for="duty_backup" class="col-sm-3 control-label">Backup值班人员:</label>
+        <div class='col-sm-6'>
+            <select id="duty_backup" name="duty_backup" class="form-control"  multiple>
+             {% for item in user %}
+                <option value="{{ item.id }}">{{ item.display_name }}</option>
+             {% endfor %}
+            </select>
+        </div>
+        </div>
+        <div class="form-group">
+        <label for="comment" class="col-sm-3 control-label">备注:</label>
+        <div class='col-sm-6'>
+             <textarea  id="comment" name="comment" class="form-control"  placeholder="备注" ></textarea>
+        </div>
+        </div>
+</div>
+
+<div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+        <button type="submit" class="btn  btn-green" id="submit">添加</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+{#修改modal#}
+<div class="modal fade" id="editmodal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="editform" method="POST">
+<input type="hidden" name="e_id" id="e_id">
+<input type="hidden" name="e_time" id="e_time">
+<div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="myModalLabel">修改</h4>
+</div>
+<div class="modal-body">
+        <div class="form-group">
+        <label for="eduty_activity" class="col-sm-3 control-label "><span style="color:red">* </span>活动：</label>
+        <div class='col-sm-6'>
+        <select id="eduty_activity" name="eduty_activity" class="form-control" disabled="true">
+             <option value="{{ activity_id }}">{{ activity_select.name}}</option>
+        </select>
+        </div>
+        </div>
+        <div class="form-group" id="estart" >
+        <label for="edate_start" class="col-sm-3 control-label"><span style="color:red">* </span>值班开始时间:</label>
+        <div class='col-sm-6'>
+        <input type="text"  id="edate_start" name="edate_start" class="form-control datepicker"  placeholder="起始时间" />
+        </div>
+        </div>
+        <div class="form-group" id="eend" >
+        <label for="edate_end" class="col-sm-3 control-label"><span style="color:red">* </span>值班结束时间:</label>
+        <div class='col-sm-6'>
+        <input type="text"  id="edate_end" name="edate_end" class="form-control datepicker"   placeholder="结束时间" />
+        </div>
+        </div>
+        <div class="form-group" id="eshiftid">
+        <label for="eshift" class="col-sm-3 control-label "><span style="color:red">* </span>值班班次：</label>
+        <div class='col-sm-6'>
+        <select id="eshift" name="eshift" class="form-control" >
+            <option value="" >--请选择--</option>
+            {% for item in shift_times %}
+                <option value="{{ item.id }}">{{ item.start|date:"Y-m-d H:i"}}~{{ item.end|date:"Y-m-d H:i"}}</option>
+            {% endfor %}
+         </select>
+        </div>
+        </div>
+        <div class="form-group">
+        <label for="eduty_domain" class="col-sm-3 control-label "><span style="color:red">* </span>{% if activity_select.promotion != 2 %}值班Domain{% endif %}{% if activity_select.promotion == 2 %}参与Domain：{% endif %}</label>
+        <div class='col-sm-6'>
+        <select id="eduty_domain" name="eduty_domain" class="form-control" disabled="true">
+            <option value=""></option>
+            {% for item in domains %}
+                <option value="{{ item.id }}">{{ item.domainname }}</option>
+            {% endfor %}
+         </select>
+        </div>
+        </div>
+        <div class="form-group">
+        <label for="eduty_man" class="col-sm-3 control-label"><span style="color:red">* </span>值班人员/负责人:</label>
+        <div class='col-sm-6'>
+         <select id="eduty_man" name="eduty_man" class="form-control" multiple>
+         </select>
+         </div>
+        </div>
+        <div class="form-group" id="eway">
+        <label for="eduty_way" class="col-sm-3 control-label"><span style="color:red">* </span>值班方式:</label>
+        <div class='col-sm-6'>
+        <select id="eduty_way" name="eduty_way" class="form-control selectpicker " >
+             <option value="0">on call</option>
+             <option value="1">on site</option>
+             <option value="2">at home</option>
+         </select>
+        </div>
+        </div>
+        <div class="form-group" id="ebackup">
+        <label for="eduty_backup" class="col-sm-3 control-label">Backup值班人员:</label>
+        <div class='col-sm-6'>
+         <select id="eduty_backup" name="eduty_backup" class="form-control" multiple>
+         </select>
+         </div>
+        </div>
+        <div class="form-group">
+        <label for="ecomment" class="col-sm-3 control-label">备注:</label>
+        <div class='col-sm-6'>
+             <textarea  id="ecomment" name="ecomment" class="form-control"  placeholder="备注" ></textarea>
+        </div>
+        </div>
+</div>
+
+<div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+        <button type="submit" class="btn  btn-green" id="submit2">修改</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+{#批量删除    #}
+<div class="modal fade" id="batchdeletemodal">
+<div class="modal-dialog">
+    <div class="modal-content">
+        <form class="form-horizontal" role="form" id="batchdeleteform" method="POST">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                 <h4 class="modal-title">确认</h4>
+        </div>
+        <div class="modal-body">
+            <p style="font-size:16px; " ><i class="fa fa-warning"></i>确定删除所选记录吗？</p>
+        </div>
+        <div class="modal-footer">
+            <button type="submit" id="batchdeletebtn" class="btn btn-green">确定</button>
+            <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+        </div>
+        </form>
+    </div>
+</div>
+</div>
+<!--批量导入文件-->
+<div class="modal fade" id="importmodal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="importform" method="POST" enctype="multipart/form-data">
+<div class="modal-header">
+<button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+<h4 class="modal-title" id="myModalLabel">批量导入值班信息</h4>
+</div>
+<div class="modal-body">
+    <div class="form-group">
+        <label for="duty_role" class="col-sm-3 control-label">选择Domain</label>
+        <div class='col-sm-4'>
+        <select id="duty_role" name="duty_role" class="form-control">
+            <option value="">--值班Domain--</option>
+            {% for item in domains %}
+                <option value="{{ item.id }}">{{ item.domainname }}</option>
+            {% endfor %}
+         </select>
+        </div>
+    </div>
+    <div class="form-group">
+        <input type="hidden" id="cur_session" name="cur_session" value="{{ cur_session }}">
+        <label for="filename" class="col-sm-3 control-label">选择文件</label>
+        <div class='col-sm-6'>
+        <input type="file" id="filename" name="filename">
+        <p class="help-block">请上传后缀为csv的文件.</p>
+        </div>
+    </div>
+</div>
+<div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn btn-green" id="submit2">上传</button>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+<table id="rotatable">
+</table>
+
+<script>
+$(document).ready(function() {
+    $('.datepicker').datetimepicker({
+        format: 'yyyy-mm-dd hh:00',
+        autoclose: true,
+        minView: 1,
+    })
+    $('#duty_domain,#eduty_domain,#duty_activity,#eduty_activity,#shift,#eshift,#duty_role').selectpicker({
+        'liveSearch': true,
+		'liveSearchPlaceholder': '搜索',
+	})
+    $('#eduty_backup,#eduty_man,#duty_backup,#duty_man').selectpicker({
+        'title':'--请选择--',
+        'liveSearch': true,
+		'liveSearchPlaceholder': '搜索',
+    })
+
+    $('#alert1 a').click(function(){
+        if ($('#alert1 a').html() =="点击详情"){
+             $('#detail').show();
+                $('#alert1 a').html('点击隐藏');
+        }
+       else {
+             $('#detail').hide();
+            $('#alert1 a').html('点击详情');
+        }
+
+    })
+
+    $('#duty_domain').change(function () {
+        var id = $('#duty_domain').val();
+        $("#duty_man").find("option").remove();
+        $("#duty_backup").find("option").remove();
+        if (id!="") {
+            if ('{{ activity_select.promotion }}'!='0'){
+            var userdomain_api_url = '{{ CMDBAPI_URL }}cmdb/usersdomainsforrota/?format=json&page_size=1000&dddomain__id=' + id;
+            $.ajax({
+                url: userdomain_api_url,
+                dataType: 'json',
+                type: 'GET',
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (json) {
+                    var data = eval(json);
+                    if (data.count == 0) {
+                        $('#duty_man').append($('<option>').text('未搜索到所属人员').attr('value', '0'));
+                        $('#duty_backup').append($('<option>').text('未搜索到所属人员').attr('value', '0'));
+                    } else {
+                        var rs = data.results;
+                        var html=[];
+                        $.each(rs, function (key, val) {
+
+                            $('#duty_man').append($('<option>').text(val.ddusers_display).attr('value', val.ddusers_id));
+                            $('#duty_backup').append($('<option>').text(val.ddusers_display).attr('value', val.ddusers_id));
+
+                        });
+                        }
+                    $("#duty_man").selectpicker('refresh');
+                    $("#duty_backup").selectpicker('refresh');
+                    }
+                    });
+            }
+            else{
+                {%  for item in dep_users %}
+                    $('#duty_man').append($('<option>').text('{{ item.display_name }}').attr('value', {{ item.id }}));
+                    $('#duty_backup').append($('<option>').text('{{ item.display_name }}').attr('value', {{ item.id }}));
+                {% endfor %}
+            }
+        }
+        else {
+            {%  for item in user %}
+                $('#duty_man').append($('<option>').text('{{ item.display_name }}').attr('value', {{ item.id }}));
+                $('#duty_backup').append($('<option>').text('{{ item.display_name }}').attr('value', {{ item.id }}));
+            {% endfor %}
+{#            $("#duty_man").selectpicker('refresh');#}
+{#            $("#duty_backup").selectpicker('refresh');#}
+        };
+            $("#duty_man").selectpicker('refresh');
+            $("#duty_backup").selectpicker('refresh');
+    })
+
+
+    window.operateEvents = {
+     'click .edit': function (e, value, row, index) {
+
+            $("#e_id").val(row.id);
+            $('#eshift').val(row.shift_time);
+            $("#eduty_domain").val(row.duty_domain);
+            if ('{{ activity_select.promotion }}' !='2'){
+                $('#edate_start').val(row.duty_date_start.replace('T',' ').substring(0,16));
+                $('#edate_end').val(row.duty_date_end.replace('T', ' ').substring(0, 16));
+            }else{
+                $('#edate_start').val(row.duty_date_start);
+                $('#edate_end').val(row.duty_date_end);
+            }
+            $("#eduty_way").val(row.duty_way);
+            $("#ecomment").val(row.comment);
+            $("#eduty_way").selectpicker('refresh');
+            $("#eshift").selectpicker('refresh');
+            $('#eduty_domain').selectpicker('refresh');
+            $('#e_time').val($('#eshift').find("option:selected").text());
+            $("#eduty_man").find("option").remove();
+            $("#eduty_backup").find("option").remove();
+            if($("#eduty_domain").val()!='') {
+                if ('{{ activity_select.promotion }}'!='0') {
+                    $.ajax({
+                        url: '{{ CMDBAPI_URL }}cmdb/usersdomainsforrota/?format=json&page_size=1000&dddomain__id=' + $("#eduty_domain").val(),
+                        async: false,
+                        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                        success: function (json) {
+                            $.each(json.results, function (key, val) {
+                                $('#eduty_man').append($('<option>').text(val.ddusers_display).attr('value', val.ddusers_id));
+                                $('#eduty_backup').append($('<option>').text(val.ddusers_display).attr('value', val.ddusers_id));
+                            });
+                        }
+                    });
+                }
+            else{
+                {%  for item in dep_users %}
+                    $('#eduty_man').append($('<option>').text('{{ item.display_name }}').attr('value', {{ item.id }}));
+                    $('#eduty_backup').append($('<option>').text('{{ item.display_name }}').attr('value', {{ item.id }}));
+                {% endfor %}
+            }
+            }
+             else{
+                {%  for item in user %}
+                    $('#eduty_man').append($('<option>').text('{{ item.display_name }}').attr('value', {{ item.id }}));
+                    $('#eduty_backup').append($('<option>').text('{{ item.display_name }}').attr('value', {{ item.id }}));
+                {% endfor %}
+             };
+         var mans=[];
+         var backups=[];
+         $.each(row.duty_man,function(key,val){
+             mans.push(val.id);
+         })
+        $.each(row.duty_backup,function(key,val){
+             backups.push(val.id);
+         })
+         $("#eduty_man").val(mans);
+         $("#eduty_backup").val(backups);
+         $("#eduty_man").selectpicker('refresh');
+         $("#eduty_backup").selectpicker('refresh');
+
+         $('#editmodal').modal('show');
+            }
+        };
+
+    $('#batchdelete').prop('disabled',true)
+     $('#rotatable').on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+     $('#batchdelete').prop('disabled', !$('#rotatable').bootstrapTable('getSelections').length);
+    });
+<!--删除功能-->
+{#    console.log('{{ activity_select.promotion}}'=='2')#}
+    $('#rotatable').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}cmdb/rotaenter/?format=json&rota_activity={{ activity_id }}',
+        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'state',
+                checkbox: true
+            },
+{#            {#}
+{#                field: 'id',#}
+{#                visible: false#}
+{#            },#}
+            {% if activity_select.promotion != 2 %}
+            {
+                field: 'duty_date_start',
+                title: '值班开始时间',
+                formatter: getExpire_date,
+                align: 'center'
+            },
+            {% endif %}
+            {% if activity_select.promotion != 2 %}
+            {
+                field: 'duty_date_end',
+                title: '值班结束时间',
+                formatter: getExpire_date,
+                align: 'center'
+            },
+            {% endif %}
+            {
+                field: 'department_2',
+                title: '二级部门',
+                align: 'center'
+            },
+            {
+                field: 'department_3',
+                title: '三级部门',
+                align: 'center'
+            },
+            {
+                field: 'duty_domain_name',
+                title: 'Domain',
+                align: 'center'
+            },
+            {
+                field: 'duty_man',
+                title: '值班人员/负责人员',
+                align: 'center',
+                formatter: getnameform
+            },
+            {% if activity_select.promotion != 2 %}
+            {
+                field: 'duty_way_name',
+                title: '值班方式',
+                align: 'center'
+            },
+            {% endif %}
+            {% if activity_select.promotion != 2 %}
+            {
+                field: 'duty_backup',
+                title: 'Backup值班人员',
+                align: 'center',
+                formatter: getnameform
+            },
+            {% endif %}
+            {
+                field: 'comment',
+                title: '备注',
+                align: 'center',
+            },
+            {
+                field: 'operate ',
+                title: '操作',
+                align: 'center',
+                formatter:operateFormatter,
+                events: operateEvents
+            }
+        ],
+        responseHandler: function (res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset / p.limit + 1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [10, 20, 100],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false,
+        showExport:true,
+    });
+
+     function getExpire_date(value) {
+         if (value) {
+             var str = value.replace('T', ' ');
+             return str.substring(0, str.length - 3)
+         }
+    };
+    function getnameform(value){
+        var str=[];
+        $.each(value,function(key,val){
+{#            var display=val.display_name;#}
+{#            display=display.split('_');#}
+{#            display= display[display.length-1].split(')')#}
+{#           str.push(display[0]+'('+val.username+')');#}
+            str.push(val.username_ch+'('+val.username+')');
+        });
+        str.join(',');
+        return str
+    };
+    function getaccountform(value){
+        var str=[];
+        $.each(value,function(key,val){
+           str.push(val.username);
+        });
+        str.join(',');
+        return str
+    };
+     function operateFormatter(value,row,index){
+       var op = [];
+         op.push(
+         '<a class="edit">',
+         '<span class="glyphicon glyphicon-pencil" title="编辑" style="cursor:pointer;margin-right:10px;"></span>',
+         '</a>');
+        return op.join('');
+     };
+
+    $('#rotatable').bootstrapTable('hideColumn', 'department_2');
+    $('#rotatable').bootstrapTable('hideColumn', 'department_3');
+
+<!--新建-->
+$('#createform')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                duty_domain: {
+                    validators: {
+                        notEmpty: {
+                            message: '值班Domain/参与Domain不能为空。'
+                        }
+                    }
+                },
+                date_start: {
+                    validators: {
+                        notEmpty: {
+                            message: '值班开始日期不能为空。'
+                        }
+                    }
+                },
+                date_end: {
+                    validators: {
+                        notEmpty: {
+                            message: '值班结束日期不能为空。'
+                        }
+                    }
+                },
+                shift: {
+                    validators: {
+                        notEmpty: {
+                            message: '值班班次不能为空。'
+                        }
+                    }
+                },
+                 duty_man: {
+                    validators: {
+                        notEmpty: {
+                            message: '值班人员/负责人员不能为空。'
+                        }
+                    }
+                },
+{#                  duty_backup: {#}
+{#                    validators: {#}
+{#                        notEmpty: {#}
+{#                            message: '值班人员不能为空。'#}
+{#                        }#}
+{#                    }#}
+{#                },#}
+            }
+            })
+            .on('success.form.bv', function (e) {
+            var duty_date_start=$('#date_start').val();
+            var duty_date_end=$('#date_end').val();
+            if ('{{ activity_select.promotion }}'=='1'){
+                 duty_date_start=$('#shift').find("option:selected").text().split('~')[0];
+                 duty_date_end=$('#shift').find("option:selected").text().split('~')[1];
+            }
+                e.preventDefault();
+                var createdata = {
+                    'rota_activity': $('#duty_activity').val(),
+                    'promotion':{{ activity_select.promotion }},
+                    'duty_date_start':duty_date_start ,
+                    'duty_date_end':duty_date_end ,
+                    'shift_time':$('#shift').val(),
+                    'duty_domain': $('#duty_domain').val(),
+                    'duty_man': $('#duty_man').val().join(','),
+                    'duty_way': $('#duty_way').val(),
+{#                    'duty_backup': $('#duty_backup').val().join(','),#}
+                    'comment':$('#comment').val(),
+                };
+                if($('#duty_backup').val()){
+                     createdata['duty_backup']=$('#duty_backup').val().join(',');
+                };
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}cmdb/rotaenter/',
+                    type: 'POST',
+                    async: false,
+                    data: createdata,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        $('#rotatable').bootstrapTable('refresh', {
+                            silent: true
+                            });
+                        $('#createmodal').modal('hide');
+                        $('#createform').bootstrapValidator('resetForm', true);
+                    },
+                    error: function (json) {
+                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加记录' + JSON.stringify(json.responseText) +'</div>');
+                        $('#createmodal').modal('hide');
+                        $('#createform').bootstrapValidator('resetForm', true);
+
+                    }
+                });
+                    $('#duty_man,#duty_backup,#duty_domain,#shift').selectpicker('val','');
+                    $('#comment').val('');
+
+
+            });
+
+    <!--修改表单-->
+    $('#editform')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                 eduty_man: {
+                    validators: {
+                        notEmpty: {
+                            message: '值班人员/负责人员不能为空。'
+                        }
+                    }
+                },
+{#                  eduty_backup: {#}
+{#                    validators: {#}
+{#                        notEmpty: {#}
+{#                            message: '值班人员不能为空。'#}
+{#                        }#}
+{#                    }#}
+{#                },#}
+                edate_start: {
+                    validators: {
+                        notEmpty: {
+                            message: '值班开始日期不能为空。'
+                        }
+                    }
+                },
+                edate_end: {
+                    validators: {
+                        notEmpty: {
+                            message: '值班结束日期不能为空。'
+                        }
+                    }
+                },
+                eshift: {
+                    validators: {
+                        notEmpty: {
+                            message: '值班班次不能为空。'
+                        }
+                    }
+                },
+            }
+            })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var url ='{{ CMDBAPI_URL }}cmdb/rotaenter/'  + $("#e_id").val() + '/';
+            var duty_date_start=$('#edate_start').val();
+            var duty_date_end=$('#edate_end').val();
+            if ('{{ activity_select.promotion }}'=='1'){
+                 duty_date_start=$('#eshift').find("option:selected").text().split('~')[0];
+                 duty_date_end=$('#eshift').find("option:selected").text().split('~')[1];
+            }
+            var editdata ={
+                'id':$('#e_id').val(),
+                'rota_activity': $('#eduty_activity').val(),
+                'promotion':{{ activity_select.promotion }},
+                'duty_date_start': duty_date_start,
+                'duty_date_end': duty_date_end,
+                'shift_time':$('#eshift').val(),
+                'duty_domain': $('#eduty_domain').val(),
+                'duty_man': $('#eduty_man').val().join(','),
+                'duty_way': $('#eduty_way').val(),
+{#                'duty_backup': $('#eduty_backup').val().join(','),#}
+                'comment':$('#ecomment').val(),
+            };
+
+             if($('#eduty_backup').val()){
+                     editdata['duty_backup']=$('#eduty_backup').val().join(',');
+                };
+
+            $.ajax({
+                url: url,
+                type: 'PATCH',
+                data: editdata,
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                  success: function( json ) {
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>修改记录</div>');
+                    $('#editform').bootstrapValidator('resetForm', true);
+                    $('#editmodal').modal('hide');
+                    $('#rotatable').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>修改记录' + JSON.stringify(json.responseText) +'</div>');
+                    $('#editform').bootstrapValidator('resetForm', true);
+                    $('#editmodal').modal('hide');
+                }
+            });
+        });
+
+    $('#batchdeleteform')
+        .bootstrapValidator({
+
+            })
+        .on('success.form.bv', function(e) {
+                e.preventDefault();
+                $.map($('#rotatable').bootstrapTable('getSelections'), function (row) {
+
+                    $.ajax({
+                        url:'{{ CMDBAPI_URL }}cmdb/rotaenter/' + row.id + '/?format=json',
+                        type: 'DELETE',
+                        async:   false,
+                        headers:{'Authorization':'Token {{ API_TOKEN }}'},
+
+                        success: function( json ) {
+                        $('#batchdelete').prop('disabled', true);
+
+                    },
+                    error: function( json ) {
+                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>删除失败!</strong>原因：' + JSON.stringify(json.responseText) +'</div>');
+                    }
+
+            });
+
+        });
+            $('#batchdeletemodal').modal('hide');
+            $('#batchdeleteform').bootstrapValidator('resetForm', true);
+
+            $('#rotatable').bootstrapTable('selectPage',1
+                    );
+        });
+
+
+
+    $('#importform')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                duty_role: {
+                    validators: {
+                        notEmpty: {
+                            message: '值班Domain不能为空'
+                        }
+                    }
+                },
+                 filename: {
+                    validators: {
+                        notEmpty: {
+                            message: ' '
+                        },
+                        regexp: {
+                            regexp: /(.csv)$/,
+                            message: ' '
+                        },
+                    }
+                },
+
+
+            }
+            })
+
+
+    $("#edate_start").change(function(){
+        $('#editform').data('bootstrapValidator')
+                .updateStatus('edate_start', 'NOT_VALIDATED').validateField('edate_start');
+    });
+    $("#edate_end").change(function(){
+        $('#editform').data('bootstrapValidator')
+                .updateStatus('edate_end', 'NOT_VALIDATED').validateField('edate_end');
+    });
+    $("#date_start").change(function(){
+        $('#createform').data('bootstrapValidator')
+                .updateStatus('date_start', 'NOT_VALIDATED').validateField('date_start');
+    });
+    $("#date_end").change(function(){
+        $('#createform').data('bootstrapValidator')
+                .updateStatus('date_end', 'NOT_VALIDATED').validateField('date_end');
+    });
+
+    if ('{{ activity_select.promotion }}'=='1'){
+    $('#start').hide();
+    $('#end').hide();
+    $('#estart').hide();
+    $('#eend').hide();
+    $('#createform').data('bootstrapValidator').enableFieldValidators('date_start',false);
+    $('#createform').data('bootstrapValidator').enableFieldValidators('date_end',false);
+    $('#editform').data('bootstrapValidator').enableFieldValidators('edate_start',false);
+    $('#editform').data('bootstrapValidator').enableFieldValidators('edate_end',false);
+        }
+    if ('{{ activity_select.promotion }}'=='0'){
+        $('#shiftid').hide();
+        $('#eshiftid').hide();
+        $('#createform').data('bootstrapValidator').enableFieldValidators('shift', false);
+        $('#editform').data('bootstrapValidator').enableFieldValidators('eshift', false);
+    }
+    if ('{{ activity_select.promotion }}'=='2'){
+        $('#shiftid').hide();
+        $('#eshiftid').hide();
+        $('#start').hide();
+        $('#end').hide();
+        $('#estart').hide();
+        $('#eend').hide();
+        $('#way').hide();
+        $('#eway').hide();
+        $('#backup').hide();
+        $('#ebackup').hide();
+        $('#createform').data('bootstrapValidator').enableFieldValidators('shift', false);
+        $('#editform').data('bootstrapValidator').enableFieldValidators('eshift', false);
+        $('#createform').data('bootstrapValidator').enableFieldValidators('date_start',false);
+        $('#createform').data('bootstrapValidator').enableFieldValidators('date_end',false);
+        $('#editform').data('bootstrapValidator').enableFieldValidators('edate_start',false);
+        $('#editform').data('bootstrapValidator').enableFieldValidators('edate_end',false);
+    }
+
+});
+</script>
+{%  endblock %}

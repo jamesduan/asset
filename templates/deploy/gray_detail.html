@@ -1,0 +1,635 @@
+{% extends "deploy/base.html" %}
+
+{% block meta %}
+    <title>发布系统 - 1号店运维平台</title>
+{% endblock %}
+
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}deploy/css/global.css" />
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}deploy/css/deploy.css" />
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/jquery-ui/themes/base/jquery.ui.all.css" />
+    <link rel="stylesheet" type="text/css" href="http://oms.yihaodian.com.cn/itil/js/zUI/resources/css/zui.css" />
+{% endblock %}
+
+{% block js %}
+    <script src="{{ STATIC_URL }}deploy/js/date.format.js"></script>
+    <script src="http://oms.yihaodian.com.cn/itil/js/zUI/src/zUI.core.js"></script>
+    <script src="http://oms.yihaodian.com.cn/itil/js/zUI/src/zUI.dialog.js"></script>
+    <script src="http://oms.yihaodian.com.cn/itil/js/zUI/src/zUI.msgBox.js"></script>
+    <script src="http://oms.yihaodian.com.cn/itil/js/zUI/src/zUI.autocomplete.js"></script>
+    <script src="http://oms.yihaodian.com.cn/itil/js/zUI/src/zUI.page.js"></script>
+    <script>
+        $(document).ready(function(){
+            var ip, last_progress;
+            //loading状态
+            var loading_ico = $('<div><img src="{{ STATIC_URL }}deploy/img/loading.gif" /></div>').css({
+                position: 'absolute',
+                zIndex: 9999,
+                top: '50%',
+                left: '50%'
+            });
+            var loading_mask = $('<div></div>').css({
+                height: Math.max($(window).height(), $('body').height()),
+                width: '100%',
+                position: 'absolute',
+                zIndex: 9999,
+                top: 0,
+                left: 0
+            });
+            var showLoading = function() {
+                endLoading();
+                loading_mask.appendTo('body');
+                loading_ico.appendTo('body');
+            };
+            var endLoading = function() {
+                loading_mask.remove();
+                loading_ico.remove();
+            };
+            //时间转换
+            var from_unixtime = function(timestamp) {
+                if (!timestamp) return '';
+                var date = new Date(parseInt(timestamp) * 1000);
+                return date.format("yyyy-mm-dd HH:MM:ss")
+            }
+            var getButton = function(depid) {
+                //显示状态和日志
+                $.ajax({
+                    url: '/api/deploy/main/list/',
+                    type: 'get',
+                    async: false,
+                    data: {depid: depid, format: 'json'},
+                    headers: {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    },
+                    success: function(json) {
+                        //显示状态
+                        var info = json.results[0];
+                        //添加回滚和快速回滚按钮
+                        switch(info.status) {
+                            case 1:
+                            case 2:
+                                $('#handle').attr('data-status', status).text('预发布').parent().show();
+                                //预发布逻辑
+                                $('#handle').bind('click', function() {
+                                    new zUI.dialog.Dialog({
+                                        title: '预发布',
+                                        html: '是否对 ' + depid + ' 进行预发布？',
+                                        button: {
+                                            ok: '发布'
+                                        },
+                                        ok: function () {
+                                            $.ajax({
+                                                url: '/api/deploy/auto_pre_deploy/',
+                                                type: 'post',
+                                                async: false,
+                                                data: {depid: depid},
+                                                headers: {
+                                                    'Authorization': 'Token {{ API_TOKEN }}'
+                                                },
+                                                error: function(jqXHR) {
+                                                    alert(jqXHR.responseText);
+                                                }
+                                            })
+                                            return true;
+                                        }
+                                    })
+                                });
+                                //作废逻辑
+                                $('#handle').nextAll().remove();
+                                $('#handle').after('<button class="btn" id="cancel">作废</button>');
+                                $('#cancel').bind('click', function() {
+                                    new zUI.dialog.Dialog({
+                                        title:'作废',
+                                        html:'是否作废对 ' + depid + ' 的发布？',
+                                        button:{
+                                            ok: '作废'
+                                        },
+                                        ok: function() {
+                                            $.ajax({
+                                                url: '/api/deploy/status/'+depid+'/',
+                                                type: 'put',
+                                                async: false,
+                                                data: {status: 7},
+                                                headers: {
+                                                    'Authorization': 'Token {{ API_TOKEN }}'
+                                                },
+                                                error: function(jqXHR) {
+                                                    alert(jqXHR.responseText);
+                                                }
+                                            })
+                                            return true;
+                                        }
+                                    });
+                                });
+                                break;
+                            case 3:
+                                $('#handle').attr('data-status', status).text('灰度发布').parent().show();
+                                //灰度发布逻辑
+                                $('#handle').bind('click', function() {
+                                    $.ajax({
+                                        url: '/api/deploy/permitted/',
+                                        type: 'get',
+                                        async: false,
+                                        data: {depid: depid, pubtype: 1, format: 'json'},
+                                        headers: {
+                                            'Authorization': 'Token {{ API_TOKEN }}'
+                                        },
+                                        success: function(json) {
+                                            if(json) {
+                                                new zUI.dialog.Dialog({
+                                                    title: '灰度发布',
+                                                    html: '是否对 ' + depid + ' 进行灰度发布？',
+                                                    button: {
+                                                        ok: '发布'
+                                                    },
+                                                    ok: function () {
+                                                        $.ajax({
+                                                            url: '/api/deploy/auto_publish/',
+                                                            type: 'post',
+                                                            async: false,
+                                                            data: {depid: depid},
+                                                            headers: {
+                                                                'Authorization': 'Token {{ API_TOKEN }}'
+                                                            },
+                                                            error: function(jqXHR) {
+                                                                alert(jqXHR.responseText);
+                                                            }
+                                                        })
+                                                        return true;
+                                                    }
+                                                })
+                                            } else {
+                                                new zUI.dialog.Dialog({
+                                                    title: '灰度发布',
+                                                    html: '当前时段不能发布',
+                                                    'button': {
+                                                        ok: '强制发布',
+                                                        cancel: '取消'
+                                                    },
+                                                    ok: function () {
+                                                        $.ajax({
+                                                            url: '/api/deploy/auto_publish/',
+                                                            type: 'post',
+                                                            async: false,
+                                                            data: {depid: depid},
+                                                            headers: {
+                                                                'Authorization': 'Token {{ API_TOKEN }}'
+                                                            },
+                                                            error: function(jqXHR) {
+                                                                alert(jqXHR.responseText);
+                                                            }
+                                                        })
+                                                        return true;
+                                                    },
+                                                    cancel: function () {
+                                                        return true;
+                                                    }
+                                                })
+                                            }
+                                        },
+                                        error: function(jqXHR) {
+                                            alert(jqXHR.responseText);
+                                        }
+                                    })
+                                });
+                                //作废逻辑
+                                $('#handle').after('<button class="btn" id="cancel">作废</button>');
+                                $('#cancel').bind('click', function() {
+                                    new zUI.dialog.Dialog({
+                                        title:'作废',
+                                        html:'是否作废对 ' + depid + ' 的发布？',
+                                        button:{
+                                            ok: '作废'
+                                        },
+                                        ok: function() {
+                                            $.ajax({
+                                                url: '/api/deploy/status/'+depid+'/',
+                                                type: 'put',
+                                                async: false,
+                                                data: {status: 7},
+                                                headers: {
+                                                    'Authorization': 'Token {{ API_TOKEN }}'
+                                                },
+                                                error: function(jqXHR) {
+                                                    alert(jqXHR.responseText);
+                                                }
+                                            })
+                                            return true;
+                                        }
+                                    });
+                                });
+                                break;
+                            case 4:
+                            case 6:
+                                $('#handle').text('回滚').parent().show();
+                                //回滚逻辑
+                                $('#handle').bind('click', function() {
+                                    var tpl = [
+                                        '<div class="rollback-check">',
+                                        '<p>',
+                                        '<label for="r_person">确认人</label>',
+                                        '<input type="text" class="input-text" id="r_person" /> <span style="color:#f00;">*</span>',
+                                        '</p>',
+                                        '<p>',
+                                        '<label for="r_reason">回滚原因</label>',
+                                        '<textarea id="r_reason" class="textarea"></textarea> <span style="color:#f00;">*</span>',
+                                        '</p>',
+                                        '<p>',
+                                        '<label for="r_category">回滚分类</label>',
+                                        '<select id="r_category">' +
+                                        '<option></option>' +
+                                        '<option value="0">Domain自身问题</option>' +
+                                        '<option value="1">发布系统问题</option>' +
+                                        '<option value="2">其他</option>' +
+                                        '</select> <span style="color:#f00;">*</span>',
+                                        '</p>',
+                                        '</div>'
+                                    ].join('');
+                                    new zUI.dialog.Dialog({
+                                        title:'回滚',
+                                        html:tpl,
+                                        height: 250,
+                                        width: 320,
+                                        button:{
+                                            ok: '回滚'
+                                        },
+                                        ok: function() {
+                                            var verifier = $.trim($('#r_person').val());
+                                            var reason = $.trim($('#r_reason').val());
+                                            var category = $.trim($('#r_category').val());
+                                            if(!verifier) {
+                                                alert('请输入确认人');
+                                                return false;
+                                            } else if(!reason) {
+                                                alert('请输入回滚原因');
+                                                return false;
+                                            } else if(!category) {
+                                                alert('请选择回滚分类');
+                                                return false;
+                                            } else {
+                                                $.ajax({
+                                                    url: '/api/deploy/rollback/reason/list/',
+                                                    type: 'post',
+                                                    async: false,
+                                                    data: {uid: "{{ UID }}", depid: depid, verifier: verifier, reason: reason, category: category},
+                                                    headers: {
+                                                        'Authorization': 'Token {{ API_TOKEN }}'
+                                                    },
+                                                    success: function(json) {
+                                                        var interval = prompt('请输入每台回滚间隔(秒)', "{{ DEPLOY_INTERVAL }}");
+                                                        if(interval==null)
+                                                            return false;
+                                                        var r = /^\d+$/;
+                                                        if(!r.test(interval)){
+                                                            alert('请输入0或者正整数');
+                                                            return false;
+                                                        }
+                                                        $.ajax({
+                                                            url: '/api/deploy/rollback/',
+                                                            type: 'post',
+                                                            async: false,
+                                                            data: {depid: depid, interval: interval},
+                                                            headers: {
+                                                                'Authorization': 'Token {{ API_TOKEN }}'
+                                                            },
+                                                            error: function(jqXHR) {
+                                                                alert(jqXHR.responseText);
+                                                            }
+                                                        })
+                                                    },
+                                                    error: function(jqXHR) {
+                                                        alert(jqXHR.responseText);
+                                                    }
+                                                });
+                                                return true;
+                                            }
+                                        }
+                                    });
+                                });
+                                //快速回滚逻辑
+                                $('#handle').after('<button class="btn" id="rapid_rollback">无节操回滚</button>');
+                                $('#rapid_rollback').bind('click', function() {
+                                    var tpl = [
+                                        '<div class="rollback-check">',
+                                        '<p>',
+                                        '<label for="r_person">确认人</label>',
+                                        '<input type="text" class="input-text" id="r_person" /> <span style="color:#f00;">*</span>',
+                                        '</p>',
+                                        '<p>',
+                                        '<label for="r_reason">回滚原因</label>',
+                                        '<textarea id="r_reason" class="textarea"></textarea> <span style="color:#f00;">*</span>',
+                                        '</p>',
+                                        '<p>',
+                                        '<label for="r_category">回滚分类</label>',
+                                        '<select id="r_category">' +
+                                        '<option></option>' +
+                                        '<option value="0">Domain自身问题</option>' +
+                                        '<option value="1">发布系统问题</option>' +
+                                        '<option value="2">其他</option>' +
+                                        '</select> <span style="color:#f00;">*</span>',
+                                        '</p>',
+                                        '</div>'
+                                    ].join('');
+                                    new zUI.dialog.Dialog({
+                                        title:'快速回滚',
+                                        html:tpl,
+                                        height: 250,
+                                        width: 320,
+                                        button:{
+                                            ok: '回滚'
+                                        },
+                                        ok: function() {
+                                            var verifier = $.trim($('#r_person').val());
+                                            var reason = $.trim($('#r_reason').val());
+                                            var category = $.trim($('#r_category').val());
+                                            if(!verifier) {
+                                                alert('请输入确认人');
+                                                return false;
+                                            } else if(!reason) {
+                                                alert('请输入回滚原因');
+                                                return false;
+                                            } else if(!category) {
+                                                alert('请选择回滚分类');
+                                                return false;
+                                            } else {
+                                                $.ajax({
+                                                    url: '/api/deploy/rollback/reason/list/',
+                                                    type: 'post',
+                                                    async: false,
+                                                    data: {uid: "{{ UID }}", depid: depid, verifier: verifier, reason: reason, category: category},
+                                                    headers: {
+                                                        'Authorization': 'Token {{ API_TOKEN }}'
+                                                    },
+                                                    success: function(json) {
+                                                        $.ajax({
+                                                            url: '/api/deploy/rollback/',
+                                                            type: 'post',
+                                                            async: false,
+                                                            data: {depid: depid, parallel: true},
+                                                            headers: {
+                                                                'Authorization': 'Token {{ API_TOKEN }}'
+                                                            },
+                                                            error: function(jqXHR) {
+                                                                alert(jqXHR.responseText);
+                                                            }
+                                                        })
+                                                    },
+                                                    error: function(jqXHR) {
+                                                        alert(jqXHR.responseText);
+                                                    }
+                                                });
+                                                return true;
+                                            }
+                                        }
+                                    });
+                                });
+                                break;
+                        }
+                    },
+                    error: function(jqXHR) {
+                        alert(jqXHR.responseText);
+                    }
+                })
+            };
+
+            var getDeployLog = function(depid) {
+                //获取日志信息
+                $.ajax({
+                    url: '/api/deploy/log/',
+                    type: 'get',
+                    async: false,
+                    data: {depid: depid, format: 'json'},
+                    headers: {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    },
+                    success: function(json) {
+                        $('#dept_log').empty();
+                        $.each(json, function(index, value) {
+                            var tr = $('<tr></tr>');
+                            tr.append($('<td width="150"></td>').html(from_unixtime(value.create_time)));
+                            tr.append($('<td></td>').html(value.log));
+                            $('#dept_log').prepend(tr);
+                            if(value.error) {
+                                tr.css('color', '#f00');
+                            }
+                        })
+                    },
+                    error: function(jqXHR) {
+                        alert(jqXHR.responseText);
+                    }
+                })
+            };
+
+            var getDeployList = function(depid) {
+                //获取日志信息
+                $.ajax({
+                    url: '/api/deploy/detail/list/',
+                    type: 'get',
+                    async: false,
+                    data: {depid: depid, is_source: 0, format: 'json'},
+                    headers: {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    },
+                    success: function(json) {
+                        if(json.length)
+                            ip = json[0].host;
+                        $('#dept_lists').empty();
+                        var room = {};
+                        $.each(json, function(i, n) {
+                            if (typeof(room[n.room_name]) == 'undefined')
+                                room[n.room_name] = [];
+                            room[n.room_name].push({
+                                'host': n.host,
+                                'has_backup': n.has_backup,
+                                'backup_time': n.backup_time,
+                                'has_pre': n.has_pre,
+                                'pre_time': n.pre_time,
+                                'has_real': n.has_real,
+                                'real_time': n.real_time,
+                                'has_rollback': n.has_rollback,
+                                'rollback_time': n.rollback_time,
+                                'has_error': n.has_error,
+                                'complete': n.complete
+                            })
+                        })
+                        $.each(room, function(i, n) {
+                            $('<tr><th colspan="11">' + i + '</th></tr>').appendTo('#dept_lists');
+                            var l_tr = $('<tr></tr>'), tps, m = n;
+                            tps = [
+                                '<th style="width:100px;">主机ip</th>',
+                                '<th style="width:80px;">是否已备份</th>',
+                                '<th>备份时间</th>',
+                                '<th style="width:80px;">是否已预发布</th>',
+                                '<th>预发布时间</th>',
+                                '<th style="width:80px;">是否已发布</th>',
+                                '<th>发布时间</th>',
+                                '<th style="width:80px;">是否已回滚</th>',
+                                '<th>回滚时间</th>',
+                                '<th style="width:80px;">是否完成</th>',
+                                '<th>发生错误</th>'
+                            ].join('');
+                            l_tr.html(tps).appendTo('#dept_lists');
+                            $.each(m, function(i, n) {
+                                var l_tr = $('<tr></tr>'), tps;
+                                var has_backup = n.has_backup ? '<span style="color:#008200;">是</span>' : '<span style="color:#f00;">否</span>';
+                                var backup_time = n.backup_time;
+                                var has_pre = n.has_pre ? '<span style="color:#008200;">是</span>' : '<span style="color:#f00;">否</span>';
+                                var pre_time = n.pre_time;
+                                var has_real = n.has_real ? '<span style="color:#008200;">是</span>' : '<span style="color:#f00;">否</span>';
+                                var real_time = n.real_time;
+                                var has_rollback = n.has_rollback ? '<span style="color:#008200;">是</span>' : '<span style="color:#f00;">否</span>';
+                                var rollback_time = n.rollback_time;
+                                var has_error = n.has_error ? '<span style="color:#f00;">错误：' + n.error_msg + '</span>' : '<span style="color:#008200;">否</span>';
+                                var complete = n.complete ? '<span style="color:#008200;">是</span>' : '<span style="color:#f00;">否</span>';
+                                tps = [
+                                    '<td>' + n.host + '</td>',
+                                    '<td>' + has_backup + '</td>',
+                                    '<td>' + from_unixtime(backup_time) + '</td>',
+                                    '<td>' + has_pre + '</td>',
+                                    '<td>' + from_unixtime(pre_time) + '</td>',
+                                    '<td>' + has_real + '</td>',
+                                    '<td>' + from_unixtime(real_time) + '</td>',
+                                    '<td>' + has_rollback + '</td>',
+                                    '<td>' + from_unixtime(rollback_time) + '</td>',
+                                    '<td>' + complete + '</td>',
+                                    '<td>' + has_error + '</td>'
+                                ].join('');
+                                l_tr.html(tps).appendTo('#dept_lists');
+                            })
+                            $('<tr><td colspan=7>&nbsp;</td></tr>').appendTo('#dept_lists');
+                        })
+                    },
+                    error: function(jqXHR) {
+                        alert(jqXHR.responseText);
+                    }
+                })
+            };
+
+            var statusAutoMonitor = function(depid) {
+                $.ajax({
+                    url: '/api/deploy/main/list/',
+                    type: 'get',
+                    async: false,
+                    data: {depid: depid, format: 'json'},
+                    headers: {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    },
+                    success: function(json) {
+                        var info = json.results[0], tr = $('<tr></tr>'), tps;
+                        $('#dept_info').empty();
+                        tps = [
+                            '<td>' + info.depid + '</td>',
+                            '<td>' + info.site_name + '</td>',
+                            '<td>' + info.app_name + '</td>',
+                            '<td>' + info.deptype_name + '</td>',
+                            '<td>' + info.packtype_name + '</td>',
+                            '<td>' + info.jiraid + '</td>',
+                            '<td>' + (info.restart ? '是' : '否') + '</td>',
+                            '<td>' + (info.status != 6 ? info.status_name : '灰度 Step'+ info.gray_status) + '</td>',
+                            '<td>' + info.gray_release_info + '</td>',
+                            '<td>' + info.gray_stage_interval + '</td>',
+                            '<td>' + info.colony_surplus + '</td>',
+                            '<td>' + info.recover_time + '</td>',
+                            '<td>' + info.gray_rollback_type_name + '</td>',
+                            '<td>' + (info.in_progress ? '是' : '否') + '</td>'
+                        ].join('');
+                        tr.html(tps).appendTo('#dept_info');
+                        if(info.in_progress){
+                            showLoading();
+                            getDeployList(depid);
+                            getDeployLog(depid);
+                            last_progress = true;
+                        }
+                        else{
+                            if(last_progress)
+                                window.location.reload();
+                        }
+                    },
+                    error: function(jqXHR) {
+                        alert(jqXHR.responseText);
+                    }
+                })
+                var t = setTimeout(function() {
+                    statusAutoMonitor(depid);
+                }, 1500);
+            };
+
+            $(function() {
+                var depid = window.location.search;
+                depid = depid.substr(7);
+                getButton(depid);
+                getDeployLog(depid);
+                getDeployList(depid);
+                statusAutoMonitor(depid);
+                //查看 catalina
+                $('#catalina').bind('click', function () {
+                    $.ajax({
+                        url: '/api/deploy/catalina/',
+                        type: 'get',
+                        async: false,
+                        data: {ip: ip, format: 'json'},
+                        headers: {
+                            'Authorization': 'Token {{ API_TOKEN }}'
+                        },
+                        success: function(json) {
+                            var content = '<div style="height:550px;overflow:auto;">' + json.join('<br>') + '</div>';
+                            new zUI.dialog.Dialog({
+                                height: 600,
+                                width: 650,
+                                title: 'catalina日志',
+                                html: content,
+                                button: {
+                                    disabled: true
+                                }
+                            });
+                        },
+                        error: function(jqXHR) {
+                            alert(jqXHR.responseText);
+                        }
+                    })
+                });
+            });
+        })
+    </script>
+{% endblock %}
+
+{% block body %}
+    <section class="wrapper">
+        <header style="display:none;"><button id="handle" class="btn"></button></header>
+        <h2 class="grid-title">发布信息 [<a href="javascript:void(0);" id="catalina">catalina日志</a>]</h2>
+        <table class="commons-grid">
+            <thead>
+            <tr>
+                <th>发布号</th>
+                <th>站点</th>
+                <th>应用</th>
+                <th>发布类型</th>
+                <th>包类型</th>
+                <th>jiraID</th>
+                <th>是否重启</th>
+                <th>当前状态</th>
+                <th>灰度比例(%)</th>
+                <th>阶段间歇(分钟)</th>
+                <th>集群剩余容量下限(%)</th>
+                <th>应用恢复时长(秒/每台)</th>
+                <th>阶段回滚判断方式</th>
+                <th>进行中</th>
+            </tr>
+            </thead>
+            <tbody id="dept_info">
+            </tbody>
+        </table>
+        <h2 class="grid-title">发布列表</h2>
+        <table class="commons-grid">
+            <tbody id="dept_lists">
+            </tbody>
+        </table>
+        <h2 class="grid-title">发布日志</h2>
+        <section>
+            <table class="commons-grid">
+                <tbody id="dept_log">
+                </tbody>
+            </table>
+        </section>
+    </section>
+{% endblock %}

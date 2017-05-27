@@ -1,0 +1,606 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js" ></script>
+<script src="{{ STATIC_URL }}libs/jquery/spin.min.js" ></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+
+<style>
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+</style>
+<!-- <div class="inner-h1">Pool管理</div> -->
+
+<div id="alert">
+</div>
+
+<div id="loading"></div>
+
+<div id="toolbar">
+<div class="form-inline" role="form">
+    <button id="create" data-toggle="modal" data-target="#addModal" class="btn btn-green">
+        <i class="glyphicon glyphicon-plus"></i> 新增
+    </button>
+
+    <select id="site_select" class="form-control select_api_url">
+        <option value="">请选择站点</option>
+        <option value=" ">--------</option>
+        {%  for item in sitelist %}
+            <option value="{{ item.id }}">{{ item.name }}</option>
+        {%  endfor %}
+    </select>
+
+    <select id="type_select" class="form-control select_api_url">
+        <option value="">请选择App类型</option>
+        <option value=" ">--------</option>
+        <option id="type" name="type" value="0">应用</option>
+        <option id="type" name="type" value="1">基础服务</option>
+    </select>
+
+    <button id="downloadcsv" target="_blank" class="btn btn-green">
+        <i class="glyphicon glyphicon-download-alt"></i> 导出CSV
+    </button>
+
+    <button id="synchronize" class="btn btn-green">
+        <i class="glyphicon glyphicon-refresh"></i> CMIS同步
+    </button>
+</div>
+</div>
+
+<table id="app">
+</table>
+
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="addForm" method="POST" action="{{ API_HYBRID_SAVE }}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="myModalLabel">新增App</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="inputEmail3" class="col-sm-3 control-label">站点</label>
+                        <div class='col-sm-6'>
+                            <select name="site_name" id="site_name" class="form-control" >
+                                <option value="">请选择</option>
+                                {%  for item in sitelist %}
+                                    <option value="{{ item.id }}">{{ item.name }}</option>
+                                {%  endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">应用</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="name" id="name" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">级别</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="level" id="level" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">备注</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="comment" id="comment" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-green" id="submit1">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="editForm" method="POST" action="{{ API_HYBRID_SAVE }}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="editApp">修改App</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="inputEmail3" class="col-sm-3 control-label">App编号</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_id" id="e_id" readonly />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputEmail3" class="col-sm-3 control-label">站点</label>
+                        <div class='col-sm-6'>
+                            <select name="e_site_name" id="e_site_name" class="form-control" >
+                                <option value="">请选择</option>
+                                {%  for item in sitelist %}
+                                    <option value="{{ item.id }}">{{ item.name }}</option>
+                                {%  endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">应用</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_name" id="e_name" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">级别</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_level" id="e_level" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">备注</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_comment" id="e_comment" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-green" id="submit2">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+var $table = $('#app'),
+    $remove = $('#remove');
+
+    $("#site_select").change(function() {
+        if($('#site_select').val() != ''){
+            refresh_by_url();
+        }
+    });
+
+    $("#type_select").change(function() {
+        if($('#type_select').val() != ''){
+            refresh_by_url();
+        }
+    });
+
+    function refresh_by_url() {
+        var site_id = $("#site_select").val().trim();
+        var type = $("#type_select").val().trim();
+        var api_url_base = '{{ CMDBAPI_URL }}cmdb/applist/?';
+        var params = ['format=json'];
+        if (site_id !="") {
+            params.push('site_id='+site_id)
+        }
+        if (type !="") {
+            params.push('type=' + type)
+        }
+        var api_url = api_url_base + params.join('&')
+        $('#app').bootstrapTable('refresh', {
+            url: api_url
+        });
+    };
+$(document).ready(function(){
+    $('#site_select, #type_select').combobox({});
+
+    $(function () { $("[data-toggle='tooltip']").tooltip(); });
+
+    var opts = {
+        lines: 13, // 花瓣数目
+        length: 10, // 花瓣长度
+        width: 10, // 花瓣宽度
+        radius: 25, // 花瓣距中心半径
+        corners: 1, // 花瓣圆滑度 (0-1)
+        rotate: 0, // 花瓣旋转角度
+        direction: 1, // 花瓣旋转方向 1: 顺时针, -1: 逆时针
+        color: '#5882FA', // 花瓣颜色
+        speed: 1, // 花瓣旋转速度
+        trail: 60, // 花瓣旋转时的拖影(百分比)
+        shadow: false, // 花瓣是否显示阴影
+        hwaccel: false, //spinner 是否启用硬件加速及高速旋转
+        className: 'spinner', // spinner css 样式名称
+        zIndex: 2e9, // spinner的z轴 (默认是2000000000)
+        top: '0%', // spinner 相对父容器Top定位 单位 px
+        left: '0%'// spinner 相对父容器Left定位 单位 px
+    };
+    var spinner = new Spinner(opts);
+
+    $("#downloadcsv").click(function() {
+        $('#app').tableExport(
+            {
+                type:'csv',
+                escape:'false',
+{#                ignoreColumn: [6,7],#}
+            }
+        );
+    });
+
+    $("#synchronize").click(function(e){
+        e.preventDefault();
+        $.ajax({
+            url: '{{ CMDBAPI_URL }}cmdb/app/syncbycmis/',
+            type: 'GET',
+            dataType: 'json',
+            beforeSend: function(){
+                $("#loading").css({display:"",top:"40%",left:"50%",position:"absolute"});
+                var target = $("#loading").get(0);
+                spinner.spin(target);
+            },
+            success: function (response) {
+                spinner.spin();
+                if (response['success']) {
+                    alert('Success: ' + response['msg']);
+                } else {
+                    alert('Error: ' + response['msg']);
+                }
+
+            }
+
+        });
+    });
+
+    window.operateEvents = {
+        'click .edit': function (e, value, row) {
+            if(row.type== '0'){
+                alert("该Pool为业务Pool，不允许通过CMDB系统修改。请登录CMIS系统进行修改操作！");
+            }
+            else {
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}cmdb/app/' + row.id + '/?format=json',
+                    type: 'GET',
+                    async: false,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        $("#e_id").val(json.id);
+                        $("#e_site_name").val(json.site_name);
+                        $("#e_name").val(json.name);
+                        $("#e_level").val(json.level);
+                        $("#e_comment").val(json.comment);
+                        var count = $("#e_site_name option").length;
+                        for (var i = 0; i < count; i++) {
+                            if ($("#e_site_name ").get(0).options[i].text == json.site_name) {
+                                $("#e_site_name ").get(0).options[i].selected = true;
+                                break;
+                            }
+                        }
+                    }
+                });
+                $('#editModal').modal('show');
+            }
+        },
+
+        'click .remove': function (e, value, row) {
+            if(row.type== '0'){
+                alert("该Pool为业务Pool，不允许通过CMDB系统删除。请登录CMIS系统进行删除操作！");
+            }
+            else{
+                var msg = "确认要删除吗？"
+                if(confirm(msg)==true){
+                    $.ajax({
+                        url:'{{ CMDBAPI_URL }}cmdb/app/' + row.id + '/?format=json',
+                        type: 'PATCH',
+                        async:   false,
+                        headers:{'Authorization':'Token {{ API_TOKEN }}'},
+
+                        success: function( json ) {
+                            $('#app').bootstrapTable('refresh', {
+                                silent: true
+                            });
+                            alert('成功删除App记录！');
+                        },
+                        error: function( json ) {
+                            $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>删除失败!</strong>原因：' + JSON.stringify(json.responseText) +'</div>');
+                        }
+
+                    });
+                }
+            }
+
+        }
+    };
+
+    var search = window.location.search;
+    var init_url = '{{ CMDBAPI_URL }}cmdb/applist/?format=json';
+    if (search.length > 1) {
+        init_url += '&' + search.substr(1);
+    }
+    $('#app').bootstrapTable({
+        url: init_url,
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'site_name',
+                title: '站点',
+                align: 'center'
+            },
+            {
+                field: 'name',
+                title: '应用',
+                align: 'center'
+            },
+            {
+                field: 'type_name',
+                title: '类型',
+                align: 'center'
+            },
+            {
+                field: 'level',
+                title: '级别',
+                align: 'center'
+            },
+            {
+                field: 'server_total',
+                title: '主机总数',
+                align: 'center',
+            },
+            {
+                field: 'server_stg_total',
+                title: 'stg主机数',
+                align: 'center',
+                visible: false
+            },
+            {
+                field: 'server_pro_total',
+                title: 'pro主机数',
+                align: 'center',
+                visible: false
+            },
+            {
+                field: 'JQ_pro_total',
+                title: '金桥pro主机数',
+                align: 'center',
+                visible: false
+            },
+            {
+                field: 'NH_pro_total',
+                title: '南汇pro主机数',
+                align: 'center',
+                visible: false
+            },
+            {
+                field: 'service_name',
+                title: 'pool标签',
+                align: 'center',
+            },
+            {
+                field: 'groups',
+                title: '分组',
+                align: 'center',
+                visible: false
+            },
+            {
+                field: 'comment',
+                title: '备注',
+                align: 'center'
+            },
+            {
+                field: 'ctime',
+                title: '创建时间',
+                align: 'center',
+                formatter: getCreateTime
+            },
+            {
+                field: 'operate',
+                title: '操作',
+                align: 'center',
+                formatter: operateFormatter,
+                events: operateEvents
+            }
+        ],
+        responseHandler: function(res){
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 10,
+        pageList: [10,20,50,100,500,800],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false,
+        showExport: true
+    });
+
+    function getCreateTime(value, row, index) {
+        return moment.unix(value).format('YYYY-MM-DD HH:mm:ss');
+    };
+
+    function operateFormatter(value, row, index) {
+        return [
+            '<a href="#" class="edit" data-toggle="tooltip" title="修改应用信息">',
+            '<span class="glyphicon glyphicon-pencil"></span>',
+            '</a>&nbsp;&nbsp;&nbsp;&nbsp; ',
+
+            '<a href="#" class="remove" data-toggle="tooltip" title="删除应用">',
+            '<span class="glyphicon glyphicon-trash"></span>',
+            '</a>&nbsp;&nbsp;&nbsp;&nbsp; '
+        ].join('');
+    };
+
+    $('#addForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                site_name: {
+                    validators: {
+                        notEmpty: {
+                            message: '站点名称不能为空。'
+                        }
+                    }
+                },
+                name: {
+                    validators: {
+                        notEmpty: {
+                            message: '应用名称不能为空。'
+                        }
+                    }
+                },
+                level: {
+                    validators: {
+                        notEmpty: {
+                            message: '级别信息不能为空。'
+                        }
+                    }
+                },
+                comment: {
+                    validators: {
+                        notEmpty: {
+                            message: '备注信息不能为空。'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var inputdata = {
+                'site_id': $("#site_name option:selected").val(),
+                'name': $.trim($("input[name='name']").val()),
+                'level': $.trim($("input[name='level']").val()),
+                'comment': $.trim($("input[name='comment']").val()),
+            };
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}cmdb/applist/',
+                type: 'POST',
+                async: false,
+                data: inputdata,
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (json) {
+                    $('#addModal').modal('hide');
+                    $('#app').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#addForm').bootstrapValidator('resetForm', true);
+                    alert('成功添加App记录！');
+                },
+                error: function (json) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>添加错误!</strong>添加App记录' + JSON.stringify(json.responseText) + '</div>');
+                    $('#addModal').modal('hide');
+                }
+            });
+        });
+    $('#editForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                e_site_name: {
+                    validators: {
+                        notEmpty: {
+                            message: '站点名称不能为空。'
+                        }
+                    }
+                },
+                e_name: {
+                    validators: {
+                        notEmpty: {
+                            message: '应用名称不能为空。'
+                        }
+                    }
+                },
+                e_level: {
+                    validators: {
+                        notEmpty: {
+                            message: '级别信息不能为空。'
+                        }
+                    }
+                },
+                e_comment: {
+                    validators: {
+                        notEmpty: {
+                            message: '备注信息不能为空。'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}cmdb/app/' + $("#e_id").val() + '/',
+                type: 'PATCH',
+                async:  false,
+                data: {
+                    'site_id': $("#e_site_name option:selected").val(),
+                    'name': $.trim($("input[name='e_name']").val()),
+                    'level': $.trim($("input[name='e_level']").val()),
+                    'comment': $.trim($("input[name='e_comment']").val()),
+                },
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $('#editModal').modal('hide');
+                    $('#app').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#editForm').bootstrapValidator('resetForm', true);
+                    alert('成功修改App记录！');
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>修改App记录' + JSON.stringify(json.responseText) +'</div>');
+                    $('#editModal').modal('hide');
+                }
+            });
+        });
+
+
+    $remove.click(function () {
+        var ids = $.map($table.bootstrapTable('getSelections'), function (row) {
+            var outputid = []
+
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}cmdb/app/' + row.id + '/?format=json',
+                type: 'DELETE',
+                async:   false,
+                headers:{'Authorization':'Token {{ API_TOKEN }}'},
+
+                success: function( json ) {
+                    $remove.prop('disabled', true);
+                    outputid.push(row.id);
+                    alert('成功删除App记录！');
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>删除失败!</strong>原因：' + JSON.stringify(json.responseText) +'</div>');
+                }
+
+            });
+            return outputid;
+        });
+
+        $table.bootstrapTable('remove', {
+            field: 'id',
+            values: ids
+        });
+    });
+
+});
+
+</script>
+{% endblock %}

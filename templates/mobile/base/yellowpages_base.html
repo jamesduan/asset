@@ -1,0 +1,39 @@
+{% extends "mobile/base/base.html" %}
+<!-- 黄页内页通用模板 -->
+
+{% block title %}黄页{% endblock %}
+{% block inner_menu %}
+    <div class="mui-scroll-wrapper mui-slider-indicator mui-segmented-control mui-segmented-control-inverted" id="segmentedControl" style="position: fixed;">
+        <div class="mui-scroll" style="transform: translate3d(0px, 0px, 0px) translateZ(0px); transition-duration: 0ms; transition-timing-function: cubic-bezier(0.1, 0.57, 0.1, 1);">
+                <a class="mui-control-item mui-active" href="{{ ROOT_URL }}yellow/"><span>用户查询</span></a>
+                <a class="mui-control-item" id="yellow_menu_duty" href="{{ ROOT_URL }}yellow/duty/"><span>今日值班</span></a>
+        </div>
+    </div>
+
+
+    <script>
+        //指定"黄页"菜单高亮
+        mui(".mui-bar-tab a").each(function () {
+            this.classList.remove();
+        });
+        document.getElementById('main_menu_yellowpages').classList.add('mui-active');
+        //子菜单切换
+        mui(".mui-scroll").on("tap","a",function(e) {
+            var newpage = this.getAttribute("href");
+            mui.openWindow({
+                url: newpage,
+                id: newpage
+            });
+        });
+
+        mui('.mui-scroll-wrapper').scroll({
+            deceleration: 0.0005 //flick 减速系数，系数越大，滚动速度越慢，滚动距离越小，默认值0.0006
+        });
+    </script>
+{% endblock %}
+
+{% block content %}
+    <div class="mui-slider-group" style="transform: translate3d(-7680px, 0px, 0px) translateZ(0px); transition-duration: 0ms;padding-top: 40px;">
+        <div id="item0" class="mui-slider-item mui-control-content">{% block inner_content %}{% endblock %}</div>
+    </div>
+{% endblock %}

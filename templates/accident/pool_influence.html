@@ -1,0 +1,120 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %} 影响范围 {% endblock %}
+{% block content %}
+<link href="{{ STATIC_URL }}accident/css/influence_style.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}accident/iconfont/iconfont.css" rel="stylesheet"/>
+
+<style>
+img{border:0 none;vertical-align:top;}
+button::-moz-focus-inner{padding:0;border:none;}
+.wrap{width:980px;margin:0 auto;}
+.fl{float:left;}
+.fr{float:right;}
+.mt{margin-top:10px;}
+.ml{margin-left:10px;}
+.mt5{margin-top:5px;}
+.mt10{margin-top:10px;}
+.mb{margin-bottom:10px;}
+.none{display:none;}
+</style>
+
+<!-- 主体内容 -->
+<div class="main_cont influence_region">
+    <div class="influence_tit">
+        <h3 class="tit_main">HealthCheck告警受影响Pool范围</h3>
+    </div>
+    <div class="section_list">
+        <ul class="list-inline clearfix" id="dept_list">
+        </ul>
+    </div>
+</div>
+<!-- /主体内容 -->
+
+<script>
+$(document).ready(function() {
+    var flag = true;
+    updatePoolError();
+    //定时刷新插入最新时间轴数据
+    setInterval(updatePoolError, 5000);
+    //查询最新log插入到主时间轴
+    function updatePoolError() {
+        if(flag == false){
+        }else {
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/influence/?format=json',
+                type: "GET",
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (res) {
+                    var count = res.length;
+                    if (count > 0) {
+                        $('#dept_list').html('');
+                        var all_errors = 0;
+                        var depts = JSON.parse(res);
+                        for (var i in depts) {
+                            $('#dept_list').append('<li class="item" id="li-' + i + '">' +
+                                    '<div class="accident_cont" id="' + i + '">');
+                            var dept_errors = 0;
+                            $.each(depts[i]['apps'], function (j, app) {
+                                var status = '';
+                                var healthcheck = '<ul class="incident_detail">';
+                                if (app['events'].length > 0) {
+                                    status = 'red_tooltip';
+                                    dept_errors = dept_errors + 1;
+                                    healthcheck = healthcheck + '<li>HealthCheck报警：' + app['events'].length + '</li>';
+                                    $.each(app['events'], function (k, event) {
+                                        healthcheck = healthcheck + '<li>' + (k + 1) + '.' + event['title'] + '：<span>' + event['message'] + '</span></li>';
+                                    });
+                                } else {
+                                    healthcheck = healthcheck + '<li>HealthCheck报警：无</li>';
+                                }
+                                healthcheck = healthcheck + '</ul>';
+                                $('#dept_list .item #' + i).append('<div class="has_tooltip ' + status + '" id="' + i + j + '"><i class="incident"></i>' +
+                                        '<div class="incident_cont"><ul class="list-unstyled incident_hd">' +
+                                        '<li><strong>应用：</strong>' + app['site_name'] + '/' + app['app_name'] + '</li>' +
+                                        '<li><strong>Domain：</strong>' + app['contact']['domain_name'] + '</li>' +
+                                        '<li><strong>联系人：</strong><span>' + app['contact']['domain_leader'] + '</span> <strong>电话：</strong><span>' + app['contact']['leader_phone'] + '</span></li>' +
+                                        '<li><strong>backup联系人 ：</strong>' + app['contact']['domain_backup_leader'] + ' <strong>电话：</strong>' + app['contact']['backup_leader_phone'] + '</li></ul>' + healthcheck +
+                                        '</div></div>');
+
+                                $('#' + i + j).hover(function () {
+                                    flag = false;
+                                    var _this = $(this).children('.incident'),
+                                            hoverCont = $(this).children('.incident_cont');
+                                    hoverCont.show();
+                                    var w = window.innerWidth - $(document).scrollLeft(),
+                                            thisOffset = _this.offset().left,
+                                            _width = _this.outerWidth(),
+                                            width = parseInt(w - thisOffset - _width),
+                                            hoverWidth = hoverCont.outerWidth();
+                                    if (width < hoverWidth) {
+                                        hoverCont.addClass('laft_show').removeClass('center_show');
+                                    } else if (width < hoverWidth && thisOffset < hoverWidth) {
+                                        hoverCont.removeClass('laft_show').addClass('center_show');
+                                    } else {
+                                        hoverCont.removeClass('laft_show').removeClass('center_show');
+                                    }
+                                }, function () {
+                                    $(this).children('.incident_cont').hide();
+                                });
+
+                                $('#' + i + j).mouseleave(function(){
+                                    flag = true;
+                                });
+
+                            });
+                            all_errors = all_errors + dept_errors;
+                            $('#dept_list').append('</div></li>');
+                            $('#li-' + i).prepend('<p class="item_tit">' + depts[i]['dept_name'] + '<span>（<span>pool共计：' + depts[i]['apps'].length + '，告警：' + dept_errors + '</span>）</span></p>');
+                        }
+                        $('.influence_tit p').remove();
+                        $('.influence_tit').append('<p class="tit_note">当前受影响的Pool共<span>' + all_errors + '</span>个</p>');
+                    }
+
+                }
+            });
+        }
+    }
+
+});
+</script>
+{% endblock %}

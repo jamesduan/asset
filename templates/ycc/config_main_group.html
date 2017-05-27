@@ -1,0 +1,98 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block title %} Host主配置组校验 {% endblock %}
+
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+
+    <div class="inner-h1">Host主配置组校验</div>
+
+    <div class="inner-box inner-list-box">
+        <table id="config_host">
+        </table>
+    </div>
+<script type="application/javascript">
+$(document).ready(function() {
+    $('#config_host').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}ycc/config/maingroup/?format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'server_ip',
+                title: '主机IP'
+            },
+            {
+                field: 'pool_name',
+                title: '应用'
+            },
+            {
+                field: 'ori_pool_name',
+                title: '上报应用名'
+            },
+            {
+                field: 'ori_main_group_id',
+                title: '上报主配置组名'
+            },
+            {
+                field: 'main_group_name',
+                title: '主配置组名（校验）'
+            },
+            {
+                field: 'create_time',
+                title: '更新时间',
+                formatter: updateTimeFormatter
+            }
+{#            {#}
+{#                field: 'operate',#}
+{#                title: '操作',#}
+{#                align: 'center',#}
+{#                formatter: operateFormatter#}
+{#            }#}
+        ],
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [20,50,100,500],
+        clickToSelect: true,
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        showExport: true,
+        cache: false
+    });
+
+    function updateTimeFormatter(value, row, index)
+    {
+        return moment.unix(value).format("YYYY-MM-DD");
+    };
+
+});
+</script>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+
+<!-- <div class="inner-h1">预分配资产号</div> -->
+
+<div id="mess"></div>
+<form class="form-inline" role="form" id="exportform" method="POST" action="?action=export" style="padding-top: 10px">
+<div class="form-group">
+    <input name="cname" class="form-control" id="cname" placeholder="合同编号">
+</div>
+<div class="form-group">
+    <input name="count" class="form-control" id="count" placeholder="预分配设备数量">
+</div>
+<div class="form-group">
+    <select name="asset_type_id" id="asset_type_id" class="form-control" >
+        <option value="" selected>请选择设备类型</option>
+        {% for item in asset_type %}
+            <option value="{{ item.id }}">{{ item.comment }}</option>
+        {% endfor %}
+    </select>
+</div>
+
+<button class="btn btn-green" id="expert" type="submit"> 导出资产号 </button>
+</form>
+
+<div class="inner-h1">预分配资产号查询</div>
+
+<form class="form-inline" role="form" id="searchform" method="POST" action="?action=search">
+<div class="form-group">
+    <input name="cname1" class="form-control" id="cname1" placeholder="合同编号">
+</div>
+
+<button class="btn btn-green" id="search" type="submit"> 点击查询 </button>
+</form>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th style="width: 15%"><strong>合同编号</strong></th>
+            <th style="width: 8%"><strong>资产号</strong></th>
+        </tr>
+    </thead>
+
+    <tbody>
+    {% for item in list %}
+        <tr>
+            <td>{{ item.cname }}</td>
+            <td>{{ item.assetid }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+<div class="clearfix">
+    <ul class="pagination">
+        {% if list.has_previous %}
+            <li><a href="?page={{ list.previous_page_number }}&action={{ action }}&cname1={{ cname }}">&laquo; 上一页</a></li>
+        {% else %}
+            <li class="disabled"><a href="#">&laquo; 上一页</a></li>
+        {% endif %}
+        {% for p in page_range %}
+            {% ifequal p list.number %}
+                <li class="active"><a href="#">{{ p }} <span class="sr-only">(current)</span></a></li>
+            {% else %}
+                <li><a href="?page={{p}}&action={{ action }}&cname1={{ cname }}" title="第{{p}}页">{{p}}</a></li>
+            {% endifequal %}
+        {% endfor %}
+        {% if list.has_next %}
+            <li><a href="?page={{ list.next_page_number }}&action={{ action }}&cname1={{ cname }}">&raquo; 下一页</a></li>
+        {% else %}
+            <li class="disabled"><a href="#">&raquo; 下一页</a></li>
+        {% endif %}
+    </ul>
+</div>
+
+<script>
+$(document).ready(function() {
+    $('#asset_type_id').combobox({});
+
+    $('#exportform')
+        .bootstrapValidator({
+            container: '#mess',
+            fields: {
+                cname: {
+                    validators: {
+                        notEmpty: {
+                            message: '合同编号不能为空。'
+                        }
+                    }
+                },
+                count: {
+                    validators: {
+                        notEmpty: {
+                            message: '数量不能为空。'
+                        }
+                    }
+                },
+                asset_type_id: {
+                    validators: {
+                        notEmpty: {
+                            message: '设备类型不能为空。'
+                        }
+                    }
+                }
+            }
+        });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,318 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %}Production批量操作{% endblock %}
+{% block content %}
+    <link href="{{ STATIC_URL }}libs/jquery-treetable-v3.2.0/css/jquery.treetable.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.11.0/bootstrap-table.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.11.0/extensions/group-by-v2/bootstrap-table-group-by.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker-v2/css/bootstrap-datetimepicker.css"
+          rel="stylesheet"/>
+    <script src="{{ STATIC_URL }}libs/jquery-treetable-v3.2.0/jquery.treetable.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.11.0/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.11.0/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.11.0/extensions/group-by-v2/bootstrap-table-group-by.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/date-format/js/date.format.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker-v2/js/bootstrap-datetimepicker.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-json/js/jquery.json.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-timer-v1.0.1/js/jquery.timer.js"></script>
+
+    <!-- toolbar -->
+    <div id="toolbar">
+        <div class="form-inline" role="form">
+            <label>From</label>
+            <div class="input-group date">
+                <input class="form-control" type="text" disabled>
+                <span class="input-group-addon"><span class="glyphicon glyphicon-th"></span></span>
+            </div>
+            <button class="btn btn-green" id="bulk_deploy" disabled="disabled">批量发布</button>
+            <button class="btn btn-green" id="bulk_rollback">批量回滚</button>
+        </div>
+    </div>
+    <div class="inner-h1" style="margin-bottom: 0px">
+        <h1>
+            Production批量操作
+        </h1>
+    </div>
+    <table id="table" class="bootstrap-table"></table>
+
+    <script>
+        function from_unixtime(timestamp) {
+            if (!timestamp) return null;
+            var date = new Date(parseInt(timestamp) * 1000);
+            return date.format("yyyy-mm-dd HH:MM:ss");
+        }
+
+        function unix_timestamp(date_format, offset) {
+            if (!date_format) return '';
+            return Date.parse(date_format) / 1000 + offset;
+        }
+        $(document).ready(function () {
+            var today = new Date()
+            var startDate = new Date(today.getTime() - 1 * 86400 * 1000);
+            var endDate = new Date(today.getTime() + 86400 * 1000);
+            $('div.date').datetimepicker({
+                format: 'yyyy-mm-dd hh:00:00',
+                weekStart: 0,
+                startDate: startDate.format('yyyy-mm-dd'),
+                endDate: endDate.format('yyyy-mm-dd'),
+                daysOfWeekDisabled: [],
+                autoclose: true,
+                startView: 2,
+                minView: 1,
+                maxView: 4,
+                todayBtn: true,
+                todayHighlight: true,
+                keyboardNavigation: true,
+                language: 'en',
+                forceParse: true,
+                minuteStep: 5,
+                pickerReferer: 'default',
+                pickerPosition: 'bottom-right',
+                viewSelect: 'day',
+                showMeridian: false,
+                initialDate: new Date()
+            });
+            $('#table').bootstrapTable({
+                ajaxOptions: {
+                    'headers': {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    }
+                },
+                columns: [
+                    {
+                        field: 'state',
+                        checkbox: true,
+                        {#                        formatter: function (value, row, index) {#}
+                        {#                            if (row.publishdatetimefrom > Date.parse(new Date()) / 1000)#}
+                        {#                                return {#}
+                        {#                                    disabled: true#}
+                        {#                                };#}
+                        {#                            return value;#}
+                        {#                        }#}
+                    },
+                    {
+                        title: 'Trident ID',
+                        formatter: function (value, row, index) {
+                            return $('<a>').attr({
+                                href: '{{ trident_prefix }}/secure/queryDeployRequestForm.jspa?issueKey=' + row.jiraid,
+                                target: '_blank'
+                            }).text(row.jiraid)[0].outerHTML;
+                        }
+                    },
+                    {
+                        title: '发布号',
+                        formatter: function (value, row, index) {
+                            return $('<a>').attr({
+                                href: '/deploy/prod/detail/?depid=' + row.depid,
+                                target: '_blank'
+                            }).text(row.depid)[0].outerHTML;
+                        }
+                    },
+                    {
+                        field: 'pool_name',
+                        title: 'Pool',
+                        formatter: function (value, row, index) {
+                            return row.site_name + '/' + row.app_name;
+                        }
+                    },
+                    {
+                        field: 'group_id',
+                        visible: false
+                    },
+                    {
+                        title: '发布开始时间',
+                        formatter: function (value, row, index) {
+                            return from_unixtime(row.publishdatetimefrom);
+                        }
+                    },
+                    {
+                        title: '发布结束时间',
+                        formatter: function (value, row, index) {
+                            return from_unixtime(row.publishdatetimeto);
+                        }
+                    },
+                    {
+                        field: 'packtype_name',
+                        title: '发布类型',
+                    },
+                    {
+                        title: '灰度',
+                        formatter: function (value, row, index) {
+                            return row.is_gray_release ? '是' : '否';
+                        },
+                        visible: false
+                    },
+                    {
+                        title: '是否重启',
+                        formatter: function (value, row, index) {
+                            return row.restart ? '是' : '否';
+                        },
+                        visible: false
+                    },
+                    {
+                        title: '最后修改时间',
+                        formatter: function (value, row, index) {
+                            return from_unixtime(row.last_modified);
+                        },
+                        visible: false
+                    },
+                    {
+                        field: 'status_name',
+                        title: '状态'
+                    },
+                    {
+                        title: '发布进度',
+                        formatter: function (value, row, index) {
+                            var cls_array = ['progress-bar', 'progress-bar-success', 'progress-bar-striped']
+                            if (($.inArray(row.packtype_name, ['webapps', 'static']) != -1 && $.inArray(row.status, [6, 9]) != -1) || (row.packtype_name == 'config' && row.in_progress == true))
+                                cls_array.push('active')
+                            return $('<div>').attr('class', 'progress').css({
+                                {#                                'height': '34px',#}
+                                'margin-bottom': 0
+                            }).append($('<div>').attr({
+                                class: cls_array.join(' '),
+                                role: 'progressbar',
+                                'aria-valuenow': row.deploy_progress,
+                                'aria-valuemin': 0,
+                                'aria-valuemax': 100,
+                            }).css({
+                                'min-width': '2em',
+                                width: row.deploy_progress + '%',
+                                {#                                'line-height': '34px',#}
+                            }).text(row.deploy_progress + '%'))[0].outerHTML;
+                        },
+                        {#                        width: '15%'#}
+                    },
+                    {
+                        title: '回滚进度',
+                        formatter: function (value, row, index) {
+                            var cls_array = ['progress-bar', 'progress-bar-danger', 'progress-bar-striped']
+                            if (($.inArray(row.packtype_name, ['webapps', 'static']) != -1 && row.status == 11) || (row.packtype_name == 'config' && row.in_progress == true))
+                                cls_array.push('active')
+                            return $('<div>').attr('class', 'progress').css({
+                                {#                                'height': '34px',#}
+                                'margin-bottom': 0
+                            }).append($('<div>').attr({
+                                class: cls_array.join(' '),
+                                role: 'progressbar',
+                                'aria-valuenow': row.rollback_progress,
+                                'aria-valuemin': 0,
+                                'aria-valuemax': 100,
+                            }).css({
+                                'min-width': '2em',
+                                width: row.rollback_progress + '%',
+                                {#                                'line-height': '34px'#}
+                            }).text(row.rollback_progress + '%'))[0].outerHTML;
+                        },
+                        {#                        width: '15%'#}
+                    },
+                ],
+                {#                responseHandler: function (res) {#}
+                {#                    var result = new Object();#}
+                {#                    result.rows = res.results;#}
+                {#                    result.total = res.count;#}
+                {#                    return result#}
+                {#                },#}
+                pagination: false,
+                showRefresh: true,
+                search: false,
+                showColumns: true,
+                toolbar: "#toolbar",
+                cache: false,
+                {#                sortName: 'publishdatetimefrom',#}
+                {#                sortOrder: 'asc',#}
+                uniqueId: 'depid',
+                groupBy: true,
+                groupByField: 'jiraid'
+            });
+            $('div.date > input[type="text"]').change(function () {
+                $('#table').bootstrapTable('refreshOptions', {
+                    url: '/api/deploy/bulk/list/',
+                    queryParams: function (p) {
+                        return {
+                            publishdatetimefrom: unix_timestamp($('div.date > input[type="text"]').val(), 0)
+                        };
+                    },
+                });
+            })
+            $('#bulk_rollback').bind('click', function () {
+                bootbox.confirm('是否执行批量回滚？', function (result) {
+                    if (!result)
+                        return;
+                    var group_id_list = [];
+                    $.each($('#table').bootstrapTable('getSelections'), function (index, value) {
+                        if (($.inArray(value.packtype, [0, 3]) != -1 && value.status != 4) || (value.packtype == 4 && value.status != 2)) {
+                            if ($.inArray(value.group_id, group_id_list) == -1)
+                                group_id_list.push(value.group_id)
+                        }
+                    });
+                    if (group_id_list.length > 0) {
+                        $.each($('#table').bootstrapTable('getSelections'), function (index, value) {
+                            if ($.inArray(value.group_id, group_id_list) != -1)
+                                $('#table').bootstrapTable('updateByUniqueId', {
+                                    id: value.depid,
+                                    row: {
+                                        state: false
+                                    }
+                                })
+                        })
+                        bootbox.alert('清除状态不是已发布的发布申请单的勾选，请重新检查一遍');
+                    }
+                    else {
+                        group_id_list = [];
+                        $.each($('#table').bootstrapTable('getSelections'), function (index, value) {
+                            if ($.inArray(value.group_id, group_id_list) == -1)
+                                group_id_list.push(value.group_id)
+                        })
+                        $.ajax({
+                            url: '/api/deploy/bulk/rollback/',
+                            async: false,
+                            method: 'post',
+                            data: {
+                                group_id_list: $.toJSON(group_id_list)
+                            },
+                            headers: {
+                                Authorization: 'Token {{ API_TOKEN }}'
+                            },
+                            success: function (json) {
+                                $('#bulk_rollback').prop('disabled', true);
+                                var timer = $.timer(2000, function () {
+                                    $('#table').bootstrapTable('refresh', {
+                                        silent: true
+                                    });
+                                })
+
+                            },
+                            error: function (json) {
+                                bootbox.alert('操作失败，原因为：' + json.responseText);
+                            }
+                        })
+                    }
+                })
+            })
+            $('#table').on('check.bs.table', function (e, row, $element) {
+                $.each($('#table').bootstrapTable('getData'), function (index, value) {
+                    if (value.group_id == row.group_id && value.state != true)
+                        $('#table').bootstrapTable('updateByUniqueId', {
+                            id: value.depid,
+                            row: {
+                                state: true
+                            }
+                        })
+                })
+            }).on('uncheck.bs.table', function (e, row, $element) {
+                $.each($('#table').bootstrapTable('getData'), function (index, value) {
+                    if (value.group_id == row.group_id && value.state == true)
+                        $('#table').bootstrapTable('updateByUniqueId', {
+                            id: value.depid,
+                            row: {
+                                state: false
+                            }
+                        })
+                })
+            })
+        })
+    </script>
+{% endblock %}

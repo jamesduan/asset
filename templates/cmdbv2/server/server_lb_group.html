@@ -1,0 +1,244 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %}LB分组管理{% endblock %}
+{% block content %}
+
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.11.0/bootstrap-table.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-select-1.10.0/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"
+          rel="stylesheet"/>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.11.0/bootstrap-table.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.11.0/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-select-1.10.0/dist/js/bootstrap-select.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+
+    <!-- 新建/修改 -->
+    <div class="modal fade" id="modal_create" tabindex="-1" role="dialog" aria-labelledby="label_create"
+         aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="form_create">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span
+                                aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="label_create"></h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="app_create" class="col-sm-2 control-label">站点/应用</label>
+                            <div class='col-sm-10'>
+                                <select id="app_create" name="app_create" class="form-control selectpicker" data-live-search="true">
+                                    <option value="">请选择站点/应用</option>
+                                    {% for app in app_queryset %}
+                                        <option value="{{ app.id }}">{{ app.site.name }}/{{ app.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="name_create" class="col-sm-2 control-label">分组名称</label>
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" id="name_create" name="name_create"/>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green create">创建</button>
+                        <button type="submit" class="btn btn-green update">修改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="toolbar">
+        <button class="btn btn-green">
+            <i class="glyphicon glyphicon-plus"></i> 新增
+        </button>
+    </div>
+    <table id="table"></table>
+
+    <script>
+        $(document).ready(function () {
+            var id = null;
+
+            function refresh() {
+                $('#table').bootstrapTable('refresh', {
+                    silent: false,
+                    query: $('#app').val() ? {
+                        app_id: $('#app').val()
+                    } : null
+                });
+            }
+
+            function operateFormatter(value, row, index) {
+                var group = new Array();
+                group.push($('<a>').attr('class', 'edit').append(
+                        $('<span>').attr({
+                            class: 'glyphicon glyphicon-pencil',
+                            title: ' 编辑',
+                        }).css({
+                            cursor: 'pointer',
+                            'margin-right': '10px'
+                        }))[0].outerHTML)
+                group.push($('<a>').attr('class', 'remove').append(
+                        $('<span>').attr({
+                            class: 'glyphicon glyphicon-remove',
+                            title: ' 删除',
+                        }).css({
+                            cursor: 'pointer',
+                        }))[0].outerHTML)
+                return group.join('');
+            };
+            function ajax(url, method, data) {
+                $.ajax({
+                    url: url,
+                    async: false,
+                    method: method,
+                    data: data,
+                    headers: {
+                        Authorization: 'Token {{ API_TOKEN }}'
+                    },
+                    success: function (json) {
+                        bootbox.alert('操作成功');
+                    },
+                    error: function (json) {
+                        bootbox.alert('操作失败，原因为' + json.responseText);
+                    }
+                });
+            }
+
+            window.operateEvents = {
+                'click .edit': function (e, value, row, index) {
+                    id = row.id;
+                    $('#label_create').text('修改分组')
+                    $('#modal_create div.modal-footer button.create').hide();
+                    $('#modal_create div.modal-footer button.update').show();
+                    $('#app_create').selectpicker('val', row.app);
+                    $('#app_create').prop('disabled', true).selectpicker('refresh');
+                    $("#name_create").val(row.name);
+                    $('#modal_create').modal('show');
+                }, 'click .remove': function (e, value, row, index) {
+                    bootbox.confirm('是否删除？', function (result) {
+                        if (result) {
+                            ajax(
+                                    '/api/server/lb_group/' + row.id + '/',
+                                    'delete',
+                                    null
+                            );
+                            refresh();
+                        }
+                    })
+                },
+            };
+            $('#app').change(function () {
+                if ($(this).val())
+                    refresh();
+            })
+            $('#table').bootstrapTable({
+                url: '/api/server/lb_group/',
+                ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                columns: [
+                    {
+                        title: '站点/应用',
+                        formatter: function (value, row, index) {
+                            return row.site_name + '/' + row.app_name;
+                        }
+                    },
+                    {
+                        field: 'name',
+                        title: '分组名称'
+                    },
+                    {
+                        field: 'operate',
+                        title: '操作',
+                        align: 'left',
+                        formatter: operateFormatter,
+                        events: operateEvents
+                    }
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search,
+                        format: 'json',
+                    };
+                },
+                pagination: true,
+                pageSize: 10,
+                pageList: [10, 20, 50, 100],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: true,
+                showColumns: true,
+                toolbar: "#toolbar",
+                cache: false
+            });
+            <!-- hudson_job_create -->
+            $('#form_create')
+                    .bootstrapValidator({
+                        excluded: ':disabled',
+                        fields: {
+                            app_create: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '站点/应用不能为空'
+                                    }
+                                }
+                            },
+                            name_create: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '分组名称不能为空。'
+                                    }
+                                }
+                            },
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        var $button = $(e.target).data('bootstrapValidator').getSubmitButton();
+                        if ($button.hasClass('create'))
+                            ajax(
+                                    '/api/server/lb_group/',
+                                    'post',
+                                    {
+                                        app: $('#app_create').val(),
+                                        name: $('#name_create').val(),
+                                    }
+                            );
+                        else if ($button.hasClass('update'))
+                            ajax(
+                                    '/api/server/lb_group/' + id + '/',
+                                    'patch',
+                                    {
+                                        name: $('#name_create').val(),
+                                    }
+                            );
+                        refresh();
+                        $('#modal_create').modal('hide');
+                    });
+            $('#modal_create').on('hidden.bs.modal', function (e) {
+                $('#app_create').selectpicker('val', '');
+                $('#app_name').val('');
+                $('#form_create').bootstrapValidator('resetForm', true);
+            });
+            $('#toolbar button').bind('click', function () {
+                $('#label_create').text('新建分组');
+                $('#app_create').prop('disabled', false).selectpicker('refresh');
+                $('#modal_create div.modal-footer button.create').show();
+                $('#modal_create div.modal-footer button.update').hide();
+                $('#modal_create').modal('show');
+            })
+        })
+    </script>
+{% endblock %}

@@ -1,0 +1,515 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<style>
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+</style>
+<!-- <div class="inner-h1">机房管理</div> -->
+
+<div id="alert">
+</div>
+<div id="toolbar">
+    <button id="create" data-toggle="modal" data-target="#addModal" class="btn btn-green">
+        <i class="glyphicon glyphicon-plus"></i> 新增
+    </button>
+
+    <button id="remove" class="btn btn-danger">
+        <i class="glyphicon glyphicon-remove"></i> 删除
+    </button>
+</div>
+
+<table id="zone">
+</table>
+
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="addForm" method="POST" action="{{ API_HYBRID_SAVE }}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="myModalLabel">新增机房</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">名称</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="name" id="name" />
+                        </div>
+                    </div>
+					<div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">名称（中文）</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="name_ch" id="name_ch" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputEmail3" class="col-sm-3 control-label">城市</label>
+                        <div class='col-sm-6'>
+                            <select name="area" id="area" class="form-control" >
+                                <option value="">请选择</option>
+                                {%  for item in arealist %}
+                                    <option value="{{ item.id }}">{{ item.name_cn }}</option>
+                                {%  endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">备注</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="comment" id="comment" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">经纬度</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="points" id="points" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">YCC</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="ycc_code" id="ycc_code" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">ZK集群</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="zk_cluster" id="zk_cluster" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-green" id="submit1">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="editForm" method="POST" action="{{ API_HYBRID_SAVE }}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="editzone">修改机房</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="inputEmail3" class="col-sm-3 control-label">机房编号</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_id" id="e_id" readonly />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputEmail3" class="col-sm-3 control-label">所在城市</label>
+                        <div class='col-sm-6'>
+                            <select name="e_area" id="e_area" class="form-control" >
+                                <option value="">请选择</option>
+                                {%  for item in arealist %}
+                                    <option value="{{ item.id }}">{{ item.name_cn }}</option>
+                                {%  endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">机房名称</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_name" id="e_name" />
+                        </div>
+                    </div>
+					<div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">名称（中文）</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_name_ch" id="e_name_ch" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">备注信息</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_comment" id="e_comment" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">经纬度</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_points" id="e_points" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">YCC</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_ycc_code" id="e_ycc_code" />
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">ZK集群</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_zk_cluster" id="e_zk_cluster" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-green" id="submit2">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<script>
+var $table = $('#zone'),
+    $remove = $('#remove');
+$(document).ready(function(){
+     window.operateEvents = {
+        'click .edit': function (e, value, row) {
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/zone/' + row.id + '/?format=json',
+                type: 'GET',
+                async:   false,
+                headers:{'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $("#e_id").val(json.id);
+                    $("#e_area").val(json.area);
+                    $("#e_name").val(json.name);
+					$("#e_name_ch").val(json.name_ch);
+                    $("#e_comment").val(json.comment);
+                    $("#e_points").val(json.points);
+                    $("#e_ycc_code").val(json.ycc_code);
+                    $("#e_zk_cluster").val(json.zk_cluster);
+                    var count=$("#e_area option").length;
+                    for(var i=0;i<count;i++) {
+                        if($("#e_area ").get(0).options[i].text == json.area) {
+                            $("#e_area ").get(0).options[i].selected = true;
+                            break;
+                        }
+                    }
+                }
+            });
+            $('#editModal').modal('show');
+        }
+    };
+    $('#zone').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}asset/zone/?format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'state',
+                checkbox: true
+            },
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'area_name',
+                title: '城市',
+                align: 'center'
+            },
+            {
+                field: 'name',
+                title: '机房',
+                align: 'center'
+            },
+            {
+                field: 'comment',
+                title: '机房(备注)',
+                align: 'center'
+            },
+			{
+                field: 'ycc_code',
+                title: 'Zone',
+                align: 'center'
+            },
+			{
+                field: 'architecture_name',
+                title: 'IDC',
+                align: 'center'
+            },
+			{
+                field: 'parent_name',
+                title: '物理机房',
+                align: 'center'
+            },
+            {
+                field: 'rack_real_total',
+                title: '机柜数',
+                align: 'center'
+            },
+            {
+                field: 'rack_blade_total',
+                title: '刀片笼数',
+                align: 'center'
+            },
+            {
+                field: 'rack_total',
+                title: '总数',
+                align: 'center'
+            },
+            {
+                field: 'points',
+                title: '经纬度',
+                align: 'center'
+            },
+            {
+                field: 'operate',
+                title: '操作',
+                align: 'center',
+                formatter: operateFormatter,
+                events: operateEvents
+            }
+        ],
+        responseHandler: function(res){
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 5,
+        pageList: [5,10,50],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false
+
+    });
+
+
+    function operateFormatter(value, row, index) {
+        return [
+            '<a href="#" class="edit">',
+            '<span class="glyphicon glyphicon-pencil"></span>',
+            '</a>&nbsp;&nbsp;&nbsp;&nbsp; '
+        ].join('');
+    }
+
+    $table.on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+        $remove.prop('disabled', !$table.bootstrapTable('getSelections').length);
+    });
+
+    $('#addForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                name: {
+                    validators: {
+                        notEmpty: {
+                            message: '机房名称不能为空。'
+                        }
+                    }
+                },
+				name_ch: {
+                    validators: {
+                        notEmpty: {
+                            message: '机房中文名称不能为空。'
+                        }
+                    }
+                },
+                area: {
+                    validators: {
+                        notEmpty: {
+                            message: '所在城市不能为空。'
+                        }
+                    }
+                },
+                comment: {
+                    validators: {
+                        notEmpty: {
+                            message: '备注信息不能为空。'
+                        }
+                    }
+                },
+                points: {
+                    validators: {
+                        notEmpty: {
+                            message: '经纬度信息不能为空。'
+                        }
+                    }
+                },
+                ycc_code: {
+                    validators: {
+                        notEmpty: {
+                            message: 'ycc信息不能为空。'
+                        }
+                    }
+                },
+                zk_cluster: {
+                    validators: {
+                        notEmpty: {
+                            message: 'ZK集群信息不能为空。'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var inputdata = {
+                'name': $.trim($("input[name='name']").val()),
+				'name_ch': $.trim($("input[name='name_ch']").val()),
+                'area': $("#area option:selected").val(),
+                'comment': $.trim($("input[name='comment']").val()),
+                'points': $.trim($("input[name='points']").val()),
+                'ycc_code': $.trim($("input[name='ycc_code']").val()),
+                'zk_cluster': $.trim($("input[name='zk_cluster']").val())
+            };
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}asset/zone/',
+                type: 'POST',
+                async: false,
+                data: inputdata,
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (json) {
+                    $('#addModal').modal('hide');
+                    $('#zone').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#addForm').bootstrapValidator('resetForm', true);
+                    alert('成功添加机房记录！');
+                },
+                error: function (json) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>添加错误!</strong>添加机房记录' + JSON.stringify(json.responseText) + '</div>');
+                    $('#addModal').modal('hide');
+                }
+            });
+        });
+    $('#editForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                e_area: {
+                    validators: {
+                        notEmpty: {
+                            message: '所在城市不能为空。'
+                        }
+                    }
+                },
+                e_name: {
+                    validators: {
+                        notEmpty: {
+                            message: '机房名称不能为空。'
+                        }
+                    }
+                },
+				e_name_ch: {
+                    validators: {
+                        notEmpty: {
+                            message: '机房中文名称不能为空。'
+                        }
+                    }
+                },
+                e_comment: {
+                    validators: {
+                        notEmpty: {
+                            message: '备注信息不能为空。'
+                        }
+                    }
+                },
+                e_points: {
+                    validators: {
+                        notEmpty: {
+                            message: '经纬度信息不能为空。'
+                        }
+                    }
+                },
+                e_ycc_code: {
+                    validators: {
+                        notEmpty: {
+                            message: 'ycc信息不能为空。'
+                        }
+                    }
+                },
+                e_zk_cluster: {
+                    validators: {
+                        notEmpty: {
+                            message: 'ZK集群信息不能为空。'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/zone/' + $("#e_id").val() + '/',
+                type: 'PATCH',
+                async:  false,
+                data: {
+                    'name': $.trim($("input[name='e_name']").val()),
+					'name_ch': $.trim($("input[name='e_name_ch']").val()),
+                    'area': $("#e_area option:selected").val(),
+                    'comment': $.trim($("input[name='e_comment']").val()),
+                    'points': $.trim($("input[name='e_points']").val()),
+                    'ycc_code': $.trim($("input[name='e_ycc_code']").val()),
+                    'zk_cluster': $.trim($("input[name='e_zk_cluster']").val())
+
+                },
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $('#editModal').modal('hide');
+                    $('#zone').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#editForm').bootstrapValidator('resetForm', true);
+                    alert('成功修改机房记录！');
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加机房记录' + JSON.stringify(json.responseText) +'</div>');
+                    $('#editModal').modal('hide');
+                }
+            });
+        });
+
+
+    $remove.click(function () {
+        var ids = $.map($table.bootstrapTable('getSelections'), function (row) {
+            var outputid = []
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/zone/' + row.id + '/?format=json',
+                type: 'DELETE',
+                async:   false,
+                headers:{'Authorization':'Token {{ API_TOKEN }}'},
+
+                success: function( json ) {
+                    $remove.prop('disabled', true);
+                    outputid.push(row.id);
+                    alert('成功删除机房记录！');
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>删除失败!</strong>原因：' + JSON.stringify(json.responseText) +'</div>');
+                }
+
+            });
+            return outputid;
+        });
+
+        $table.bootstrapTable('remove', {
+            field: 'id',
+            values: ids
+        });
+    });
+
+});
+
+</script>
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends "deploy/base.html" %}
+
+{% block title %}
+    <title>服务器重启</title>
+{% endblock %}
+
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/bootstrap/css/bootstrap.min.css" />
+{% endblock %}
+
+{% block js %}
+    <script src="{{ STATIC_URL }}libs/bootstrap/js/bootstrap.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/queryParser/jquery-queryParser.min.js"></script>
+    <script src="{{ STATIC_URL }}deploy/js/date.format.js"></script>
+    <script src="{{ STATIC_URL }}deploy/js/jquery.json.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            //loading状态
+            var loading_ico = $('<div><img src="{{ STATIC_URL }}/deploy/img/loading.gif" /></div>').css({
+                position: 'absolute',
+                zIndex: 9999,
+                top: '50%',
+                left: '50%'
+            });
+            var loading_mask = $('<div></div>').css({
+                height: Math.max($(window).height(), $('body').height()),
+                width: '100%',
+                position: 'absolute',
+                zIndex: 9999,
+                top: 0,
+                left: 0
+            });
+            var showLoading = function() {
+                endLoading();
+                loading_mask.appendTo('body');
+                loading_ico.appendTo('body');
+            };
+            var endLoading = function() {
+                loading_mask.remove();
+                loading_ico.remove();
+            };
+            //时间转换
+            var from_unixtime = function(timestamp) {
+                if (!timestamp) return '';
+                var date = new Date(parseInt(timestamp) * 1000);
+                return date.format("yyyy-mm-dd HH:MM:ss")
+            }
+            var statusAutoMonitor = function(ticket_id) {
+                var t = setTimeout(function() {
+                    statusAutoMonitor(ticket_id);
+                }, 1000);
+                $.ajax({
+                    url: '/api/deploy/log/reboot/',
+                    type: 'get',
+                    async: false,
+                    data: {ticket_id: ticket_id, format: 'json'},
+                    headers: {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    },
+                    success: function(json) {
+                        $('#log_info').empty();
+                        $("#log_info").append("<tr class='active'>" +
+                            "<td width='15%'></td>" +
+                            "<td width='10%'>执行状态：</td><td width='10%'>"+json.status+"</td>" +
+                            "<td width='10%'>执行结果：</td><td>"+json.result+"</td>" +
+                            "</tr>")
+                        $.each(json.logs, function(n, value){
+                            $("#log_info").append("<tr>" +
+                            "<td>"+from_unixtime(value.create_time)+"</td>" +
+                            "<td colspan='4'>"+value.log+"</td>" +
+                            "</tr>");
+                        })
+                        if(json.ready){
+                            clearTimeout(t);
+                            endLoading();
+                        }
+                    },
+                    error: function(jqXHR) {
+{#                        alert(jqXHR.responseText);#}
+                    }
+                });
+                $.ajax({
+                    url: '/api/deploy/ticket/'+ticket_id+'/',
+                    type: 'get',
+                    async: false,
+                    data: {format: 'json'},
+                    headers: {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    },
+                    success: function(json) {
+                        var percent = parseInt(json.percent);
+                        $('div.progress-bar').attr('aria-valuenow', percent);
+                        $('div.progress-bar').css('width', percent+'%');
+                        $('div.progress-bar span').text(percent+'% Complete');
+                        if(percent == 100)
+                            $('div.progress-bar').removeClass('active');
+                    },
+                    error: function(jqXHR) {
+{#                        alert(jqXHR.responseText);#}
+                    }
+                });
+            };
+            showLoading();
+            var query = $.getQuery();
+            statusAutoMonitor(query.ticket_id);
+        })
+    </script>
+{% endblock %}
+
+{% block body %}
+    <div class="container-fluid">
+        <div class="row" style="margin-top: 20px">
+            <div class="col-md-10 col-md-offset-1">
+                <div class="progress">
+                  <div class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                    <span class="sr-only">0% Complete</span>
+                  </div>
+                </div>
+                <table class="table table-bordered" id="log_info">
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

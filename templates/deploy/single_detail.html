@@ -1,0 +1,102 @@
+{% extends "deploy/base.html" %}
+
+{% block title %}
+    <title>单台服务器发布</title>
+{% endblock %}
+
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/bootstrap/css/bootstrap.min.css" />
+{% endblock %}
+
+{% block js %}
+    <script src="{{ STATIC_URL }}libs/bootstrap/js/bootstrap.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/queryParser/jquery-queryParser.min.js"></script>
+    <script src="{{ STATIC_URL }}deploy/js/date.format.js"></script>
+    <script src="{{ STATIC_URL }}deploy/js/jquery.json.min.js"></script>
+    <script>
+        $(document).ready(function(){
+            //loading状态
+            var loading_ico = $('<div><img src="{{ STATIC_URL }}/deploy/img/loading.gif" /></div>').css({
+                position: 'absolute',
+                zIndex: 9999,
+                top: '50%',
+                left: '50%'
+            });
+            var loading_mask = $('<div></div>').css({
+                height: Math.max($(window).height(), $('body').height()),
+                width: '100%',
+                position: 'absolute',
+                zIndex: 9999,
+                top: 0,
+                left: 0
+            });
+            var showLoading = function() {
+                endLoading();
+                loading_mask.appendTo('body');
+                loading_ico.appendTo('body');
+            };
+            var endLoading = function() {
+                loading_mask.remove();
+                loading_ico.remove();
+            };
+            //时间转换
+            var from_unixtime = function(timestamp) {
+                if (!timestamp) return '';
+                var date = new Date(parseInt(timestamp) * 1000);
+                return date.format("yyyy-mm-dd HH:MM:ss")
+            }
+            var statusAutoMonitor = function(task_id) {
+                var query = $.getQuery();
+                var ip = query.ip;
+                var t = setTimeout(function() {
+                    statusAutoMonitor(task_id);
+                }, 1000);
+                $.ajax({
+                    url: '/api/deploy/log2/',
+                    type: 'get',
+                    async: false,
+                    data: {task_id: task_id, format: 'json'},
+                    headers: {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    },
+                    success: function(json) {
+                        $('#log_info').empty();
+                        $("#log_info").append("<tr class='active'>" +
+                            "<td width='15%'>IP：</td><td width='12%'>"+ip+"</td>" +
+                            "<td width='12%'>是否执行完成：</td><td width='5%'>"+(json.ready?'是':'否')+"</td>" +
+                            "<td width='12%'>执行状态：</td><td width='12%'>"+json.status+"</td>" +
+                            "<td width='12%'>执行结果：</td><td>"+json.result+"</td>" +
+                            "</tr>")
+                        $.each(json.logs, function(n, value){
+                            $("#log_info").append("<tr>" +
+                            "<td>"+from_unixtime(value.create_time)+"</td>" +
+                            "<td colspan='7'>"+value.log+"</td>" +
+                            "</tr>");
+                        })
+                        if(json.ready){
+                            clearTimeout(t);
+                            endLoading();
+                        }
+                    },
+                    error: function(jqXHR) {
+                        alert(jqXHR.responseText);
+                    }
+                });
+            };
+            showLoading();
+            var query = $.getQuery();
+            statusAutoMonitor(query.task_id);
+        })
+    </script>
+{% endblock %}
+
+{% block body %}
+    <div class="container-fluid">
+        <div class="row" style="margin-top: 20px">
+            <div class="col-md-10 col-md-offset-1">
+                <table class="table table-bordered" id="log_info">
+                </table>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -1,0 +1,990 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %} 事故中心 {% endblock %}
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-fileinput/css/fileinput.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/font-awesome-4.1.0/css/font-awesome.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/summernote/dist/summernote.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/zoom/css/zoom.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-fileinput/js/fileinput.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-fileinput/js/fileinput_locale_zh.js"></script>
+<script src="{{ STATIC_URL }}libs/summernote/dist/summernote.min.js"></script>
+<script src="{{ STATIC_URL }}libs/summernote/dist/lang/summernote-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/zoom/js/zoom.js"></script>
+<script src="{{ STATIC_URL }}libs/zoom/transition.js"></script>
+<style>
+    .red{ color:#ff0000;}
+{#    .look{#}
+{#        cursor: pointer;#}
+{#        transition: all 0.6s;#}
+{#    }#}
+    .look:hover{
+{#        transform: scale(20);#}
+        z-index: 1999;
+        position: fixed;
+    }
+</style>
+<!--内页的标题-->
+<div class="inner-h1">事故处理中心</div>
+
+<div id="alert"></div>
+<div class="inner-box inner-tab-box">
+{% if accident == null %}
+    <div class="panel panel-default acStar-panel">
+        <div class="panel-body">
+            <form class="form" id="addAccidentForm" role="form"  method="POST">
+                    <div class="form-group">
+                        <input id="act_title" name="act_title" type="text" class="form-control" placeholder="请填写事故名称"/>
+                    </div>
+                    <div class="form-group basic-footer">
+                            <button id="open_accident" type="submit" class="btn btn-green form-control">开启事故</button>
+                    </div>
+            </form>
+        </div>
+        <div class="panel-footer"><a href="{{ ROOT_URL }}list/" class="label label-default">查看历史记录</a></div>
+    </div>
+{% else %}
+    <!--关闭事故-模态框（Modal） -->
+    <div class="modal fade" id="closeModal" tabindex="-1" role="dialog" aria-labelledby="recoverModalLabel" aria-hidden="true"  data-backdrop="static">
+     <div class="modal-dialog">
+      <div class="modal-content">
+        <form class="form-horizontal" role="form" id="closeAccidentForm" method="POST">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                <h4 class="modal-title" id="myModalLabel" style="font-size:18px;">关闭事故</h4>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" aria-disabled="true" hidden>
+                    <label class="col-sm-4 control-label"><span class="label red">*</span>事故ID：</label>
+                    <div class="col-sm-7">
+                        <input type="text" name="act_id"  id="act_id" value="{{ accident.id }}" class="form-control" readonly="readonly">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="col-sm-4 control-label"><span class="label red">*</span>恢复时间：</label>
+                    <div class="col-sm-7">
+                        <input type="text" name="finish_time"  id="finish_time" class="form-control selectTime">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" id="recover_ok" class="btn btn-green">确认关闭</button>
+                </div>
+            </div>
+        </form>
+      </div>
+     </div>
+    </div>
+    <!-- 事故Log录入 -->
+    <div class="modal fade" id="whTimeModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel2" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog" style="width: 30%; height: 10%; margin-right: 30px;bottom:20px;">
+            <div class="modal-content">
+                <form id="createLogForm" class="form-horizontal">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                        <h4 class="modal-title" id="myModalLabel2" style="font-size:18px;">事故信息录入</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <div class="col-sm-12">
+                                <div id="log_content" class="form-control"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button id="createlog" type="submit" class="btn btn-green">提交</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{#    <!-- 录入Log时添加链接 -->#}
+{#    <div class="modal fade" id="addLinkModal" tabindex="-1" role="dialog" aria-labelledby="addLinkModalLabel" aria-hidden="true">#}
+{#     <div class="modal-dialog">#}
+{#      <div class="modal-content">#}
+{#        <form class="form-horizontal" role="form" id="addLinkForm" method="POST">#}
+{#            <div class="modal-header">#}
+{#                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>#}
+{#                <h4 class="modal-title" id="addLinkModalLabel" style="font-size:18px;">添加链接</h4>#}
+{#            </div>#}
+{#            <div class="modal-body">#}
+{#                <div class="form-group" aria-disabled="true">#}
+{#                    <label class="col-sm-3 control-label">显示名称：</label>#}
+{#                    <div class="col-sm-9">#}
+{#                        <input type="text" name="link_name"  id="link_name" value="" class="form-control" placeholder="例如：百度">#}
+{#                    </div>#}
+{#                </div>#}
+{#                <div class="form-group">#}
+{#                    <label class="col-sm-3 control-label"><span class="label red">*</span>URL地址：</label>#}
+{#                    <div class="col-sm-9">#}
+{#                        <input type="text" name="link_url"  id="link_url" class="form-control" placeholder="例如：https://www.baidu.com/">#}
+{#                    </div>#}
+{#                </div>#}
+{#                <div class="modal-footer">#}
+{#                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>#}
+{#                    <button type="submit" id="addlink_ok" class="btn btn-green">添加</button>#}
+{#                </div>#}
+{#            </div>#}
+{#        </form>#}
+{#      </div>#}
+{#     </div>#}
+{#    </div>#}
+{#    <!-- 录入Log时添加图片 -->#}
+{#    <div class="modal fade" id="addPictureModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel2"#}
+{#         aria-hidden="true">#}
+{#        <div class="modal-dialog">#}
+{#            <form id="addPictureForm" class="form-horizontal">#}
+{#                <div class="modal-content">#}
+{#                    <div class="modal-header">#}
+{#                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>#}
+{#                        <h4 class="modal-title" id="myModalLabel2" style="font-size:18px;">添加图片</h4>#}
+{#                    </div>#}
+{#                    <div class="modal-body">#}
+{#                        <div class="form-group">#}
+{#                            <div class="col-sm-12">#}
+{#                                <textarea id="log_content" class="form-control" rows="8" placeholder="使用快捷键Ctrl+V粘贴图片"></textarea>#}
+{#                            </div>#}
+{#                        </div>#}
+{#                        <div class="form-group">#}
+{#                            <div class="col-sm-12">#}
+{#                                <input id="picture" name="picture[]" type="file" multiple class="file-loading" accept="image/*">#}
+{#                            </div>#}
+{#                        </div>#}
+{#                    </div>#}
+{#                    <div class="modal-footer">#}
+{#                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>#}
+{#                        <button id="createlog" type="submit" class="btn btn-green">添加</button>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </form>#}
+{#        </div>#}
+{#    </div>#}
+{#    <div class="modal fade" id="sendMailModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel3"#}
+{#         aria-hidden="true">#}
+{#        <div class="modal-dialog">#}
+{#            <form id="sendMailForm" class="form-horizontal">#}
+{#                <div class="modal-content">#}
+{#                    <div class="modal-header">#}
+{#                        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>#}
+{#                        <h4 class="modal-title" id="myModalLabel3" style="font-size:18px;">事故进度邮件通知</h4>#}
+{#                    </div>#}
+{#                    <div class="modal-body">#}
+{#                        <div class="form-group">#}
+{#                            <div class="col-sm-12">#}
+{#                                <textarea id="log_content" class="form-control" rows="3" placeholder="录入事故情况。。。"></textarea></div>#}
+{#                        </div>#}
+{#                    </div>#}
+{#                    <div class="modal-footer">#}
+{#                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>#}
+{#                        <button id="createlog" type="submit" class="btn btn-green">提交</button>#}
+{#                    </div>#}
+{#                </div>#}
+{#            </form>#}
+{#        </div>#}
+{#    </div>#}
+    <div class="accident-tab" style=" overflow:hidden; ">
+            <div class="col-sm-8 time-box">
+                <a href="#" class="label label-warning wh-btn" data-toggle="modal" data-target="#whTimeModal"><i
+                        class="glyphicon glyphicon-pencil"></i>&nbsp;录&nbsp;入</a>
+                <!--Nav tabs-->
+                <ul class="nav nav-tabs" role="tablist">
+                    <li role="presentation" class="tab_ctrl active">
+                        <a href="#all" role="tab" data-toggle="tab">时间轴</a>
+                    </li>
+                    <li role="presentation" class="tab_ctrl">
+                        <a href="#change" role="tab" data-toggle="tab">配置变更</a>
+                    </li>
+                    <li role="presentation" class="tab_ctrl">
+                        <a href="#monitor" role="tab" data-toggle="tab">告警事件</a>
+                    </li>
+                    <li role="presentation" class="tab_ctrl">
+                        <a href="#write" role="tab" data-toggle="tab">自定义</a>
+                    </li>
+                </ul>
+                <!--Tab panes-->
+                <div class="tab-content">
+                    <div role="tabpanel" class="tab-pane active" id="all">
+                        <!--all-->
+                        <div class="time-line"></div>
+                    </div>
+                    <!--配置变更-->
+                    <div role="tabpanel" class="tab-pane" id="change">
+                        <div class="form-inline" style="padding-top: 10px">
+                            <form id="multi_select" role="form">
+                                <strong>配置变更</strong>&nbsp;&nbsp;
+                                <select name="change_type" id="change_type" class="form-control change_url selectpicker">
+                                    <option value="">变更类型</option>
+                                    {% for type in change_types %}
+                                        <option value="{{ type.id }}">{{ type.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select name="change_action" id="change_action" class="form-control change_url selectpicker">
+                                    <option value="">变更动作</option>
+                                    {% for action in change_actions %}
+                                        <option value="{{ action.id }}">{{ action.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select name="change_app" id="change_app" class="form-control change_url">
+                                    <option value="">站点/应用</option>
+                                    {% for app in app_list %}
+                                        <option value="{{ app.id }}">{{ app.site.name }}/{{ app.name }}</option>
+                                    {% endfor %}
+                                </select>
+{#                                <select name="change_level" id="change_level" class="form-control change_url selectpicker">#}
+{#                                    <option value="">变更等级</option>#}
+{#                                    {% for action in change_level %}#}
+{#                                        <option value="{{ action.id }}">{{ action.name }}</option>#}
+{#                                    {% endfor %}#}
+{#                                </select>#}
+                                <input name="change_index" id="change_index" class="form-control change_url" placeholder="索引值搜索"/>
+                                <input name="change_start_time" id="change_start_time" class="form-control change_url   selectTime" placeholder="开始时间"/>
+
+                            </form>
+
+                        </div>
+                        <div id="changeLine" class="time-line"></div>
+                    </div>
+                    <!--告警事件-->
+                    <div role="tabpanel" class="tab-pane" id="monitor">
+                        <div class="form-inline" style="padding-top: 10px">
+                            <form id="multi_select" role="form">
+                                <strong>告警记录</strong>&nbsp;&nbsp;
+                                <select name="monitor_source" id="monitor_source" class="form-control monitor_url selectpicker">
+                                    <option value="">告警来源</option>
+                                    {% for source in monitor_sources %}
+                                        <option value="{{ source.id }}">{{ source.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select name="monitor_type" id="monitor_type" class="form-control monitor_url selectpicker">
+                                    <option value="">告警类型</option>
+                                    {% for type in monitor_types %}
+                                        <option value="{{ type.id }}">{{ type.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select name="monitor_level" id="monitor_level" class="form-control monitor_url selectpicker">
+                                    <option value="">告警等级</option>
+                                    {% for level in monitor_levels %}
+                                        <option value="{{ level.id }}">{{ level.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <select name="monitor_app_id" id="monitor_app_id" class="form-control monitor_url">
+                                    {% for app in app_list %}
+                                        <option value="{{ app.id }}">{{ app.site.name }}/{{ app.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <input name="monitor_start_time" id="monitor_start_time" class="form-control monitor_url   selectTime" placeholder="开始时间"/>
+                            </form>
+
+                        </div>
+                        <div id="monitorLine" class="time-line"></div>
+                    </div>
+                    <!--自定义-->
+                    <div role="tabpanel" class="tab-pane" id="write">
+                        <div id="writeLine" class="time-line"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-4">
+                <div class="panel panel-default">
+                    <div class="panel-heading">所受影响的pool</div>
+                    <div class="panel-body pooLinks">
+                        <a href="#" class="label label-default">backend-product-sales-service</a>
+                        <a href="#" class="label label-default">yihaodian/promotion</a>
+                        <a href="#" class="label label-default">edm-backend-send</a>
+                        <a href="#" class="label label-default">inshop/merchant-backend-merchant</a>
+
+
+                    </div>
+                </div>
+                <div class="panel panel-default">
+                    <div class="panel-heading">相关的其他链接</div>
+                    <div class="panel-body pooLinks">
+                        <a href="#" class="label label-danger">报警</a>
+                        <a href="#" class="label label-success">日志</a>
+                        <a href="#" class="label label-info">zabbix</a>
+                    </div>
+                </div>
+
+                <div>
+                    <button id="send_mail" class="btn btn-green">
+                        邮件通知
+                    </button>
+                    <button id="recover" class="btn btn-green">
+                        关闭事故
+                    </button>
+                </div>
+
+            </div>
+        </div>
+        <!--accident-tab end -->
+{% endif %}
+</div><!--inner-box end-->
+
+<script>
+$(document).ready(function() {
+    $('.link-dialog h4').val('添加链接');
+    var hg=$(window).height();
+    $(".acStar-panel").css("margin-top",hg/2-250);
+
+    {% if accident == null %}
+        //开启事故
+        $('#addAccidentForm')
+            .bootstrapValidator({
+                excluded: ':disabled',
+                fields: {
+                    act_title: {
+                        validators: {
+                            notEmpty: {
+                                message: '事故名称不能为空。'
+                            }
+                        }
+                    }
+                }
+                })
+            .on('success.form.bv', function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url:'{{ CMDBAPI_URL }}accident/accident/',
+                    type: 'POST',
+                    async:  false,
+                    data: {
+                        'title': $('#act_title').val(),
+                        'find_user_name':'{{ USER.username }}',
+                        'happened_time': moment().format('X'),
+                        'level': 0,
+                    },
+                    headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                    success: function( json ) {
+                        $('#act_title').val('');
+                        $('#addAccidentForm').bootstrapValidator('resetForm', true);
+                         location.reload();
+                    },
+                    error: function( json ) {
+                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>开启事故失败，</strong>原因：' + JSON.stringify(JSON.parse(json.responseText)['detail']) +'</div>');
+                        $('#addAccidentForm').bootstrapValidator('resetForm', true);
+                    }
+                });
+
+            });
+    {% else %}
+{#        $('#whTimeModal').draggable();#}
+
+        $('.selectpicker').selectpicker({
+            'width': 'auto'
+        });
+
+        $('#monitor_app_id, #change_app').selectpicker({
+            'width': 'fit',
+            'title': '站点/应用',
+            'liveSearch': true,
+            'liveSearchPlaceholder': '搜索应用',
+        });
+
+        $('.selectTime').datetimepicker({
+            format: 'yyyy-mm-dd hh:ii:ss',
+            weekStart:1,
+            todayHighlight:1,
+            autoclose: true,
+            minView:1,
+            hourStep: 1,
+        });
+        //配置变更的select框二级联动
+        $('#change_type').change(function(){
+            var type_id = $('#change_type option:selected').val();
+            $('#change_action').find('option').remove();
+            $('#change_action').append($('<option>').text('变更动作').attr('value', ''));
+            if(type_id != ""){
+                {%  for action in change_actions %}
+                    if('{{ action.type_id }}' == type_id) {
+                        $('#change_action').append($('<option>').text("{{ action.name }}").attr('value', "{{ action.id }}"));
+                    }
+                {%  endfor %}
+            }else {
+                {%  for action in change_actions %}
+                    $('#change_action').append($('<option>').text("{{ action.name }}").attr('value', "{{ action.id }}"));
+                {%  endfor %}
+            }
+            $('#change_action').selectpicker('refresh');
+        });
+        //配置变更条件筛选时间轴数据
+        $('.change_url').change(function(){
+            updateChangeLine();
+        });
+
+        $('.monitor_url').change(function(){
+            updateMonitorLine();
+        });
+
+        //默认时间轴数据
+        updateTimeLine();
+        //切换tab刷新时间轴数据
+        $('.tab_ctrl a').click(function(){
+            if($(this).attr('href').toString() == '#all'){
+                updateTimeLine();
+            }else if($(this).attr('href').toString() == '#write'){
+                updateWriteLine();
+            }else if($(this).attr('href').toString() == '#change'){
+                updateChangeLine();
+            }else if($(this).attr('href').toString() == '#monitor'){
+                updateMonitorLine();
+            }
+        });
+
+
+        $('#log_content').summernote({
+            lang : 'zh-CN',
+            placeholder : '描述事故处理进度或发现的问题，可附链接或图片',
+            focus:true,
+            height: 200,
+            minHeight: 150,
+            maxHeight: 600,
+{#            dialogsFade : true,#}
+            dialogsInBody : true,
+            toolbar: [
+                //[groupname, [button list]]
+{#                ['style', ['bold', 'italic', 'underline', 'clear']],#}
+{#                ['font', ['strikethrough']],#}
+{#                ['fontsize', ['fontsize']],#}
+{#                ['color', ['color']],#}
+{#                ['para', ['ul', 'ol', 'paragraph']],#}
+{#                ['height', ['height']],#}
+                ['link', ['link']],
+                ['picture', ['picture']],
+                ['fullscreen', ['fullscreen']],
+                ['codeview', ['codeview']],
+            ],
+            popover: {
+                image: [
+                    ['imagesize', ['imageSize25','imageSize50', 'imageSize100']],
+                    ['remove', ['removeMedia']]
+                ],
+                link: [['link', ['linkDialogShow', 'unlink']]],
+            },
+            callbacks: {
+                onInit: function() {
+                    $('.link-dialog .checkbox label').remove();
+                },
+                onImageUpload: function(files, editor, $editable) {
+                    sendFile(files[0]);
+                },
+            }
+
+
+        });
+
+        function sendFile(file){
+            var data = new FormData();
+            data.append("image", file);
+            if(file.size > 500000){
+                bootbox.alert('上传图片的大小不应超过500K！')
+            }else if(!file.type.match(/.jpg|.jpeg|.png|.gif/i)){
+                bootbox.alert('图片格式必须是jpg或jpeg或png或gif！')
+            }else{
+               $.ajax({
+                    data: data,
+                    type: "POST",
+                    url: '{{ CMDBAPI_URL }}accident/log/image/',
+                    cache: false,
+                    contentType: false,
+                    processData: false,
+                    headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                    success: function(res) {
+                        $('#log_content').summernote('editor.insertImage', res['image']);
+                    }
+                });
+            }
+        }
+
+{#        $("#picture").fileinput({#}
+{#            showPreview: true,#}
+{#            showCaption: false,#}
+{#            overwriteInitial: true,#}
+{#            uploadAsync: true,#}
+{#            language: 'zh',#}
+{#            allowedFileTypes: ["jpg", "png", "gif"],#}
+{#            allowedFileExtensions: ["jpg", "png", "gif"],#}
+{#            uploadUrl: "{{ CMDBAPI_URL }}accident/log/image/",#}
+{#            maxImageWidth: 250,#}
+{#            maxImageHeight: 250#}
+{#            ajaxSettings: {#}
+{#                'ajaxOptions': {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},#}
+{#                'dataType': 'json',#}
+{#                success: function (response) {#}
+{#                    if (response['success'] == true) {#}
+{#                        alert('OK!');#}
+{#                    }#}
+{#                }#}
+{#            }#}
+{#        });#}
+
+        //定时刷新时间轴数据
+        setInterval(updateLineByActive, 60000);
+
+        function updateLineByActive(){
+            if($( "#all").hasClass('active')){
+                updateTimeLine();
+            }else if($( "#write").hasClass('active')){
+                updateWriteLine();
+            }
+        }
+{#        function updateLineByActive(){#}
+{#            if($( "#all").hasClass('active')){#}
+{#                updateTimeLine();#}
+{#            }else if($( "#change").hasClass('active')){#}
+{#                updateChangeLine();#}
+{#            }else if($( "#monitor").hasClass('active')){#}
+{#                updateMonitorLine();#}
+{#            }else if($( "#write").hasClass('active')){#}
+{#                updateWriteLine();#}
+{#            }#}
+{#        }#}
+        //刷新事故处理时间轴
+        function updateTimeLine() {
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/log/?format=json&accident_id={{ accident.accidentid }}&page_size=1000',
+                type: "GET",
+                "async": "true",
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function (json) {
+                    $('#all').html('');
+                    $('#all').append('<div class="time-line">')
+                    $('#all div').append('<ul>');
+                    $('#all div ul').append('<li class="first"><b class="glyphicon glyphicon-bullhorn"></b><div class="time-content"><h2>{{ accident.title }}</h2></div></li>');
+
+                    $.each(json.results, function (i, val) {
+                        var image_html = ''
+                        $.each(val['images'], function (j, img) {
+                            image_html= image_html + '<img  class="look" height="30px"  data-action="zoom" src="' + img['image'] + '">&nbsp;&nbsp;';
+                        });
+                        if(val['source'] == 1){
+                            $('#all div ul').append('<li><b></b><div class="time"><span class="hours">' + val['create_time_format'] +
+                                '</span></div><div class="time-content"><p><span class="red">' + val['level_name'] + '</span>&nbsp;<span> ' + val['username'] + '</span>&nbsp;<span>【配置变更】 ' + val['message'] +'</span></p></div></li>');
+                        }else if(val['source'] == 2){
+                            $('#all div ul').append('<li><b></b><div class="time"><span class="hours">' + val['create_time_format'] +
+                                '</span></div><div class="time-content"><p><span class="red">' + val['level_name'] + '</span>&nbsp;&nbsp;<span> ' + val['username'] +
+                                '</span>&nbsp;<span>【告警事件】 ' + val['message'] + '</span></p></div></li>');
+                        }else{
+                            $('#all div ul').append('<li><b></b><div class="time"><span class="hours">' + val['create_time_format'] +
+                                '</span></div><div class="time-content"><p><span> '
+                                + val['username'] + ': </span>&nbsp;&nbsp;' + val['message'] + image_html + '</p> </div> </li>');
+                        }
+                    });
+
+                    $('#all div').append('</ul>');
+                    $('#all').append('</div>');
+                }
+            });
+        }
+        //刷新配置变更时间轴
+        function updateChangeLine() {
+            var ids_arr = []
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/log/?format=json&accident_id={{ accident.accidentid }}&source=1',
+                type: "GET",
+                "async": "false",
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function (res) {
+                    $.each(res, function (i, val) {
+                        ids_arr.push(val['from_id']);
+                    });
+                }
+            });
+            var change_api_url = '{{ CMDBAPI_URL }}change/changelist/'
+            var type = $('#change_type').val();
+            var action = $('#change_action').val();
+            var app_id = $('#change_app').val();
+{#            var level = $('#change_level').val();#}
+            var index = $('#change_index').val();
+            var start_time = $('#change_start_time').val();
+            var params = ['?format=json'];
+            params.push('start_time=' + (moment().format('X')-86400))
+            if(type != ''){
+                params.push('type_id=' + type)
+            }
+            if(action != ''){
+                params.push('action_id=' + action)
+            }
+            if(app_id != ''){
+                params.push('app_id=' + app_id)
+            }
+{#            if(level != ''){#}
+{#                params.push('level_id=' + level)#}
+{#            }#}
+            if(index != ''){
+                params.push('index=' + index)
+            }
+            if(start_time != ''){
+                params.push('start_time=' + moment(start_time).format('X'));
+            }
+            $.ajax({
+                url: change_api_url + params.join('&'),
+                type: "GET",
+                "async": "false",
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function (change_arr) {
+                    $('#changeLine').html('');
+                    $('#changeLine').append('<ul>');
+                    var post_arr = [];
+                    if(change_arr.length > 0){
+                        $.each(change_arr, function (i, val) {
+                            var happen_time = val['happen_time_str'].substring(11)
+                            var message = '【'+ val['action_type_name'] + '】 【' + val['action_name'] + '】 '+ val['user'] + ' '  + val['pool_name'] +  ' <a href="{{ cmdbv2_url }}cmdb/change/changelist/?id=' + val["id"] + '" target="_blank" title="点击查看详情">' + val['index'] +'</a>'
+                            post_arr.push({
+                                'id': i,
+                                'from_id': val['id'],
+                                'app_id': 1,
+                                'level_id': 3,
+                                'message': message,
+                                'happen_time': happen_time
+                            })
+                            if($.inArray(val['id'], ids_arr) != -1){
+                                $('#changeLine ul').append('<li><b></b><div class="time"><span class="hours red">' + happen_time +
+                                    '</span></div><div class="time-content"><p><span class="red">' + val['level_name'] + '</span>&nbsp;<span class="red">' + message +'</span></p></div></li>');
+
+                            }else{
+                                $('#changeLine ul').append('<li><b></b><div class="time"><span class="hours red">' + happen_time +
+                                    '</span></div><div class="time-content"><p><span class="red">' + val['level_name'] +
+                                '</span>&nbsp;<span>' + message + '</span><a href="#" class="push_change" title="推送信息到事故log"><small hidden="hidden">' +
+                                        i +'</small><span class="glyphicon glyphicon-bullhorn"></span></a></p></div></li>');
+                            }
+                        });
+                    }else{
+                        $('#changeLine ul').append('<li><b></b><div class="time-content"><p><span>无配置变更记录</span></p></div></li>');
+                    }
+
+                    $('#changeLine').append('</ul>');
+
+                    //推送配置变更记录到事故处理时间轴
+                    $('.push_change').click(function(){
+                        var change = post_arr[$(this).text()];
+                        $.ajax({
+                            url:'{{ CMDBAPI_URL }}accident/log/',
+                            type: 'POST',
+                            async:  false,
+                            data: {
+                                'accident_id': parseInt('{{ accident.accidentid }}'),
+                                'source': 1,
+                                'from_id': change['from_id'],
+                                'username': '{{ USER.username }}',
+                                'app_id': change['app_id'],
+                                'level_id': change['level_id'],
+                                'message': change['message'] + ' 【时间:' + change['happen_time'] + '】',
+                            },
+                            headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                            success: function( json ) {
+                                bootbox.alert('成功推送至事故log！');
+
+                                updateChangeLine();
+                                updateTimeLine();
+                            },
+                            error: function( json ) {
+                                $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>推送log出现错误，</strong>原因：' + JSON.stringify(JSON.parse(json.responseText)['detail']) +'</div>');
+                            }
+                        });
+                    });
+                }
+            });
+        }
+        //刷新告警事件时间轴
+        function updateMonitorLine() {
+            var ids_arr = []
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/log/?format=json&accident_id={{ accident.accidentid }}&source=2',
+                type: "GET",
+                "async": "false",
+                success: function (res) {
+                    $.each(res, function (i, val) {
+                        ids_arr.push(val['from_id']);
+                    });
+                }
+            });
+            var monitor_api_url = '{{ CMDBAPI_URL }}notification/alarm/';
+            var source = $('#monitor_source').val();
+            var type = $('#monitor_type').val();
+            var level = $('#monitor_level').val();
+            var app_id = $('#monitor_app_id').val();
+            var start_time = $('#monitor_start_time').val();
+            var params = ['?format=json'];
+            if(source != ''){
+                params.push('event__source__id=' + source)
+            }
+            if(type != ''){
+                params.push('event__type__id=' + type)
+            }
+            if(level != ''){
+                params.push('event__level__id=' + level)
+            }
+            if(app_id != ''){
+                params.push('pool_id=' + app_id)
+            }
+            if(start_time != ''){
+                params.push('start_time=' + start_time)
+            }else{
+                params.push('start_time=' + moment().subtract(30,"minute").format('YYYY-MM-DD HH:mm:ss'));
+            }
+
+            $.ajax({
+                url: monitor_api_url + params.join('&'),
+                type: "GET",
+                "async": "false",
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function (change_arr) {
+                    $('#monitorLine').html('');
+                    $('#monitorLine').append('<ul>');
+                    var post_arr = []
+                    if(change_arr.length > 0){
+                        $.each(change_arr, function (i, val) {
+                            var happen_time = moment(val['create_time']).format('HH:mm:ss');
+                            var site_name = val['event_detail'].length>0 ? val['event_detail'][0]['site_name'] : '';
+                            var pool_name = val['event_detail'].length>0 ? val['event_detail'][0]['pool_name'] : '';
+                            var message = '【'+ val['source_name'] + '】【' + val['type_name'] + '】 ' + site_name + '/' + pool_name + ' ' + val['message'] + ' <a href="{{ monitor_url }}alarm/?id=' + val["id"] + '" target="_blank" title="点击查看详情">详情</a> '
+                            post_arr.push({
+                                'id': i,
+                                'from_id': val['id'],
+                                'app_id': val['pool_id'],
+                                'level_id': val['level_id'],
+                                'message': message,
+                                'happen_time': happen_time
+                            })
+                            if($.inArray(val['id'], ids_arr) != -1){
+                                $('#monitorLine ul').append('<li><b></b><div class="time"><span class="hours red">' + happen_time +
+                                    '</span></div><div class="time-content"><p><span class="red">' + val['level_name'] + '</span>&nbsp;<span class="red">' + message +'</span></p></div></li>');
+
+                            }else{
+                                $('#monitorLine ul').append('<li><b></b><div class="time"><span class="hours red">' + happen_time +
+                                    '</span></div><div class="time-content"><p><span class="red">' + val['level_name'] +
+                                '</span>&nbsp;<span>' + message +'</span><a href="#" class="push_monitor" title="推送告警记录到事故log"><small hidden="hidden">' +
+                                        i +'</small><span class="glyphicon glyphicon-bullhorn"></span></a></p></div></li>');
+                            }
+                        });
+                    }else{
+                        $('#monitorLine ul').append('<li><b></b><div class="time-content"><p><span>无告警记录</span></p></div></li>');
+                    }
+
+                    $('#monitorLine').append('</ul>');
+
+                    //推送告警事件记录到事故处理时间轴
+                    $('.push_monitor').click(function(){
+                        var monitor = post_arr[$(this).text()];
+                        $.ajax({
+                            url:'{{ CMDBAPI_URL }}accident/log/',
+                            type: 'POST',
+                            async:  false,
+                            data: {
+                                'accident_id': parseInt('{{ accident.accidentid }}'),
+                                'source': 2,
+                                'from_id': monitor['from_id'],
+                                'username': '{{ USER.username }}',
+                                'app_id': monitor['app_id'],
+                                'level_id': monitor['level_id'],
+                                'message': monitor['message'] + ' 【时间:' + monitor['happen_time'] + '】',
+                            },
+                            headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                            success: function( json ) {
+                                bootbox.alert('成功推送至事故log！');
+
+                                updateMonitorLine();
+                                updateTimeLine();
+                            },
+                            error: function( json ) {
+                                $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>推送log出现错误，</strong>原因：' + JSON.stringify(JSON.parse(json.responseText)['detail']) +'</div>');
+                            }
+                        });
+                    });
+                }
+            });
+        }
+        //刷新人工录入时间轴
+        function updateWriteLine() {
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/log/?format=json&accident_id={{ accident.accidentid }}&source=0&page_size=1000',
+                type: "GET",
+                "async": "true",
+                success: function (json) {
+                    $('#write').html('');
+                    $('#write').append('<div class="time-line">')
+                    $('#write div').append('<ul>');
+                    $('#write div ul').append('<li class="first"><b class="glyphicon glyphicon-bullhorn"></b><div class="time-content"><h2>手工录入Log</h2></div></li>');
+
+                    $.each(json.results, function (i, val) {
+                        var image_html = ''
+                        $.each(val['images'], function (j, img) {
+                            image_html= image_html + '<img  class="look" height="30px"  data-action="zoom" src="' + img['image'] + '">&nbsp;&nbsp;';
+                        });
+                        $('#write div ul').append('<li><b></b><div class="time"><span class="hours">' + val['create_time_format'] +
+                                '</span></div><div class="time-content"><p><span class="red">' + val['level_name'] + '</span>&nbsp;&nbsp;<span> '
+                                + val['username'] + ': </span>&nbsp;&nbsp;' + val['message'] + image_html + '</p> </div> </li>');
+                        })
+                    $('#write div').append('</ul>');
+                    $('#write').append('</div>');
+                }
+            });
+        }
+
+        //人工录入log
+    $('#createLogForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                log_content: {
+                    validators: {
+                        notEmpty: {
+                            message: '录入的log内容不能为空。'
+                        }
+                    }
+                }
+            }
+            })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var code = $('#log_content').summernote('code');
+            var image_urls=[];
+            $.each($(code).find('img'), function(i,v){
+                image_urls.push($(v).attr('src').replace('{{ media_url_reg | safe }}', ''))
+            })
+            code = code.replace(/<(?!a|\/a).*?>/g, '').replace('&nbsp;', ' ').replace('\<a', '\<a target="_blank"').trim();
+            if(code == ''){
+                bootbox.alert('必须输入文字描述信息');
+                $('#createLogForm').bootstrapValidator('resetForm', true);
+            }else{
+                $.ajax({
+                    url:'{{ CMDBAPI_URL }}accident/log/',
+                    type: 'POST',
+                    async:  false,
+                    contentType:"application/x-www-form-urlencoded; charset=utf-8",
+                    data: {
+                        'source': 0,
+                        'accident_id': parseInt('{{ accident.accidentid }}'),
+                        'level_id': 5,
+                        'username': '{{ USER.username }}',
+                        'message': code,
+                        'image_urls': image_urls.join(','),
+                    },
+                    headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                    success: function( json ) {
+                        $('#log_content').summernote('code', '');
+                        $('#createLogForm').bootstrapValidator('resetForm', true);
+                        $('#whTimeModal').modal('hide');
+                        updateTimeLine();
+                    },
+                    error: function( json ) {
+                        $('#whTimeModal').modal('hide');
+                        $('#createLogForm').bootstrapValidator('resetForm', true);
+                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>录入log出现错误，</strong>原因：' + JSON.stringify(JSON.parse(json.responseText)['detail']) +'</div>');
+
+                    }
+                });
+            }
+
+        });
+
+    //关闭事故
+    $('#addLinkForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                link_url: {
+                    validators: {
+                        notEmpty: {
+                            message: '链接地址不能为空'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var content = $('#log_content').val().trim();
+            var link_name = $('#link_name').val().trim();
+            var link_url = $('#link_url').val().trim();
+            if(link_name == ''){
+                content = content + '<a href="' + link_url + '" target="_blank">'+ link_url + '</a>';
+            }else{
+                content = content + '<a href="' + link_url + '" target="_blank">'+ link_name + '</a>';
+            }
+            $('#log_content').val(content);
+            $('#addLinkForm').bootstrapValidator('resetForm', true);
+            $('#addLinkModal').modal('hide');
+        });
+
+        //发送事故进度邮件
+        $('#send_mail').click(function(){
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/log/sendmail/',
+                type: 'POST',
+                async: false,
+                data: {
+                    'receive': '{{ USER.username }}@yhd.com',
+                    'cc': 'liuyating1@yhd.com'
+                },
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (res) {
+                    if(JSON.parse(res)['success']){
+                        bootbox.alert('邮件发送成功！');
+                    }
+                },
+                error: function (json) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>关闭事故失败，</strong>原因：' + JSON.stringify(JSON.parse(json.responseText)['detail']) + '</div>');
+                }
+            });
+        });
+
+    //点击关闭事故按钮
+    $('#recover').click(function(){
+        $('#finish_time').val(moment().format('YYYY-MM-DD HH:mm:ss'));
+        $('#closeModal').modal('show');
+    });
+    //关闭事故
+    $('#closeAccidentForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                finish_time: {
+                    validators: {
+                        notEmpty: {
+                            message: '事故恢复时间不能为空。'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}accident/accident/' + $('#act_id').val() + '/',
+                type: 'PATCH',
+                async: false,
+                data: {
+                    'action': 'close',
+                    'receive': '{{ USER.username }}@yhd.com',
+                    'cc': 'liuyating1@yhd.com',
+                    'finish_time': moment($('#finish_time').val()).format('X')
+                },
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (json) {
+                    $('#closeAccidentForm').bootstrapValidator('resetForm', true);
+                    $('#closeModal').modal('hide');
+
+                    location.reload();
+                },
+                error: function (json) {
+                    $('#closeAccidentForm').bootstrapValidator('resetForm', true);
+                    $('#closeModal').modal('hide');
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>关闭事故失败，</strong>原因：' + JSON.stringify(JSON.parse(json.responseText)['detail']) + '</div>');
+                }
+            });
+        });
+    {% endif %}
+
+});
+</script>
+{% endblock %}

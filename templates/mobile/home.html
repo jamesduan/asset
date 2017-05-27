@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<!-- 标题自定义的内页通用模板 -->
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>乐道App</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link href="{{ STATIC_URL }}mobile/libs/mui/css/mui.min.css" rel="stylesheet" />
+
+</head>
+<style>
+    html,
+    body {
+        background-color: #efeff4;
+    }
+</style>
+<body>
+   <header class="mui-bar mui-bar-nav">
+		<h1 class="mui-title">监控</h1>
+   </header>
+
+
+   <nav class="mui-bar mui-bar-tab">
+	   <a class="mui-tab-item mui-active" href="/monitor/orderchart/">
+		   <span class="mui-icon mui-icon-home"></span>
+		   <span class="mui-tab-label">监控</span>
+	   </a>
+	   <a class="mui-tab-item" href="/personal/info/">
+		    <span class="mui-icon mui-icon-email"></span>
+		    <span class="mui-tab-label">我的</span>
+	    </a>
+   </nav>
+
+<script src="{{ STATIC_URL }}mobile/js/app.js"></script>
+<script src="{{ STATIC_URL }}mobile/libs/mui/js/mui.min.js"></script>
+<script type="text/javascript">
+    //MUI初始化与内页跳转
+     mui.init({
+        subpages:[{
+          url:'/monitor/orderchart/',
+          id:'/monitor/orderchart/',
+          styles:{
+            top:'0px',//mui标题栏默认高度为45px；
+            bottom:'0px'//默认为0px，可不定义；
+          }
+        }]
+    });
+
+    mui.plusReady(function(){
+		alert('aaaa');
+		//当前窗口
+		var self = plus.webview.currentWebview();
+
+		//子窗口地址
+		var subpages = ['/monitor/orderchart/','/personal/info/'];
+
+		var top = "60px";
+		if(mui.os.android){
+			top = "40px";
+		}
+
+		//子窗口样式
+		var subStyles = {
+			top: top,
+			bottom:"50px"
+		}
+
+		//子窗口数量
+		var subLen = subpages.length;
+		//子窗口对象数组
+		var subWvs = [];
+		//标题栏
+		var title = document.querySelector(".mui-title");
+		//底部选项
+		var tabs = document.querySelectorAll(".mui-tab-item");
+		//底部文字
+		var lables = document.querySelectorAll(".mui-tab-label");
+
+		//默认选中页面
+		var activeTab = "/monitor/orderchart/";
+		//目标页面索引
+		var targetTab = activeTab;
+
+		mui(".mui-tab-item").on("tap","a",function(e) {
+			alert('vvv');
+			targetTab = this.getAttribute("href");
+			if(targetTab == activeTab){
+				return;
+			}
+
+			switchPage("tap",activeTab,targetTab);
+		});
+
+		function switchPage(_event,_active,_target){
+			var self = plus.webview.currentWebview();
+			var sub = plus.webview.create(_target, _target, subStyles);
+			self.append(sub);
+			//隐藏当前;
+			plus.webview.hide(_active);//这里应该是关闭页面，不知道隐藏与关闭区别有多大
+	//更改当前活跃的选项卡
+			activeTab = _target;
+		}
+
+	})
+
+
+</script>
+</body>
+</html>

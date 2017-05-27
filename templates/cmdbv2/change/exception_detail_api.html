@@ -1,0 +1,215 @@
+{% extends "common/base.html" %}
+{% block title %} 异常报表中心 {% endblock %}
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-select-1.12.0/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-select-1.12.0/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+
+<div class="inner-h1">调用配置组异常详情
+    <small style="color: #777777">——{{ exception_report.cname }}&nbsp;&nbsp;{{ exception_report.owner }}团队
+{#        <a href="{{ ROOT_URL }}change/exception_report/" target="_self">返回</a>#}
+    </small>
+</div>
+
+<div class="form-inline" role="form" id="toolbar">
+{#<select name="error_type" id="error_type" class="form-control select_class" >#}
+{#    <option value="" >异常类型</option>#}
+{#    <option value="0" >配置组无对应Pool</option>#}
+{#    <option value="1" >配置组对应Pool被禁用</option>#}
+{#    <option value="2" >配置组名不规范</option>#}
+{#    <option value="3" >404</option>#}
+{#</select>#}
+<select name="domain" id="domain" class="form-control select_class" >
+    <option value="" >调用的Domain</option>
+    {% for item in domain %}
+    <option value="{{ item.id }}" >{{ item.domainname }}</option>
+    {% endfor %}
+</select>
+<select name="pool" id="pool" class="form-control select_class" >
+    <option value="" >调用的的Pool</option>
+    {% for item in app %}
+    <option value="{{ item.id }}" >{{ item.site.name }}/{{ item.name }}</option>
+    {% endfor %}
+</select>
+
+<input id="limit" name="limit" type="checkbox">所有Domain详情
+{#<span id="switch0" style="font-size:15px"><a href="{{ ROOT_URL }}change/exception_detail_api/?exception_report_id={{ exception_report_id }}&limit=0">查看所有Domain信息</a></span>#}
+{#<span id="switch1" style="font-size:15px"><a href="{{ ROOT_URL }}change/exception_detail_api/?exception_report_id={{ exception_report_id }}&limit=1">查看所属Domain信息</a></span>#}
+{#<button class="btn btn-green" id="query" > 查询 </button>#}
+</div>
+
+<div>
+<table id="exception"></table>
+</div>
+
+
+<script>
+$(document).ready(function() {
+
+$('#pool,#domain').selectpicker({
+    'width': '250px',
+    'liveSearch': true,
+    'liveSearchPlaceholder': '搜索',
+})
+
+$('#domain,#pool').selectpicker('val','');
+{#$('#error_type').selectpicker('val','');#}
+$('#limit').prop('checked',false);
+
+if ('{{ api_url }}'.indexOf('?')>=0){
+    var conector='&';
+}else{
+    var conector='?';
+}
+
+var api_url='{{ api_url }}'+conector+'limit=1';
+
+$('.select_class').change(function() {
+    var parameters = [];
+{#    if ($('#error_type').val() != '') {#}
+{#        parameters.push('error=' + $('#error_type').val())#}
+{#    }#};
+    if ($('#pool').val() != '') {
+        parameters.push('app=' + $('#pool').val())
+    };
+    if ($('#domain').val() != '') {
+        parameters.push('domain=' + $('#domain').val())
+    };
+    var url=api_url;
+    if (parameters.join('&')){
+        url=api_url + '&'+ parameters.join('&');
+{#        console.log(parameters)#}
+    };
+    $('#exception').bootstrapTable('refresh', {
+        url: url
+    });
+});
+
+$('#limit').click(function(){
+    $('#domain').find("option").remove();
+    $('#domain').append($('<option>').text('调用的Domain').attr('value', ''));
+    $('#pool').find("option").remove();
+    $('#pool').append($('<option>').text('调用的Pool').attr('value', ''));
+    if($(this).prop('checked')) {
+        {%  for item in domain_all %}
+            $('#domain').append($('<option>').text('{{ item.domainname }}').attr('value', {{ item.id }}));
+        {% endfor %}
+        {%  for item in app_all %}
+                $('#pool').append($('<option>').text('{{ item.site.name }}/{{ item.name }}').attr('value', {{ item.id }}));
+         {% endfor %}
+        api_url='{{ api_url }}'+conector+'limit=0';
+        $('#exception').bootstrapTable('refresh', {
+        url: api_url
+    });
+{#        window.location.href = '{{ ROOT_URL }}change/exception_detail_api/?exception_report_id={{ exception_report_id }}&limit=0';#}
+    }else{
+        {%  for item in domain%}
+            $('#domain').append($('<option>').text('{{ item.domainname }}').attr('value', {{ item.id }}));
+        {% endfor %}
+        {%  for item in app%}
+            $('#pool').append($('<option>').text('{{ item.site.name }}/{{ item.name }}').attr('value', {{ item.id }}));
+        {% endfor %}
+        api_url='{{ api_url }}'+conector+'limit=1';
+        $('#exception').bootstrapTable('refresh', {
+        url: api_url
+    });
+{#        window.location.href = '{{ ROOT_URL }}change/exception_detail_api/?exception_report_id={{ exception_report_id }}&limit=1';#}
+    }
+    $('#domain').selectpicker('refresh');
+    $('#pool').selectpicker('refresh');
+    });
+
+$('#domain').change(function(){
+    $('#pool').find("option").remove();
+    $('#pool').append($('<option>').text('调用的Pool').attr('value', ''));
+    if ($('#domain').val()){
+       $.ajax({
+            url: '{{ CMDBAPI_URL }}cmdb/app/?format=json&page_size=1000&domainid='+$('#domain').val(),
+            type: 'GET',
+            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+            success: function (json) {
+                var data = eval(json);
+
+                if (data.count == 0) {
+                    $('#pool').append($('<option>').text('该Domain无对应Pool').attr('value', '0'));
+                } else {
+                    var rs = data.results;
+                    $.each(rs, function (key, val) {
+                        $('#pool').append($('<option>').text(val.site_name + '/' + val.name).attr('value', val.id));
+                    });
+                }
+                $('#pool').selectpicker('refresh');
+            }
+                });
+        }else{
+             if($('#limit').prop('checked')) {
+                 {%  for item in app_all %}
+                     $('#pool').append($('<option>').text('{{ item.site.name }}/{{ item.name }}').attr('value', {{ item.id }}));
+                 {% endfor %}
+             }else{
+                 {%  for item in app %}
+                     $('#pool').append($('<option>').text('{{ item.site.name }}/{{ item.name }}').attr('value', {{ item.id }}));
+                 {% endfor %}
+             }
+            $('#pool').selectpicker('refresh');
+    }
+
+});
+
+ $('#exception').bootstrapTable({
+        url: api_url,
+        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+        columns: [
+            {% for item in api_fields %}
+                {% for key,value in field_titles.items%}
+                    {%  if item == key  %}
+                        {
+                        field: '{{ item}}',
+                        title: '{{ value}}',
+                        align: 'center',
+                        },
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+{#            {#}
+{#                field: 'id',#}
+{#                visible: false#}
+{#            },#}
+
+        ],
+        responseHandler: function (res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset / p.limit + 1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [50, 200, 500],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false
+    });
+        function call_pool(value, row, index) {
+        return value+'/'+row.app_name
+    };
+})
+
+</script>
+{% endblock %}

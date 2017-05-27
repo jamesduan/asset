@@ -1,0 +1,28 @@
+{% extends "common/base.html" %}
+
+{% block title %} 基础信息 {% endblock %}
+
+{% block my_li %}
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">站点&&Pool</a>
+        <ul class="dropdown-menu" role="menu">
+            <li><a href="/cmdbv2/cmdb/site/">站点管理</a></li>
+            <li><a href="/cmdbv2/cmdb/app/">Pool管理</a></li>
+            <li><a href="/cmdbv2/cmdb/appcontact/">pool联系人</a></li>
+        </ul>
+    </li>
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">组织架构</a>
+        <ul class="dropdown-menu" role="menu">
+            <li><a href="/cmdbv2/cmdb/usersdomains/">用户&Domain查询</a></li>
+            <li><a href="/cmdbv2/cmdb/deptdomain/">技术部门组织架构图</a></li>
+        </ul>
+    </li>
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">DB管理</a>
+        <ul class="dropdown-menu" role="menu">
+            <li><a href="/cmdbv2/cmdb/db/instances/">DB实例管理</a></li>
+            <li><a href="/deploy/yccv2/dbassociation/">DB实例关联</a></li>
+        </ul>
+    </li>
+{% endblock %}

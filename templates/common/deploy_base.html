@@ -1,0 +1,78 @@
+{% extends "common/base.html" %}
+
+{% block title %} 发布 {% endblock %}
+
+{% block my_li %}
+    <li><a href="/deploy/center/">入口</a></li>
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">配置中心</a>
+        <!--产品下拉begin-->
+        <section class="dropdown-menu" role="menu">
+            <ul class="item">
+                <li>
+                    <ul>
+                        <li class="title">Staging</li>
+                        <li><a href="/deploy/yccv2/configinfo/v2/?env_id=6">编辑&发布</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <ul>
+                        <li class="title">Production</li>
+                        <li><a href="/deploy/yccv2/configinfo/v2/?env_id=7">编辑</a></li>
+                        <li><a href="/deploy/yccv2/group/">提交审核</a></li>
+                        <li><a href="/deploy/yccv2/proconfiginfo/v2/">查询版本</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </section>
+        <!--产品下拉end-->
+        <!--end dropdown-menu-->
+    </li>
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">前期配置</a>
+        <ul class="dropdown-menu" role="menu">
+            <li><a href="/itil/view/monitor/url/url.html" target="_blank">HealthCheck配置</a></li>
+            <li><a href="/deploy/path/config/" target="_blank">路径配置</a></li>
+            <li><a href="/deploy/hudson/job/" target="_blank">自动化测试配置</a></li>
+            <li><a href="/deploy/git/boot_sh/" target="_blank">启动脚本配置</a></li>
+            <li><a href="/deploy/stg/limit/" target="_blank">Stg发布白名单</a></li>
+        </ul>
+    </li>
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">数据展示</a>
+        <!--产品下拉begin-->
+        <section class="dropdown-menu" role="menu">
+            <ul class="item">
+                <li>
+                    <ul>
+                        <li class="title">QA报告</li>
+                        <li><a href="/deploy/publish/count/">发布统计</a></li>
+                        <li><a href="/deploy/publish/trend/">发布趋势</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <ul>
+                        <li class="title">发布大屏</li>
+                        <li><a href="/deploy/publish/largescreen/">发布大屏</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <ul>
+                        <li class="title">发布历史(Staging)</li>
+                        <li><a href="/deploy/stg/list/" target="_blank">代码发布</a></li>
+                    </ul>
+                </li>
+                <li>
+                    <ul>
+                        <li class="title">发布历史(Production)</li>
+                        <li><a href="/deploy/ycc/list/" target="_blank">配置发布</a></li>
+                        <li><a href="/deploy/prod/list/" target="_blank">代码发布</a></li>
+                    </ul>
+                </li>
+            </ul>
+        </section>
+        <!--产品下拉end-->
+        <!--end dropdown-menu-->
+    </li>
+
+{% endblock %}

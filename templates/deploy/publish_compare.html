@@ -1,0 +1,230 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block title %} 发布—发布对比 {% endblock %}
+
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+<script src="{{ STATIC_URL }}libs/echarts-2.2.7/echarts.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+
+<div class="inner-box inner-list-box">
+        <div class="form-inline" role="form">
+            <label>开始日期：</label>
+            <input size="16" type="text" value="{{ start_date }}" name="start_date" id="start_date" class="form-control datepicker" readonly>
+            <label>结束日期：</label>
+            <input size="16" type="text" value="{{ end_date }}" name="end_date" id="end_date" class="form-control datepicker" readonly>
+            <select name="is_stagging" id="is_stagging" class="form-control update_api_url">
+                <option value="">是否Stg发布</option>
+                <option value="2">------</option>
+                <option value="1">Stg发布</option>
+                <option value="0">Production发布</option>
+            </select>
+            <select name="is_gray_release" id="is_gray_release" class="form-control update_api_url" disabled>
+                <option value="">是否灰度发布</option>
+                <option value=" ">------</option>
+                <option value="0">一键发布</option>
+                <option value="1">灰度发布</option>
+            </select>
+            <select name="is_trident" id="is_trident" class="form-control update_api_url" disabled>
+                <option value="">是否Trident发布</option>
+                <option value=" ">------</option>
+                <option value="523">Trident发布</option>
+                <option value="0">非Trident发布</option>
+            </select>
+            <button id="search" name="search" class="btn btn-green" type="button">查询</button>
+        </div>
+    </div>
+    <div id="compare_chart" style="height:480px; margin-top: 5px;"></div>
+<script type="application/javascript">
+$(document).ready(function() {
+$("#select_dept,#is_stagging, #is_gray_release, #is_trident, #package_type").combobox({});
+
+$('.datepicker').datetimepicker({
+    format: 'yyyy-mm-dd',
+    autoclose: true,
+    showMeridian: true,
+    minView: 2
+});
+
+require.config({
+    paths : {
+        echarts : "{{ STATIC_URL }}libs/echarts-2.2.7/",
+    }
+});
+
+$("#is_stagging").change(function(){
+    var is_stagging = $("#is_stagging").val();
+    if(is_stagging == "0"){
+        $("#is_gray_release,#is_trident").combobox('enable');
+    }else{
+        $("#is_gray_release").data('combobox').clearTarget();
+        $("#is_gray_release").combobox('clearElement');
+        $("#is_trident").data('combobox').clearTarget();
+        $("#is_trident").combobox('clearElement');
+        $("#is_gray_release,#is_trident").combobox('disable');
+    }
+});
+
+$('#search').click(function() {
+    loadChartData();
+});
+
+loadChartData();
+
+function loadChartData(){
+    var start_date = $('#start_date').val();
+    var end_date = $('#end_date').val();
+    var is_stagging = $('#is_stagging').val();
+    var is_gray_release = $('#is_gray_release').val();
+    var is_trident = $('#is_trident').val();
+    var api_url = '{{ CMDBAPI_URL }}deploy/publish/compare/?';
+    var params = ['format=json'];
+    if (start_date !="" && start_date !=" ") {
+        params.push('start_date=' + start_date)
+    }
+    if (end_date !="" && end_date !=" ") {
+        params.push('end_date=' + end_date)
+    }
+    if (is_stagging !="") {
+        params.push('is_stagging=' + is_stagging)
+    }
+    if (is_gray_release !="" && is_gray_release !=" ") {
+        params.push('is_gray_release=' + is_gray_release)
+    }
+    if (is_trident !="" && is_trident !=" ") {
+        params.push('is_trident=' + is_trident)
+    }
+    api_url = api_url + params.join('&');
+
+    $.ajax({
+        url: api_url,
+        type: 'GET',
+        async: false,
+        dataType: "json",
+        cache: false,
+        headers:{'Authorization':'Token {{ API_TOKEN }}'},
+        success: function (json) {
+            var yAxis = json.yAxis;
+            var series = json.series;
+            require(
+            [
+                "echarts",
+                'echarts/theme/macarons',
+                "echarts/chart/line",
+                "echarts/chart/bar",
+            ],
+            function(ec){
+                var myChart = ec.init(document.getElementById('compare_chart'), 'macaron');
+                var option = {
+                    tooltip: {
+                        show: true,
+                        trigger: 'axis',
+                    },
+                    toolbox: {
+                        show : true,
+                        showTitle: true,
+                        feature : {
+                            dataView : {show: true, readOnly: false},
+                            magicType : {show: true, type: ['stack', 'tiled']},
+                            restore : {show: true},
+                            saveAsImage : {show: true},
+                        }
+                    },
+                    legend: {
+                        data: ['发布总数','成功发布数', '回滚数', '未完成数', '废弃数'],
+                         textStyle: {
+                            fontSize: 14
+                        }
+                    },
+                    calculable : true,
+                    grid: {
+                        x: 100,
+                        x2: 80,
+                        y2: 60,
+                    },
+                    yAxis : [
+                        {
+                            name: '部门',
+                            type : 'category',
+                            data : yAxis,
+                        }
+                    ],
+                    xAxis : [
+                        {
+                            type : 'value',
+                            name: "发布次数",
+                            splitArea: { show: true },
+                            splitNumber:15
+                        }
+                    ],
+                    series : [
+                        {
+                            name: '发布总数',
+                            type: 'line',
+                            data: series.all_count
+                        },
+                        {
+                            name: '成功发布数',
+                            type: 'bar',
+                            stack: '发布总数',
+                            label: {
+                                normal: {
+                                    show: true,
+                                    position: 'insideRight'
+                                }
+                            },
+                            data: series.success_count
+                        },
+                        {
+                            name: '回滚数',
+                            type: 'bar',
+                            stack: '发布总数',
+                            label: {
+                                normal: {
+                                    show: true,
+                                    position: 'insideRight'
+                                }
+                            },
+                            data: series.rollback_count
+                        },
+                        {
+                            name: '未完成数',
+                            type: 'bar',
+                            stack: '发布总数',
+                            label: {
+                                normal: {
+                                    show: true,
+                                    position: 'insideRight'
+                                }
+                            },
+                            data: series.unfinished_count
+                        },
+                        {
+                            name: '废弃数',
+                            type: 'bar',
+                            stack: '发布总数',
+                            label: {
+                                normal: {
+                                    show: true,
+                                    position: 'insideRight'
+                                }
+                            },
+                            data: series.scrap_count
+                        }
+                    ]
+                };
+                myChart.setOption(option);
+            }
+            );
+        },
+        error: function(json){
+
+        }
+    });
+};
+
+});
+</script>
+{% endblock %}

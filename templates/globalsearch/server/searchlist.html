@@ -1,0 +1,75 @@
+{% extends "common/base.html" %}
+{% block title %} 通用查询 {% endblock %}
+
+{% block content %}
+
+<style type="text/css">
+    .dancontainer em {font-size:16px; font-style: normal; color: red;}
+    .f_gray{ color:#666666; text-decoration:underline;}
+</style>
+<div class="inner-h1">
+    {% if es == None %}
+        <h4><span class="glyphicon glyphicon-search"></span> Elasticsearch连接异常，请联系平台研发的刘亚婷(liuyating1)！</h4>
+    {% elif param == "Error" %}
+        <h4><span class="glyphicon glyphicon-search"></span> 搜索参数“<em class="text-error">{{ key }}</em>”不合法，字符串必须以字母、数字或中文字符开头，以字母、数字、.(搜索IP段)或中文字符结尾！</h4>
+    {% elif es == 'ConnectError' %}
+        <h4><span class="glyphicon glyphicon-search"></span> Elasticsearch连接的索引或Type不存在，请联系平台研发的刘亚婷(liuyating1)！</h4>
+    {% elif total == 0 %}
+        <h4><span class="glyphicon glyphicon-search"></span> 在CMDB中搜索“<em class="text-error">{{ key }}</em>”未找到相关结果！</h4>
+    {% else %}
+        <h4><span class="glyphicon glyphicon-search"></span> 在CMDB中搜索“<em class="text-error">{{ key }}</em>”找到相关结果<em>{{ total }}</em>个</h4>
+    {% endif %}
+</div>
+
+<div class="inner-box inner-list-box">
+{% if es != None and param != "Error" and es != 'ConnectError' and total != 0 %}
+    {% for s in serverlist %}
+    <div class="panel">
+        <div class="panel-body">
+            <a href="{{ ROOT_URL }}server/detail/?id={{ s.id }}" target="_blank" title="点击查看主机详情"><strong style="font-size:medium">主机{{ s.assetid }}详细信息</strong></a><br>
+            <strong>应用</strong>={% if s.site_name and s.app_name %}{{ s.site_name }}/{{ s.app_name }}{% else %}{% endif %};&nbsp;
+            <strong>IP</strong>={% if s.ip %}{{ s.ip }}{% else %}{% endif %};&nbsp;
+            <strong>设备编号</strong>={% if s.assetid %}{{ s.assetid }}{% else %}{% endif %};&nbsp;
+            <strong>序列号</strong>={% if s.sn %}{{ s.sn }}{% else %}{% endif %};&nbsp;
+            <strong>主机名</strong>={% if s.hostname %}{{ s.hostname }}{% else %}{% endif %};&nbsp;
+            <strong>主机类型</strong>={% if s.type_name %}{{ s.type_name }}{% else %}{% endif %};&nbsp;
+            <strong>宿主机IP</strong>={% if s.parent_ip %}{{ s.parent_ip }}{% else %}{% endif %};&nbsp;
+            <strong>管理IP</strong>={% if s.mgmt_ip %}{{ s.mgmt_ip }}{% else %}{% endif %};&nbsp;
+            <strong>机架</strong>={% if s.rack_name %}{{ s.rack_name }}{% else %}{% endif %};&nbsp;
+            <strong>环境</strong>={% if s.env_name %}{{ s.env_name }}{% else %}{% endif %};&nbsp;
+            <strong>状态</strong>={% if s.status_name %}{{ s.status_name }}{% else %}{% endif %};&nbsp;
+            <small><a href="{{ ROOT_URL }}server/server/?id={{ s.id }}" target="_blank" class="f_gray" title="进入主机管理">主机操作</a></small>
+        </div>
+    </div>
+    {% endfor %}
+    <div class="clearfix">
+        <ul class="pagination nav navbar-nav navbar-left">
+            <li>&nbsp;共{{ total }}条记录，每页显示{{ page_size }}条记录</li>
+        </ul>
+
+        <ul class="pagination nav navbar-nav navbar-right">
+            {% if serverlist.has_previous %}
+                <li><a href="?key={{ key }}&page={{ serverlist.previous_page_number }}">&laquo; 上一页</a></li>
+            {% else %}
+                <li class="disabled"><a href="#">&laquo; 上一页</a></li>
+            {% endif %}
+            {% for p in page_range %}
+                {% ifequal p serverlist.number %}
+                    <li class="active"><a href="#">{{ p }} <span class="sr-only">(current)</span></a></li>
+                {% else %}
+                    <li><a href="?key={{ key }}&page={{p}}" title="第{{p}}页">{{p}}</a></li>
+                {% endifequal %}
+            {% endfor %}
+            {% if serverlist.has_next %}
+                <li><a href="?key={{ key }}&page={{ serverlist.next_page_number }}">&raquo; 下一页</a></li>
+            {% else %}
+                <li class="disabled"><a href="#">&raquo; 下一页</a></li>
+            {% endif %}
+        </ul>
+    </div>
+{% endif %}
+</div>
+{#<script type="text/javascript">#}
+{#    $('#globalKey').val('{{ key }}');#}
+{#</script>#}
+{% endblock %}

@@ -1,0 +1,268 @@
+{% extends "common/bootstrap3.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+
+
+<div class="page-header">
+  <h1>复制pool配置信息</h1>
+</div>
+
+<div id="alert">
+</div>
+
+<div class="modal fade" id="confirmcopy">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">确认复制？</h4>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:16px; color:#f00000;"><i class="fa fa-warning"></i>(目的Group_IDC+目的环境)已经有配置文件，复制操作会先全部删除，确认要复制？</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="confirmcopybtn" class="btn btn-warning">复制</button>
+        <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+      </div>
+    </div><!-- /.modal-content -->
+  </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<div>
+    <div class="col-sm-6">
+        <label for="s_srcgroup" class="col-sm-2 control-label">源Group_IDC</label>
+        <div class="col-sm-10">
+            <select name="s_srcgroup" id="s_srcgroup" class="form-control">
+                <option value="">选择源Group_IDC</option>
+                {% for item in groups %}
+                <option value="{{ item.id }}">{{ item.group_id }}_{{ item.idc.ycc_code }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <label for="s_dstgroup" class="col-sm-2 control-label">目的Group_IDC</label>
+        <div class="col-sm-10">
+                <select name="s_dstgroup" id="s_dstgroup" class="form-control">
+                <option value="">选择目的Group_IDC</option>
+                {% for item in groups %}
+                <option value="{{ item.id }}">{{ item.group_id }}_{{ item.idc.ycc_code }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <label for="s_srcenv" class="col-sm-2 control-label">源环境:</label>
+        <div class="col-sm-10">
+            <select name="s_srcenv" id="s_srcenv" class="form-control">
+                <option value="">选择源环境</option>
+                {% for item in envs %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <label for="s_dstenv" class="col-sm-2 control-label">目的环境:</label>
+        <div class="col-sm-10">
+            <select name="s_dstenv" id="s_dstenv" class="form-control">
+                <option value="">选择目的环境</option>
+                {% for item in envs %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <label for="s_srcver" class="col-sm-2 control-label">源版本(状态):</label>
+        <div class="col-sm-10">
+            <select name="s_srcver" id="s_srcver" class="form-control">
+                <option value="0">0(edit)</option>
+            </select>
+        </div>
+    </div>
+</div>
+<div class="col-sm-12">
+    <div id="toolbar" style="margin:5px 0 10px 15px">
+        <button id="copy_btn" class="btn btn-primary">
+            <i class="glyphicon glyphicon-plus"></i>复制
+        </button>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+
+function showSuccess(info) {
+    $('#alert').empty().append('<div class="alert alert-success text-center" role="alert">' +
+                                    '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                                        '<span aria-hidden="true">&times;</span>' +
+                                    '</button>' +
+                                    '<strong>成功</strong>' + info +
+                                '</div>');
+}
+
+function showError(err) {
+    $('#alert').empty().append('<div class="alert alert-danger text-center" role="alert">' +
+                                    '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                                        '<span aria-hidden="true">&times;</span>' +
+                                    '</button>' +
+                                    '<strong>错误!</strong>' + err +
+                                '</div>');
+}
+
+function getStatusDesc(status) {
+    var desc = 'unknown'
+    if (status == 0)
+        desc = 'edit';
+    else if (status == 1)
+        desc = 'commited';
+    else if (status == 2)
+        desc = 'approved';
+    else if (status == 3)
+        desc = 'rejected';
+    else if (status == 4)
+        desc = 'published';
+    else if (status == 5)
+        desc = 'history';
+    else if (status == 6)
+        desc = 'rollback';
+    else if (status == 7)
+        desc = 'rmvpublish';
+    else if (status == 8)
+        desc = 'rmvaudit';
+    else
+        desc = 'unknown';
+    return desc;
+}
+
+function initVersion() {
+    var params_group_id = $('#s_srcgroup').val();
+    var params_env = $('#s_srcenv').val();
+    $('#s_srcver').find('option').remove();
+    if (params_group_id == '')
+        return;
+    if (params_env != 7) {
+        $('#s_srcver').append($('<option>').text('0(edit)').attr('value', '0'));
+        $("#s_srcver").data('combobox').refresh();
+    } else {
+        var inputdata = {
+            'group': params_group_id
+        };
+        $.ajax({
+            url: '{{ CMDBAPI_URL }}ycc/status/',
+            async: false,
+            data: inputdata,
+            headers: {'Authorization':'Token {{ API_TOKEN }}'},
+            success: function( json ) {
+                var allgs = json.results;
+                for (var i=0; i<allgs.length; ++i) {
+                    var gs = allgs[i];
+                    var version = gs.version;
+                    var status = gs.status;
+                    var statusDesc = getStatusDesc(status);
+                    var verDesc = '' + version + '(' + statusDesc + ')';
+                    $('#s_srcver').append($('<option>').text(verDesc).attr('value', version));
+                }
+                $("#s_srcver").data('combobox').refresh();
+            },
+            error: function( json ) {
+                showError('获取配置组版本' + JSON.stringify(json.responseText));
+            }
+        });
+    }
+}
+
+function copyPoolConfsImpl(srcgroup, srcenv, srcver, dstgroup, dstenv) {
+    $.ajax({
+        url: '{{ CMDBAPI_URL }}ycc/copy/?format=json&srcgroup=' + srcgroup
+            + '&srcenv=' + srcenv + '&srcver=' + srcver + '&dstgroup=' + dstgroup + '&dstenv=' + dstenv,
+        type: 'POST',
+        async: false,
+        headers: {'Authorization':'Token {{ API_TOKEN }}'},
+        success: function( json ) {
+            var desc = '复制' + json.dataidnum + '个配置文件: ' + json.dataids;
+            showSuccess(desc);
+        },
+        error: function( json ) {
+            showError('复制配置组失败' + JSON.stringify(json.responseText));
+        }
+    });
+}
+
+function copyPoolConfs(srcgroup, srcenv, srcver, dstgroup, dstenv) {
+    var params = ['format=json'];
+    params.push('group_status__group__id=' + dstgroup);
+    params.push('env=' + dstenv);
+    $.ajax({
+        url: '{{ CMDBAPI_URL }}ycc/configinfo/v2/?' + params.join('&'),
+        type: 'GET',
+        async: false,
+        headers: {'Authorization':'Token {{ API_TOKEN }}'},
+        success: function( json ) {
+            if (json.count > 0) {
+                $('#confirmcopy').modal();
+            } else {
+                copyPoolConfsImpl(srcgroup, srcenv, srcver, dstgroup, dstenv);
+            }
+        },
+        error: function( json ) {
+            showError('查询(目的Group_IDC+目的环境)是否有配置文件失败' + JSON.stringify(json.responseText));
+        }
+    });
+}
+
+function initBtn() {
+    $('#copy_btn').bind('click', function() {
+        var srcgroup = $("#s_srcgroup").val();
+        var dstgroup = $("#s_dstgroup").val();
+        var srcenv = $("#s_srcenv").val();
+        var dstenv = $("#s_dstenv").val();
+        var srcver = $("#s_srcver").val();
+        if (srcgroup == '' || dstgroup == '' || srcenv == '' || dstenv== '' || srcver == '') {
+            showError('请先选择GROUP_IDC和环境，源版本。');
+        } else if (srcver == 0 && srcgroup + srcenv == dstgroup + dstenv) {
+            showError('源版本为0时，(源Group_IDC+源环境)和(源Group_IDC+源环境)不能相同。');
+        } else {
+            copyPoolConfs(srcgroup, srcenv, srcver, dstgroup, dstenv);
+        }
+    });
+
+    $('#confirmcopybtn').bind('click', function() {
+        var srcgroup = $("#s_srcgroup").val();
+        var dstgroup = $("#s_dstgroup").val();
+        var srcenv = $("#s_srcenv").val();
+        var dstenv = $("#s_dstenv").val();
+        var srcver = $("#s_srcver").val();
+        copyPoolConfsImpl(srcgroup, srcenv, srcver, dstgroup, dstenv);
+        $('#confirmcopy').modal('hide');
+    });
+}
+
+$("#s_srcgroup").combobox({
+});
+$("#s_dstgroup").combobox({
+});
+$("#s_srcenv").combobox({
+});
+$("#s_dstenv").combobox({
+});
+$('#s_srcver').combobox({
+});
+
+$('#s_srcgroup').change(function(){
+    initVersion();
+});
+$('#s_srcenv').change(function(){
+    initVersion();
+});
+
+initBtn();
+});
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,432 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %} 可用性统计 {% endblock %}
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-multiselect/css/bootstrap-multiselect.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-sweetalert/sweetalert.css" rel="stylesheet"/>
+
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-multiselect/js/bootstrap-multiselect.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-sweetalert/sweetalert.min.js"></script>
+<style>
+    .bootstrap-table .table > tbody > tr > th,
+    .bootstrap-table .table > tfoot > tr > th,
+    .bootstrap-table .table > thead > tr > td,
+    .bootstrap-table .table > tbody > tr > td,
+    .bootstrap-table .table > tfoot > tr > td {
+        padding: 4px !important;
+    }
+    .fixed-table-container tbody tr td {
+        line-height: 26px;
+    }
+    .fixed-table-container tbody .selected td {
+        background-color: #C7CCD5;
+    }
+
+    .fixed-table-container tbody tr:hover td{
+        background-color: #C7CCD5;
+    }
+    .sa-confirm-button-container .btn-primary{
+        background-color: #01a992;
+    }
+</style>
+<div id="toolbar">
+    <div class="form-inline" role="form">
+        <label style="width: 45px;">From：</label>
+        <input size="16" style="width: 115px" type="text" value="{{ start_date }}" name="start_date" id="start_date" class="form-control control_api_url datepicker" readonly>
+        <label style="width: 25px; margin: 0px 8px 0px 5px;">To：</label>
+        <input size="16" style="width: 115px" type="text" value="{{ end_date }}" name="end_date" id="end_date" class="form-control control_api_url datepicker" readonly>
+        <select name="duty_dept_id[]" id="duty_dept_id" class="form-control multiselect" multiple="multiple">
+            {%  for item in dept_level2 %}
+                <option value="{{ item.id }}">{{ item.deptname }}</option>
+            {%  endfor %}
+            {% for dm in other_domain_list %}
+                <option value="{{ dm.deptid }}">{{ dm.deptname }}</option>
+            {%  endfor %}
+        </select>
+        <select name="dept_id[]" id="dept_id" class="form-control multiselect" multiple="multiple">
+            {%  for item in dept_list %}
+                <option value="{{ item.id }}">{{ item.deptname }}</option>
+            {%  endfor %}
+            {% for dm in other_domain_list %}
+                <option value="{{ dm.deptid }}">{{ dm.deptname }}</option>
+            {%  endfor %}
+        </select>
+        <select name="duty_domains[]" id="duty_domains" class="form-control multiselect" multiple="multiple">
+            {%  for item in domain_list %}
+                <option value="{{ item.id }}">{{ item.domainname }}</option>
+            {%  endfor %}
+            {% for dm in other_domain_list %}
+                <option value="{{ dm.id }}">{{ dm.domainname }}</option>
+            {%  endfor %}
+        </select>
+{#        <button id="select" class="form-control btn btn-green" type="button">#}
+{#            查询#}
+{#        </button>#}
+        <button id="clear" class="form-control btn btn-green" type="button">
+            重置
+        </button>
+    </div>
+</div>
+
+<table id="sla_domain"></table>
+
+<script>
+$(document).ready(function() {
+    $('#start_date').val('{{ start_date }}');
+    $('#end_date').val('{{ end_date }}');
+    $('#duty_dept_id').val('');
+    $('#dept_id').val('');
+    $('#duty_domains').val('');
+    var other_domains = []
+    {% for dm in other_domain_list %}
+        other_domains.push({
+            'id': "{{ dm.id }}",
+            'domainname': "{{ dm.domainname }}",
+            'deptid': "{{ dm.deptid }}",
+            'deptname': "{{ dm.deptname }}",
+        })
+    {%  endfor %}
+    $('#duty_dept_id').multiselect({
+        nonSelectedText:'二级部门',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'二级部门',
+        maxHeight:300,
+        onDropdownHide: function(event) {
+            var duty_dept_id = [];
+            $($('#duty_dept_id option:selected')).each(function(index, brand){
+                duty_dept_id.push($(this).val());
+            });
+            $('#dept_id').find('option').remove();
+            $('#duty_domains').find('option').remove();
+            if(duty_dept_id.length != 0 && duty_dept_id.length != $('#duty_dept_id option').length){
+                var dept_ids = [];
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}cmdb/department/?format=json&pid_in=' + duty_dept_id.join(","),
+                    async: false,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        $.each(json, function (i, value) {
+                            dept_ids.push(value.id);
+                            $('#dept_id').append($('<option>').text(value.deptname).attr('value', value.id));
+                        });
+                    }
+                });
+                $.each(other_domains, function (i, dm) {
+                    $.each(duty_dept_id, function (i, value) {
+                        if(dm['deptid'] == value){
+                            dept_ids.push(value);
+                            $('#dept_id').append($('<option>').text(dm['deptname']).attr('value', dm['deptid']));
+                        }
+                    });
+                });
+                if(dept_ids.length == 0) {
+                    $('#dept_id').append($('<option>').text('无所属三级部门').attr('value', ''));
+                }
+                var domain_id = [];
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}cmdb/domain/bydeptv2/?format=json&deptid__in=' + duty_dept_id.join(","),
+                    async: false,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        $.each(JSON.parse(json), function (i, value) {
+                            domain_id.push(value['id']);
+                            $('#duty_domains').append($('<option>').text(value['domainname']).attr('value', value['id']));
+                        });
+                    }
+                });
+                $.each(other_domains, function (i, dm) {
+                    $.each(duty_dept_id, function (i, value) {
+                        if(dm['deptid'] == value){
+                            domain_id.push(dm['id']);
+                            $('#duty_domains').append($('<option>').text(dm['domainname']).attr('value', dm['id']));
+                        }
+                    });
+                });
+                if(domain_id.length == 0){
+                    $('#duty_domains').append($('<option>').text('无所属Domain').attr('value', ''));
+                }
+            }else{
+                {%  for item in dept_level2 %}
+                    $('#dept_id').append($('<option>').text("{{ item.deptname | safe }}").attr('value', "{{ item.id }}"));
+                {%  endfor %}
+                {%  for item in domain_list %}
+                    $('#duty_domains').append($('<option>').text("{{ item.domainname | safe }}").attr('value', "{{ item.id }}"));
+                {%  endfor %}
+                {% for dm in other_domain_list %}
+                    $('#dept_id').append($('<option>').text('{{ dm.deptname }}').attr('value', "{{ dm.deptid }}"));
+                    $('#duty_domains').append($('<option>').text("{{ dm.domainname }}").attr('value', "{{ dm.id }}"));
+                {% endfor %}
+            }
+            $('#dept_id').multiselect('rebuild');
+            $('#dept_id').multiselect('refresh');
+            $('#duty_domains').multiselect('rebuild');
+            $('#duty_domains').multiselect('refresh');
+            update_table();
+        }
+    });
+    $('#dept_id').multiselect({
+        nonSelectedText:'三级部门',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'三级部门',
+        maxHeight:300,
+        onDropdownHide: function(event) {
+            var dept_id = [];
+            $($('#dept_id option:selected')).each(function(index, brand){
+                dept_id.push($(this).val());
+            });
+            $('#duty_domains').find('option').remove();
+            if(dept_id.length != 0){
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}cmdb/domain/v2/?format=json&dept_id_in=' + dept_id.join(","),
+                    async: false,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        $.each(json, function (i, value) {
+                            $('#duty_domains').append($('<option>').text(value.domainname).attr('value', value.id));
+                        });
+                    }
+                });
+                $.each(other_domains, function (i, dm) {
+                    $.each(dept_id, function (i, value) {
+                        if(dm['deptid'] == value){
+                            $('#duty_domains').append($('<option>').text(dm['domainname']).attr('value', dm['id']));
+                        }
+                    });
+                });
+            }else{
+                var duty_dept_id = [];
+                $($('#duty_dept_id option:selected')).each(function(index, brand){
+                    duty_dept_id.push($(this).val());
+                });
+                if(duty_dept_id.length != 0 && duty_dept_id.length != $('#duty_dept_id option').length){
+                    var domain_id = [];
+                    $.ajax({
+                        url: '{{ CMDBAPI_URL }}cmdb/domain/bydeptv2/?format=json&deptid__in=' + duty_dept_id.join(","),
+                        async: false,
+                        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                        success: function (json) {
+                            $.each(JSON.parse(json), function (i, value) {
+                                domain_id.push(value['id']);
+                                $('#duty_domains').append($('<option>').text(value['domainname']).attr('value', value['id']));
+                            });
+                        }
+                    });
+                    $.each(other_domains, function (i, dm) {
+                        $.each(duty_dept_id, function (i, value) {
+                            if(dm['deptid'] == value){
+                                domain_id.push(dm['id']);
+                                $('#duty_domains').append($('<option>').text(dm['domainname']).attr('value', dm['id']));
+                            }
+                        });
+                    });
+                    if(domain_id.length == 0){
+                        $('#duty_domains').append($('<option>').text('无所属Domain').attr('value', ''));
+                    }
+                }else{
+                    {%  for item in domain_list %}
+                        $('#duty_domains').append($('<option>').text("{{ item.domainname | safe }}").attr('value', "{{ item.id }}"));
+                    {%  endfor %}
+                    {% for dm in other_domain_list %}
+                        $('#dept_id').append($('<option>').text('{{ dm.deptname }}').attr('value', "{{ dm.deptid }}"));
+                        $('#duty_domains').append($('<option>').text("{{ dm.domainname }}").attr('value', "{{ dm.id }}"));
+                    {% endfor %}
+                }
+            }
+            $('#duty_domains').multiselect('rebuild');
+            $('#duty_domains').multiselect('refresh');
+            update_table();
+        }
+    });
+    $('#duty_domains').multiselect({
+        enableFiltering: true,
+        nonSelectedText:'责任Domain',
+        filterPlaceholder:'搜索',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'责任Domain',
+        maxHeight:300,
+        onDropdownHide: function(event) {
+            update_table();
+        }
+    });
+
+    $('.datepicker').datetimepicker({
+        format: 'yyyy-mm-dd',
+        autoclose: true,
+        minView: 2
+    });
+
+    $('.control_api_url').change(function(){
+        start_date = moment($('#start_date').val()).format('X');
+        end_date = moment($('#end_date').val()).format('X');
+        if(Number(start_date) > Number(end_date)){
+            swal({
+              title: "开始日期不能大于结束日期，请重新选择！",
+              type: "warning",
+              confirmButtonClass: 'btn-green',
+              closeOnConfirm: true,
+            },
+            function(isConfirm){
+              if (isConfirm){
+                  $('#start_date').val('{{ start_date }}');
+                  $('#end_date').val('{{ end_date }}');
+                  update_table();
+
+              }
+            });
+        }else{
+            update_table();
+        }
+
+    });
+    $('#clear').click(function(){
+        $('#duty_dept_id').find('option').remove();
+        $('#dept_id').find('option').remove();
+        $('#duty_domains').find('option').remove();
+        {%  for item in dept_level2 %}
+            $('#duty_dept_id').append($('<option>').text("{{ item.deptname | safe }}").attr('value', "{{ item.id }}"));
+        {%  endfor %}
+        {%  for item in dept_list %}
+            $('#dept_id').append($('<option>').text("{{ item.deptname | safe }}").attr('value', "{{ item.id }}"));
+        {%  endfor %}
+        {%  for item in domain_list %}
+            $('#duty_domains').append($('<option>').text("{{ item.domainname | safe }}").attr('value', "{{ item.id }}"));
+        {%  endfor %}
+        {% for dm in other_domain_list %}
+            $('#duty_dept_id').append($('<option>').text('{{ dm.deptname }}').attr('value', "{{ dm.deptid }}"));
+            $('#dept_id').append($('<option>').text('{{ dm.deptname }}').attr('value', "{{ dm.deptid }}"));
+            $('#duty_domains').append($('<option>').text("{{ dm.domainname }}").attr('value', "{{ dm.id }}"));
+        {% endfor %}
+        $('#start_date').val('{{ start_date }}');
+        $('#end_date').val('{{ end_date }}');
+        $('#duty_dept_id').multiselect('rebuild');
+        $('#duty_dept_id').multiselect('refresh');
+        $('#dept_id').multiselect('rebuild');
+        $('#dept_id').multiselect('refresh');
+        $('#duty_domains').multiselect('rebuild');
+        $('#duty_domains').multiselect('refresh');
+        update_table();
+    });
+
+    function update_table() {
+        var api_url = '{{ CMDBAPI_URL }}accident/sla/domain/?';
+        params = ['format=json'];
+        start_date = moment($('#start_date').val()).format('X');
+        end_date = moment($('#end_date').val()).format('X');
+{#        if(Number(start_date) > Number(end_date)){#}
+{#            swal("温馨提示：", "开始日期不能大于结束日期，请重新选择！", "warning");#}
+{#            $('#start_date').val('{{ start_date }}');#}
+{#            $('#end_date').val('{{ end_date }}');#}
+{#            return;#}
+{#        }#}
+        params.push('start_date=' + start_date);
+        params.push('end_date=' + end_date);
+        var duty_dept_id = '';
+        $('#duty_dept_id option:selected').each(function() { if (duty_dept_id != '') { duty_dept_id += ',' } duty_dept_id += $(this).val() });
+        var dept_id = '';
+        $('#dept_id option:selected').each(function() { if (dept_id != '') { dept_id += ',' } dept_id += $(this).val() });
+        var duty_domains = '';
+        $('#duty_domains option:selected').each(function() { if (duty_domains != '') { duty_domains += ',' } duty_domains += $(this).val() });
+
+        if(duty_dept_id != '' && duty_dept_id.split(',').length != $('#duty_dept_id option').length){
+            params.push('dept2_id_in=' + duty_dept_id)
+        }
+        if(dept_id != '' && dept_id.split(',').length != $('#dept_id option').length){
+            params.push('dept_id_in=' + dept_id)
+        }
+        if(duty_domains != ''&& duty_domains.split(',').length != $('#duty_domains option').length){
+            params.push('domain_id_in=' + duty_domains)
+        }
+        $('#sla_domain').bootstrapTable('refresh', {
+            url: api_url + params.join('&')
+        });
+    }
+
+    var start_date = moment('{{ start_date }}').format('X');
+    var end_date = moment('{{ end_date }}').format('X');
+    $('#sla_domain').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}accident/sla/domain/?format=json&start_date=' +start_date+ '&end_date=' +end_date,
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        async: true,
+        sortable: true,
+        sortName: 'availability',
+        sortOrder: 'asc',
+        onLoadError: function(status){  //加载失败时执行
+           swal("", "加载失败，请检查请求参数！", "error");
+        },
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'dept2_name',
+                title: '二级部门',
+            },
+            {
+                field: 'deptname',
+                title: '三级部门',
+            },
+            {
+                field: 'domainname',
+                title: 'Domain',
+            },
+            {
+                field: 'domainleader',
+                title: 'Domain负责人',
+            },
+            {
+                field: 'repair_hour',
+                title: '修复时间(小时)',
+                sortable: true
+            },
+            {
+                field: 'health_repair_hours',
+                title: '调校后修复时间（小时）',
+                sortable: true,
+            },
+            {
+                field: 'accident_count',
+                title: '事故数',
+                sortable: true,
+            },
+            {
+                field: 'availability',
+                title: '系统可用性',
+                sortable: true,
+                formatter: rateFormatter,
+            }
+        ],
+        pagination: true,
+        pageSize: 20,
+        pageList: [10,20,50,100, 500],
+        sidePagination: 'client',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false,
+        showExport: true,
+        exportDataType: 'all'
+    });
+
+    function rateFormatter(value, row, index){
+        return value + '%'
+    }
+});
+</script>
+{% endblock %}

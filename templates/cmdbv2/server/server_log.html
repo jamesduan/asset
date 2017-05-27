@@ -1,0 +1,35 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+{% load tz %}
+{#<div class="page-header">#}
+{#  <h1 style="font-size: 36px">日志查看</h1>#}
+{#</div>#}
+
+<table class="table table-striped">
+    <thead><tr><th style="width: 15%">时间</th><th style="width: 8%">类型</th><th style="width: 8%">动作</th><th style="width: 8%">索引值</th><th style="width: 61%">内容</th></tr></thead>
+    <tbody>
+    {% for item in details %}
+        {% if item.is_error == 1 %}
+            <tr class="danger">
+                <td>{{ item.happen_time|utc|date:"Y-m-d G:i:s" }}</td>
+                <td>{{ item.type }}</td>
+                <td>{{ item.action }}</td>
+                <td>{{ item.index }}</td>
+                <td>{{ item.content }}</td>
+            </tr>
+        {% elif item.is_error == 0 %}
+            <tr>
+                <td>{{ item.happen_time|utc|date:"Y-m-d G:i:s"}}</td>
+                <td>{{ item.type }}</td>
+                <td>{{ item.action }}</td>
+                <td>{{ item.index }}</td>
+                <td>{{ item.content }}</td>
+            </tr>
+        {% endif %}
+    {% endfor %}
+    </tbody>
+</table>
+
+{% endblock %}

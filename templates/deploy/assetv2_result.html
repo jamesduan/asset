@@ -1,0 +1,22 @@
+{% extends "deploy/base.html" %}
+
+{% block title %}
+    <title>assetv2上线结果</title>
+{% endblock %}
+
+{% block body %}
+    <table class="table" border="1">
+        <tr>
+            <td>IP</td>
+            <td>执行结果</td>
+            <td>结果输出</td>
+        </tr>
+        {% for task in result_list %}
+            <tr>
+                <td>{{ task.0 }}</td>
+                <td>{{ task.1 }}</td>
+                <td>{{ task.2|safe }}</td>
+            </tr>
+        {% endfor %}
+    </table>
+{% endblock %}

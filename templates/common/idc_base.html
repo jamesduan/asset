@@ -1,0 +1,55 @@
+{% extends "common/base.html" %}
+
+{% block title %} IDC {% endblock %}
+
+{% block my_li %}
+    <li><a href="{{ ROOT_URL }}asset/pre_asset/">资产预分配</a></li>
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">IDC管理</a>
+        <section class="dropdown-menu" role="menu">
+           <ul class="item">
+               <li>
+                   <ul>
+                        <li class="title">设备</li>
+                        <li><a href="{{  ROOT_URL }}asset/">设备管理</a></li>
+                   </ul>
+               </li>
+
+               <li>
+                   <ul>
+                       <li class="title">基础</li>
+                       <li><a href="{{  ROOT_URL }}asset/rack/">机柜管理</a></li>
+                       <li><a href="{{  ROOT_URL }}asset/room/">机房管理</a></li>
+                       <li><a href="{{  ROOT_URL }}asset/model/">设备型号管理</a></li>
+                   </ul>
+               </li>
+               <li>
+                   <ul>
+                       <li class="title">故障</li>
+                       <li><a href="{{  ROOT_URL }}asset/repair/">设备故障管理</a></li>
+                   </ul>
+               </li>
+           </ul>
+        </section>
+    </li>
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">虚拟化&装机</a>
+        <ul class="dropdown-menu" role="menu">
+            <li><a href="{{  ROOT_URL }}server/virtual/">宿主机/虚拟机管理</a></li>
+            <li><a href="{{  ROOT_URL }}server/install/">装机管理</a></li>
+        </ul>
+    </li>
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">网络</a>
+        <ul class="dropdown-menu" role="menu">
+            <li><a href="{{  ROOT_URL }}asset/ipsegment/">IP段管理</a></li>
+            <li><a href="{{  ROOT_URL }}asset/extranetip/">外网IP管理</a></li>
+        </ul>
+    </li>
+    <li class="dropdown">
+        <a class="dropdown-toggle" data-toggle="dropdown" href="#">综合查询</a>
+        <ul class="dropdown-menu" role="menu">
+            <li><a href="{{  ROOT_URL }}asset/assetchart/1/real/0/" target="_blank">IDC设备分布图</a></li>
+        </ul>
+    </li>
+{% endblock %}

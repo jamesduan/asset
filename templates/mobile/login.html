@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+		<link href="/staticv2/cmdbv2/mobile/libs/mui/css/mui.min.css" rel="stylesheet" />
+        <style>
+           *{font-family: 'Microsoft YaHei','Helvetica Neue', Helvetica, sans-serif;}
+            a{color:#14C9B3}
+            .btn-blue{color:#fff; background-color:#14C9B3; border-color:#14C9B3;}
+            .mui-content{ padding:0px 30px;}
+            .logo{font-size:40px;text-align:center;margin:40px 0px 30px;color:#23D2BD;}
+            .mui-input-group{ background-color:transparent; margin-bottom:20px;}
+            .mui-input-group .mui-input-row{ margin-bottom:15px; border-radius:3px; background-color:#fff;}
+            .mui-input-group:after ,.mui-input-group:before ,.mui-input-group .mui-input-row:after{ background-color:transparent;}
+            .mui-content-padded {margin:10px 0px;}
+            .alert-info{ font-size:12px; color:#FF9700;}
+            .alert-info span{color:#fff;background-color:#FF800B;border-radius:50%;font-size:14px;margin-right:6px; font-weight:bold;}
+            .info{font-size:12px;color:#9E9E9E;padding:0px 12px;}
+            .mui-btn-block{padding:8px 0px;}
+            .register{font-size:14px;text-align:center;text-decoration:underline;margin-top:20px;}
+        </style>
+        <script type="text/javascript">
+        var login = function(){
+            document.getElementById('login').submit();
+        }
+		</script>
+	</head>
+	<body>
+    <!--content-->
+	<section class="mui-content">
+    <div class="logo"><img src="/staticv2/cmdbv2/mobile/img/applogo.png" width="30%"/></div>
+    <form id="login" class="mui-input-group" method="post" action="{% url 'django.contrib.auth.views.login' %}">
+    {% csrf_token %}
+    <div class="mui-input-row">
+    <input id='id_username' name="username" type="text" class="mui-input-clear" placeholder="请输入域账号"/>
+    </div>
+    <div class="mui-input-row">
+    <input id='id_password' name="password" type="password" class="mui-input-clear" placeholder="请输入密码"/>
+    </div>
+    </form>
+    {% if form.errors %}
+    <div class="alert-info"><span class="mui-icon 	mui-icon-closeempty"></span>用户名或密码不正确 ！</div>
+    {% endif %}
+    <div class="mui-content-padded">
+    <button onclick="login();" class="mui-btn mui-btn-block btn-blue">登&nbsp;录</button>
+    <input type="hidden" name="next" value="{{ next }}"/>
+    </div>
+    <div class="register"><a href="/mobile/register/">申请ledao登录授权</a></div>
+    </section>
+	</body>
+
+</html>

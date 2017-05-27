@@ -1,0 +1,1147 @@
+{% extends "common/common_menu_base.html" %}
+{#{% block title %} 历史事故 {% endblock %}#}
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-multiselect/css/bootstrap-multiselect.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-sweetalert/sweetalert.css" rel="stylesheet"/>
+
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-multiselect/js/bootstrap-multiselect.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery-json/js/jquery.json.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-sweetalert/sweetalert.min.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery-autocomplete/bootstrap3-typeahead.min.js"></script>
+
+<style>
+    .bootstrap-table .table > tbody > tr > th,
+    .bootstrap-table .table > tfoot > tr > th,
+    .bootstrap-table .table > thead > tr > td,
+    .bootstrap-table .table > tbody > tr > td,
+    .bootstrap-table .table > tfoot > tr > td {
+        padding: 4px !important;
+    }
+    .fixed-table-container tbody tr td {
+        line-height: 26px;
+    }
+    .fixed-table-container tbody .selected td {
+        background-color: #C7CCD5;
+    }
+
+    .fixed-table-container tbody tr:hover td{
+        background-color: #C7CCD5;
+    }
+    .red{ color:#ff0000;}
+
+    .ac {
+        border-style: solid;
+        border-width: 1px;
+        border-color: gray;
+        position: absolute;
+        display: none;
+        overflow: auto;
+        z-index: 9999;
+    }
+    .sa-confirm-button-container .btn-primary{
+        background-color: #01a992;
+    }
+</style>
+
+<!--新增事故-模态框（Modal） -->
+<div class="modal fade" id="addModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+ <div class="modal-dialog">
+  <div class="modal-content">
+    <form class="form-horizontal" role="form" id="addForm" method="POST"  onkeydown="if(event.keyCode==13){return false;}">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            <h4 class="modal-title" id="myModalLabel" style="font-size:18px;">新增事故</h4>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="col-sm-4 control-label"><span class="label red">*</span>事故名称：</label>
+            <div class="col-sm-7">
+             <input type="text" name="title"  id="title" class="form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-4 control-label"><span class="label red">*</span>发生时间：</label>
+            <div class="col-sm-7">
+             <input type="text" name="happened_time"  id="happened_time" class="form-control">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-4 control-label"><span class="label red">*</span>值班经理：</label>
+            <div class="col-sm-7">
+                <input type="text" name="duty_manager_name"  id="duty_manager_name" class="form-control" value="{% if duty_manager %}{{ duty_manager.username }}{% else %}{% endif %}"  data-provide="typeahead" autocomplete="off" placeholder="请输入域控账号">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="col-sm-4 control-label"><span class="label red">*</span>报告人：</label>
+            <div class="col-sm-7">
+                <input type="text" name="find_user_name"  id="find_user_name" class="form-control" value="{{ USER.username }}"  data-provide="typeahead" autocomplete="off" placeholder="请输入域控账号">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+            <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+            <button type="submit" id="add_ok" class="btn btn-green">提交</button>
+        </div>
+    </form>
+  </div>
+ </div>
+</div>
+<!--修改事故-模态框（Modal） -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel1" aria-hidden="true">
+    <div class="modal-dialog">
+    <div class="modal-content">
+    <form class="form-horizontal" role="form" id="editForm" method="POST" onkeydown="if(event.keyCode==13){return false;}">
+    <input type="hidden" name="e_id" id="e_id">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="myModalLabel1">修改事故信息</h4>
+      </div>
+      <div class="modal-body">
+          <div class="form-group">
+            <label for="inputEmail3" class="col-sm-3 control-label"><span class="label red">*</span>事故编号</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="e_accidentid" id="e_accidentid" disabled/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputEmail3" class="col-sm-3 control-label"><span class="label red">*</span>事故名称</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="e_title" id="e_title"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label"><span class="label red">*</span>发生时间</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control selectTime" name="e_happened_time" id="e_happened_time" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">恢复时间</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control selectTime" name="e_finish_time" id="e_finish_time" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label"><span class="label red">*</span>值班经理</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="e_duty_manager_name" id="e_duty_manager_name"  data-provide="typeahead" autocomplete="off" placeholder="请输入域控账号"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label"><span class="label red">*</span>报告人</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="e_find_user_name" id="e_find_user_name"  data-provide="typeahead" autocomplete="off" placeholder="请输入域控账号"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputEmail3" class="col-sm-3 control-label">事故备注</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="e_comment" id="e_comment"/>
+            </div>
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-green" id="submit2">修改</button>
+      </div>
+    </form>
+    </div>
+    </div>
+</div>
+
+<!--新增事故-模态框（Modal） -->
+<div class="modal fade" id="deleteModal" tabindex="-1" role="dialog" aria-labelledby="deleteModalLabel" aria-hidden="true">
+ <div class="modal-dialog">
+  <div class="modal-content">
+    <form class="form-horizontal" role="form" id="deleteForm" method="POST"  onkeydown="if(event.keyCode==13){return false;}">
+        <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            <h4 class="modal-title" id="myModalLabel" style="font-size:18px;">删除事故</h4>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="col-sm-4 control-label">删除原因：</label>
+            <div class="col-sm-7">
+                <input type="text" name="comment"  id="comment" class="form-control" value="{{ accident.comment }}" placeholder="请填写删除事故的原因">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+            <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+            <button type="submit" id="add_ok" class="btn btn-danger">确认删除</button>
+        </div>
+    </form>
+  </div>
+ </div>
+</div>
+
+<div id="alert"></div>
+
+<div class="form-inline" style="padding-top: 10px">
+    <form id="multi_select" role="form">
+        <select name="status__id[]" id="status__id" class="form-control control_api_url multiselect" multiple="multiple">
+            {%  for item in accident_status %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+            {%  endfor %}
+        </select>
+        <select name="level[]" id="level" class="form-control control_api_url multiselect" multiple="multiple">
+            <option value="1">S1</option>
+            <option value="2">S2</option>
+            <option value="3">S3</option>
+            <option value="4">S4</option>
+            <option value="0">未定义</option>
+        </select>
+        <select name="type__ptype__id[]" id="type__ptype__id" class="form-control multiselect" multiple="multiple">
+            {%  for item in accident_parent_type %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+            {%  endfor %}
+        </select>
+        <select name="type__id[]" id="type__id" class="form-control control_api_url multiselect" multiple="multiple">
+            {%  for item in accident_type %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+            {%  endfor %}
+        </select>
+        <select name="duty_dept_id[]" id="duty_dept_id" class="form-control multiselect" multiple="multiple">
+            {%  for item in dept_level2 %}
+                <option value="{{ item.id }}">{{ item.deptname }}</option>
+            {%  endfor %}
+            {% for dm in other_domain_list %}
+                <option value="{{ dm.deptid }}">{{ dm.deptname }}</option>
+            {%  endfor %}
+        </select>
+        <select name="duty_domains[]" id="duty_domains" class="form-control control_api_url multiselect" multiple="multiple">
+            {%  for item in domain_list %}
+                <option value="{{ item.id }}">{{ item.domainname }}</option>
+            {%  endfor %}
+            {% for dm in other_domain_list %}
+                <option value="{{ dm.id }}">{{ dm.domainname }}</option>
+            {%  endfor %}
+        </select>
+        <label style="width: 45px;">From：</label>
+        <input size="16" style="width: 115px" type="text" value="{{ start_date }}" name="start_date" id="start_date" class="form-control control_api_url datepicker" readonly>
+        <label style="width: 25px; margin: 0px 8px 0px 5px;">To：</label>
+        <input size="16" style="width: 115px" type="text" value="{{ end_date }}" name="end_date" id="end_date" class="form-control control_api_url datepicker" readonly>
+        <select name="is_punish" id="is_punish" class="form-control control_api_url selectpicker">
+            <option value="">处罚?</option>
+            <option value="1">是</option>
+            <option value="0">否</option>
+        </select>
+        <select name="is_accident" id="is_accident" class="form-control control_api_url selectpicker">
+            <option value="0">仅存在</option>
+            <option value="1">仅删除</option>
+        </select>
+        <button id="clear" class="form-control btn btn-green" type="button">
+            重置
+        </button>
+    </form>
+
+</div>
+<div id="toolbar">
+    <div class="form-inline" role="form">
+        <button id="add" class="btn btn-green" data-toggle="modal" data-target="#addModal">
+            <i class="glyphicon glyphicon-plus"></i> 补录
+        </button>
+        <button id="submit_mantis" class="btn btn-green" disabled>
+            提交Mantis
+        </button>
+        <button id="delete" class="btn btn-danger" data-toggle="modal" data-target="#deleteModal" disabled>
+            <i class="glyphicon glyphicon-trash"></i> 删除
+        </button>
+        <button id="load_light_csv" class="btn btn-green">
+            <i class="glyphicon glyphicon-download"></i> 导出
+        </button>
+        <button id="load_csv" class="btn btn-green">
+            <i class="glyphicon glyphicon-download-alt"></i> 导出详情
+        </button>
+        <a id="level_look" class="btn btn-info" href="http://oms.yihaodian.com.cn/itil/view/accident/level_standard.html?v=1" target="_blank">
+            <i class="glyphicon glyphicon-search"></i> 等级规范
+        </a>
+        &nbsp;&nbsp;值班经理：<strong style="color: red">{% if duty_manager %}{{ duty_manager.username_ch }}{% else %}{% endif %}</strong>
+    [后备：<strong style="color: red">{% if back_duty_manager %}{{ back_duty_manager.username_ch }}{% else %}{% endif %}</strong>]
+    </div>
+</div>
+
+<table id="accidentlist"></table>
+
+<script>
+var form = $("#multi_select");
+$(document).ready(function() {
+    $('#start_date').val('{{ start_date }}');
+    $('#end_date').val('{{ end_date }}');
+    var data_count = 0;
+    var other_domains = [];
+    {% for dm in other_domain_list %}
+        other_domains.push({
+            'id': "{{ dm.id }}",
+            'domainname': "{{ dm.domainname }}",
+            'deptid': "{{ dm.deptid }}",
+            'deptname': "{{ dm.deptname }}",
+        })
+    {%  endfor %}
+    $('.selectpicker').selectpicker({
+        'width': '85px'
+    });
+    $('#status__id').multiselect({
+        nonSelectedText:'事故状态',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'事故状态',
+    });
+    $('#level').multiselect({
+        nonSelectedText:'事故等级',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'事故等级',
+    });
+    $('#type__ptype__id').multiselect({
+        nonSelectedText:'事故类型',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'事故类型',
+    });
+    $('#type__id').multiselect({
+        nonSelectedText:'根源类型',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'根源类型',
+        maxHeight:300
+    });
+
+    $('#duty_dept_id').multiselect({
+        nonSelectedText:'责任部门',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'责任部门',
+        maxHeight:300,
+        onDropdownHide: function(event) {
+            var duty_dept_id = [];
+            $($('#duty_dept_id option:selected')).each(function(index, brand){
+                duty_dept_id.push($(this).val());
+            });
+            $('#duty_domains').find('option').remove();
+            if(duty_dept_id.length != 0 && duty_dept_id.length != $('#duty_dept_id option').length){
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}cmdb/domain/bydeptv2/?format=json&deptid__in=' + duty_dept_id.join(","),
+                    async: false,
+                    headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                    success: function (json) {
+                        $.each(JSON.parse(json), function (i, value) {
+                            $('#duty_domains').append($('<option>').text(value['domainname']).attr('value', value['id']));
+                        });
+                    }
+                });
+                $.each(other_domains, function (i, dm) {
+                    $.each(duty_dept_id, function (i, value) {
+                        if(dm['deptid'] == value){
+                            $('#duty_domains').append($('<option>').text(dm['domainname']).attr('value', dm['id']));
+                        }
+                    });
+                });
+            }else{
+                {%  for item in domain_list %}
+                    $('#duty_domains').append($('<option>').text("{{ item.domainname | safe }}").attr('value', "{{ item.id }}"));
+                {%  endfor %}
+                {% for dm in other_domain_list %}
+                    $('#duty_domains').append($('<option>').text("{{ dm.domainname }}").attr('value', "{{ dm.id }}"));
+                {% endfor %}
+            }
+            $('#duty_domains').multiselect('rebuild');
+            $('#duty_domains').multiselect('refresh');
+            update_table();
+        }
+    });
+    $('#duty_domains').multiselect({
+        enableFiltering: true,
+        nonSelectedText:'责任Domain',
+        filterPlaceholder:'搜索',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'责任Domain',
+        maxHeight:300
+    });
+
+    $('.datepicker').datetimepicker({
+        format: 'yyyy-mm-dd',
+        autoclose: true,
+        minView: 2
+    });
+    $('#happened_time').datetimepicker({
+        format: 'yyyy-mm-dd hh:ii:ss',
+        weekStart:1,
+        todayHighlight:1,
+        autoclose: true,
+        minView:1,
+        hourStep: 1,
+    }).on('change show', function(e) {
+        $('#addForm').bootstrapValidator('revalidateField', 'happened_time');
+    });
+    $('#happened_time').datetimepicker('setEndDate', moment().format('YYYY-MM-DD HH:mm:ss'));
+    $('#happened_time').datetimepicker('setStartDate', '2014-07-01 00:00:00');
+
+    $('#e_happened_time').datetimepicker({
+        format: 'yyyy-mm-dd hh:ii:ss',
+        weekStart:1,
+        todayHighlight:1,
+        autoclose: true,
+        minView:1,
+        hourStep: 1,
+    }).on('change show', function(e) {
+        var enddate = $('#e_finish_time').val();
+        if(enddate != ''){
+            $('#e_happened_time').datetimepicker('setEndDate', enddate);
+        }else{
+            $('#e_happened_time').datetimepicker('setEndDate', moment().format('YYYY-MM-DD HH:mm:ss'));
+        }
+        $('#editForm').bootstrapValidator('revalidateField', 'e_happened_time');
+        $('#editForm').bootstrapValidator('revalidateField', 'e_finish_time');
+    });
+    $('#e_happened_time').datetimepicker('setStartDate', '2014-07-01 00:00:00');
+
+    $('#e_finish_time').datetimepicker({
+        format: 'yyyy-mm-dd hh:ii:ss',
+        weekStart:1,
+        todayHighlight:1,
+        autoclose: true,
+        minView:1,
+        hourStep: 1,
+    }).on('change show', function(e) {
+        var startdate = $('#e_happened_time').val();
+        if(startdate != ''){
+            $('#e_finish_time').datetimepicker('setStartDate', startdate);
+        }else{
+            $('#e_finish_time').datetimepicker('setStartDate', '2014-07-01 00:00:00');
+        }
+        $('#editForm').bootstrapValidator('revalidateField', 'e_happened_time');
+        $('#editForm').bootstrapValidator('revalidateField', 'e_finish_time');
+    });
+    $('#e_finish_time').datetimepicker('setEndDate', moment().format('YYYY-MM-DD HH:mm:ss'));
+
+    <!-- 用户可选值 -->
+    var user_names = new Array();
+    {%  for item in user_list %}
+        user_names.push('{{ item.username }}');
+    {%  endfor %}
+{#    $( "#find_user_name, #duty_manager_name, #e_find_user_name, #e_duty_manager_name" ).autocomplete({#}
+{#        source: user_names#}
+{#    });#}
+    $( "#find_user_name" ).typeahead({
+        source: user_names,
+        afterSelect: function (item) {
+            $('#addForm').bootstrapValidator('revalidateField', 'find_user_name');
+        }
+    });
+    $( "#duty_manager_name" ).typeahead({
+        source: user_names,
+        afterSelect: function (item) {
+            $('#addForm').bootstrapValidator('revalidateField', 'duty_manager_name');
+        }
+    });
+    $( "#e_find_user_name" ).typeahead({
+        source: user_names,
+        afterSelect: function (item) {
+            $('#editForm').bootstrapValidator('revalidateField', 'e_find_user_name');
+        }
+    });
+    $( "#e_duty_manager_name" ).typeahead({
+        source: user_names,
+        afterSelect: function (item) {
+            $('#editForm').bootstrapValidator('revalidateField', 'e_duty_manager_name');
+        }
+    });
+
+    $('#type__ptype__id').change(function(){
+        var ptype_id = [];
+        $($('#type__ptype__id option:selected')).each(function(index, brand){
+            ptype_id.push([$(this).val()]);
+        });
+        $('#type__id').find('option').remove();
+        if(ptype_id.length != 0 && ptype_id.length != $('#type__ptype__id option').length){
+            $('#type__ptype__id option:selected').each(function() {
+                $.ajax({
+                    url:'{{ CMDBAPI_URL }}accident/type/?format=json&ptype__id='+ $(this).val(),
+                    async:   false,
+                    headers:{'Authorization':'Token {{ API_TOKEN }}'},
+                    success: function( json ) {
+                        $.each(json, function(i, value) {
+                            $('#type__id').append($('<option>').text(value.name).attr('value', value.id));
+                        });
+                    }
+                });
+            })
+
+        }else{
+            {%  for item in accident_type %}
+                $('#type__id').append($('<option>').text("{{ item.name }}").attr('value', "{{ item.id }}"));
+            {%  endfor %}
+        }
+        $('#type__id').multiselect('rebuild');
+        $('#type__id').multiselect('refresh');
+        update_table();
+    });
+
+    $('.control_api_url').change(function(){
+        update_table();
+    });
+
+    $('#clear').click(function(){
+        $('#multi_select')[0].reset();
+        $('#type__id').find('option').remove();
+        {%  for item in accident_type %}
+            $('#type__id').append($('<option>').text("{{ item.name }}").attr('value', "{{ item.id }}"));
+        {%  endfor %}
+
+        $('#duty_domains').find('option').remove();
+        {%  for item in domain_list %}
+            $('#duty_domains').append($('<option>').text("{{ item.domainname | safe }}").attr('value', "{{ item.id }}"));
+        {%  endfor %}
+        {% for dm in other_domain_list %}
+            $('#duty_domains').append($('<option>').text("{{ dm.domainname }}").attr('value', "{{ dm.id }}"));
+        {% endfor %}
+        $('#duty_domains').multiselect('rebuild');
+        $('#duty_domains').multiselect('refresh');
+        $('#status__id,#level,#type__ptype__id,#type__id,#duty_dept_id,#duty_domains').multiselect('rebuild');
+        $('#status__id,#level,#type__ptype__id,#type__id,#duty_dept_id,#duty_domains').multiselect('refresh');
+        $('.selectpicker').selectpicker('refresh');
+        $('#accidentlist').bootstrapTable('refresh', {
+            url: '{{ CMDBAPI_URL }}accident/accident/?format=json&start_date={{ start_date }}&end_date={{ end_date }}&&is_accident=0'
+        });
+    });
+    function update_table(){
+        $('#accidentlist').bootstrapTable('refresh', {
+            url: get_api_url()
+        });
+    }
+
+    function get_params(){
+        var params = ['format=json'];
+        var status__id = '';
+        $('#status__id option:selected').each(function() { if (status__id != '') { status__id += ',' } status__id += $(this).val() });
+        var level = '';
+        $('#level option:selected').each(function() { if (level != '') { level += ',' } level += $(this).val() });
+        var type__ptype__id = '';
+        $('#type__ptype__id option:selected').each(function() { if (type__ptype__id != '') { type__ptype__id += ',' } type__ptype__id += $(this).val() });
+        var type__id = '';
+        $('#type__id option:selected').each(function() { if (type__id != '') { type__id += ',' } type__id += $(this).val() });
+        var duty_dept_id = '';
+        $('#duty_dept_id option:selected').each(function() { if (duty_dept_id != '') { duty_dept_id += ',' } duty_dept_id += $(this).val() });
+        var duty_domains = '';
+        $('#duty_domains option:selected').each(function() { if (duty_domains != '') { duty_domains += ',' } duty_domains += $(this).val() });
+
+        if(status__id != '' && status__id.split(',').length != $('#status__id option').length){
+            params.push('status__id__in=' + status__id)
+        }
+        if(level != '' && level.split(',').length != $('#level option').length){
+            params.push('level__in=' + level)
+        }
+        if(type__ptype__id != '' && type__ptype__id.split(',').length != $('#type__ptype__id option').length){
+            params.push('type__ptype__id__in=' + type__ptype__id)
+        }
+        if(type__id != '' && type__id.split(',').length != $('#type__id option').length){
+            params.push('type__id__in=' + type__id)
+        }
+        if(duty_dept_id != '' && duty_dept_id.split(',').length != $('#duty_dept_id option').length){
+            params.push('duty_dept_id=' + duty_dept_id)
+        }
+        if(duty_domains != ''&& duty_domains.split(',').length != $('#duty_domains option').length){
+            params.push('duty_domains=' + duty_domains)
+        }
+        params.push('start_date=' + $('#start_date').val())
+        params.push('end_date=' + $('#end_date').val())
+        if($('#is_punish option:selected').val() != ''){
+            params.push('is_punish=' + $('#is_punish option:selected').val())
+        }
+        if($('#is_accident option:selected').val() != ''){
+            params.push('is_accident=' + $('#is_accident option:selected').val())
+        }
+        return params.join('&')
+    }
+    function get_api_url(){
+        return ('{{ CMDBAPI_URL }}accident/accident/?' + get_params());
+    }
+
+    $('#submit_mantis').click(function(){
+        swal({
+          title: "确认提交？",
+          type: "warning",
+          showCancelButton: true,
+          confirmButtonClass: 'btn-green',
+          closeOnConfirm: true,
+          closeOnCancel: true
+        },
+        function(isConfirm){
+          if (isConfirm){
+              var ids = $.map($('#accidentlist').bootstrapTable('getSelections'), function (row) {
+                  var outputid = [];
+                  if(row.mantis_id != ''){
+                      swal("", row.accidentid + "已经提交至Mantis系统，无需重复提交！", "warning");
+                  }else{
+                      $.ajax({
+                            url: '{{ CMDBAPI_URL }}accident/accident/' + row.id + '/?format=json',
+                            type: 'PATCH',
+                            data: {
+                                'action': 'mantis',
+                            },
+                            async: false,
+                            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+
+                            success: function (res) {
+                                $('#submit_mantis').prop('disabled', true);
+                                outputid.push(row.id);
+                                $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>提交成功</strong> 返回Mantis编号：'+ res['mantis_id'] +'</div>');
+                            },
+                            error: function (json) {
+                                $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>提交失败!</strong>原因：' + JSON.parse(json.responseText)["detail"] +'</div>');
+                            }
+
+                      });
+                  }
+                  return outputid;
+                  });
+                  $('#accidentlist').bootstrapTable('refresh', {
+                      silent: true
+                  });
+
+          }
+        });
+    });
+
+    $('#load_csv').click(function(){
+        if(data_count > 300){
+            swal("", "导出数据记录>300条，请缩小起止时间的范围重新导出！", "warning");
+        }else{
+            location.href='{{ ROOT_URL }}loadcsv/all/?' + get_params();
+        }
+
+    });
+    $('#load_light_csv').click(function(){
+        if(data_count > 500){
+            swal("", "导出数据记录>500条，请缩小起止时间的范围重新导出！", "warning");
+        }else{
+            location.href='{{ ROOT_URL }}loadcsv/?' + get_params();
+        }
+
+    });
+
+    window.operateEvents = {
+        'click .edit': function (e, value, row, index) {
+            if(row.finish_time != 0){
+                $("#e_finish_time").val(moment.unix(row.finish_time).format('YYYY-MM-DD HH:mm:ss'));
+            }else{
+                $("#e_finish_time").val('');
+            }
+            $("#e_id").val(row.id);
+            $("#e_accidentid").val(row.accidentid);
+            $("#e_title").val(row.title);
+            $("#e_happened_time").val(moment.unix(row.happened_time).format('YYYY-MM-DD HH:mm:ss'));
+
+            $("#e_duty_manager_name").val(row.duty_manager_name);
+            $("#e_find_user_name").val(row.find_user_name);
+            $("#e_comment").val(row.comment);
+
+            $('#editModal').modal('show');
+        },
+    };
+
+    $('#accidentlist').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}accident/accident/?format=json&start_date={{ start_date }}&end_date={{ end_date }}&is_accident=0',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'state',
+                checkbox: true
+            },
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'status_name',
+                title: '事故状态',
+                cellStyle: statusBackground,
+            },
+            {
+                field: 'accidentid',
+                title: '事故编号',
+                formatter: getAccidentDetail
+            },
+            {
+                field: 'title',
+                title: '事故名称',
+                formatter: getAccidentDetail
+            },
+            {
+                field: 'level_name',
+                title: '事故等级',
+            },
+            {
+                field: 'find_user_name',
+                title: '事故发现人',
+                visible: false
+            },
+            {
+                field: 'duty_manager_name_ch',
+                title: '值班经理',
+            },
+            {
+                field: 'duty_manager_name',
+                title: '值班经理(账号)',
+            },
+            {
+                field: 'happened_time',
+                title: '事故发生时间',
+                formatter: getFormat_date
+            },
+            {
+                field: 'finish_time',
+                title: '事故恢复时间',
+                formatter: getFormat_date
+            },
+            {
+                field: 'time_length',
+                title: '影响时长'
+            },
+            {
+                field: 'duty_dept_names',
+                title: '责任部门'
+            },
+            {
+                field: 'duty_domain_names',
+                title: '责任Domain'
+            },
+            {
+                field: 'duty_users',
+                title: '责任人',
+                visible: false
+            },
+            {
+                field: 'type_parent_name',
+                title: '事故分类',
+                visible: false
+            },
+            {
+                field: 'type_name',
+                title: '根源类型',
+                visible: false
+            },
+            {
+                field: 'mantis_id',
+                title: 'Mantis编号',
+                visible: false
+            },
+            {
+                field: 'is_punish',
+                title: '是否处罚',
+                formatter: getFormat_punish,
+                visible: false
+            },
+            {
+                field: 'comment',
+                title: '备注',
+                visible: false
+            },
+            {
+                field: 'operate',
+                title: '操作',
+                formatter: operateFormatter,
+                align: 'center',
+                events: operateEvents,
+                visible: {%  if edit_visible %} true {% else %} false {% endif %}
+            }
+        ],
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            data_count = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 20,
+        pageList: [10,20,50,100,500],
+        clickToSelect: true,
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+{#        showExport: true,#}
+        cache: false
+    });
+
+    function getFormat_date(value) {
+        if(value != 0 && value != null){
+            return moment.unix(value).format('YYYY-MM-DD HH:mm');
+        }else{
+            return ''
+        }
+
+    }
+
+    function getAccidentDetail(value, row, index, field) {
+        return '<a href="{{ ROOT_URL }}detail/?id=' + row.accidentid + '" target="_blank" class="tooltip-show" data-toggle="tooltip" title="点击进入事故详情">' + value + '</a>';
+
+    }
+
+    function getFormat_punish(value) {
+        if(value == 0){
+            return '否';
+        }else{
+            return '是'
+        }
+
+    }
+
+    function statusBackground(value, row, index, field) {
+        var class_name = 'text-nowrap another-class';
+        var color = 'white'
+        if(value == '已完成'){
+            color = '#33CC66'
+        }else if(value == '基本信息待补充'){
+            color = '#FFFF33'
+        }else if(value == '详细信息待补充'){
+            color = '#66CCFF'
+        }else if(value == '改进措施待补充'){
+            color = '#FF9900'
+        }else if(value == '改进措施未开始'){
+            color = '#FF66CC'
+        }else if(value == '改进措施进行中'){
+            color = '#3399FF'
+        }else if(value == '改进措施延迟'){
+            color = 'red'
+        }else if(value == '事故中'){
+            color = 'red'
+        }
+        return {
+            classes: class_name,
+            css: {
+                "background-color": color
+            }
+        };
+
+    }
+
+    function operateFormatter(value, row, index) {
+        return '<a href="#" class="edit" id="edit" class="tooltip-show" data-toggle="tooltip" data-placement="top" title="Monitor点击修改事故信息"><span class="glyphicon glyphicon-pencil"></span></a>';
+    }
+
+    $('#accidentlist').on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+        var selections = $("#accidentlist").bootstrapTable('getSelections');
+        var is_accident = $('#is_accident').val();
+        if (is_accident != 1 && selections.length) {
+            $("#delete, #submit_mantis").attr("disabled", false);
+        }else{
+            $("#delete,#submit_mantis").attr("disabled",true);
+        }
+    });
+
+    $('#accidentlist').on('oad-success.bs.table', function () {
+        $('.tooltip-show').tooltip('show');
+    });
+
+    $('#addForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                title: {
+                    validators: {
+                        notEmpty: {
+                            message: '事故名称不能为空。'
+                        }
+                    }
+                },
+                happened_time: {
+                    validators: {
+                        notEmpty: {
+                            message: '事故发生时间不能为空。'
+                        },
+                        callback: {
+                            message: '发生时间的格式为YYYY-MM-DD HH:mm:ss且小于当前时间',
+                            callback: function(value) {
+                                var m = new moment(value, 'YYYY-MM-DD HH:mm:ss', true);
+                                if (!m.isValid()) {
+                                    return false;
+                                }
+                                return m.isAfter('2014-07-01 00:00:00') && m.isBefore(moment().format('YYYY-MM-DD HH:mm:ss'));
+                            }
+                        }
+                    }
+                },
+                duty_manager_name: {
+                    validators: {
+                        callback: {
+                            message: '值班经理为空或不存在（请根据下方提示输入域控账号）',
+                            callback: function(value) {
+                                if(value != '') {
+                                    if($.inArray(value.trim(), user_names) != -1){
+                                        return true;
+                                    }else{
+                                        return false;
+                                    }
+                                }else{
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                },
+                find_user_name: {
+                    validators: {
+                        callback: {
+                            message: '报告人为空或不存在（请根据下方提示输入域控账号）',
+                            callback: function(value) {
+                                if(value != '') {
+                                    if($.inArray(value.trim(), user_names) != -1){
+                                        return true;
+                                    }else{
+                                        return false;
+                                    }
+                                }else{
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                },
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}accident/accident/',
+                type: 'POST',
+                async:  false,
+                data: {
+                    'action': 'after_insert',
+                    'title': $('#title').val(),
+                    'happened_time': moment($('#happened_time').val()).format('X'),
+                    'duty_manager_name': $('#duty_manager_name').val(),
+                    'find_user_name': $('#find_user_name').val()
+                },
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    swal("", "成功补录事故！", "success");
+                    $('#accidentlist').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#addModal').modal('hide');
+                    $('#addForm').bootstrapValidator('resetForm', true);
+                    $('#duty_manager_name').val('{% if duty_manager %}{{ duty_manager.username }}{% else %}{% endif %}');
+                    $('#find_user_name').val('{{ USER.username }}');
+                },
+                error: function( json ) {
+                    swal("", "补录失败，原因：" + JSON.parse(json.responseText)["detail"], "error");
+                    $('#addModal').modal('hide');
+                }
+            });
+
+        });
+
+    $('#editForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                e_title: {
+                    validators: {
+                        notEmpty: {
+                            message: '事故名称不能为空。'
+                        }
+                    }
+                },
+                e_happened_time: {
+                    validators: {
+                        notEmpty: {
+                            message: '事故发生时间不能为空。'
+                        },
+                        callback: {
+                            message: '发生时间格式为YYYY-MM-DD HH:mm:ss且小于恢复时间（或当前时间）',
+                            callback: function(value) {
+                                var m = new moment(value, 'YYYY-MM-DD HH:mm:ss', true);
+                                if (!m.isValid()) {
+                                    return false;
+                                }
+                                var enddate = $('#e_finish_time').val();
+                                if(enddate != ''){
+                                    return m.isAfter('2014-07-01 00:00:00') && m.isBefore(enddate);
+                                }else{
+                                    return m.isAfter('2014-07-01 00:00:00') && m.isBefore(moment().format('YYYY-MM-DD HH:mm:ss'));
+                                }
+                            }
+                        }
+                    }
+                },
+                e_finish_time: {
+                    validators: {
+                        callback: {
+                            message: '恢复时间格式为YYYY-MM-DD HH:mm:ss且大于发生时间小于当前时间',
+                            callback: function(value) {
+                                if(value != ''){
+                                    var m = new moment(value, 'YYYY-MM-DD HH:mm:ss', true);
+                                    if (!m.isValid()) {
+                                        return false;
+                                    }
+                                    var startdate = $('#e_happened_time').val();
+                                    if(startdate != ''){
+                                        return m.isAfter(startdate) && m.isBefore(moment().format('YYYY-MM-DD HH:mm:ss'));
+                                    }else{
+                                        return m.isAfter('2014-07-01 00:00:00') && m.isBefore(moment().format('YYYY-MM-DD HH:mm:ss'));
+                                    }
+                                }else{
+                                    return true;
+                                }
+
+                            }
+                        }
+                    }
+                },
+                e_duty_manager_name: {
+                    validators: {
+                        callback: {
+                            message: '值班经理为空或不存在（请根据下方提示输入域控账号）',
+                            callback: function(value) {
+                                if(value != '') {
+                                    if($.inArray(value.trim(), user_names) != -1){
+                                        return true;
+                                    }else{
+                                        return false;
+                                    }
+                                }else{
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                },
+                e_find_user_name: {
+                    validators: {
+                        callback: {
+                            message: '报告人为空或不存在（请根据下方提示输入域控账号）',
+                            callback: function(value) {
+                                if(value != '') {
+                                    if($.inArray(value.trim(), user_names) != -1){
+                                        return true;
+                                    }else{
+                                        return false;
+                                    }
+                                }else{
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                },
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var finish_time = $('#e_finish_time').val();
+            if(finish_time != ''){
+                finish_time = moment(finish_time).format('X')
+            }else{
+                finish_time = 0
+            }
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}accident/accident/' + $("#e_id").val() + '/',
+                type: 'PATCH',
+                async:  false,
+                data: {
+                    'action': 'basic_monitor',
+                    'title': $('#e_title').val(),
+                    'happened_time': moment($('#e_happened_time').val()).format('X'),
+                    'finish_time': finish_time,
+                    'duty_manager_name': $('#e_duty_manager_name').val().trim(),
+                    'find_user_name': $('#e_find_user_name').val().trim(),
+                    'comment': $('#e_comment').val(),
+                },
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    swal("", $('#e_accidentid').val() +"修改成功", "success");
+                    $('#accidentlist').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#editModal').modal('hide');
+                    $('#editForm').bootstrapValidator('resetForm', true);
+                },
+                error: function( json ) {
+                    swal("", "修改失败，原因：" + JSON.parse(json.responseText)["detail"], "error");
+                    $('#editModal').modal('hide');
+                    $('#editForm').bootstrapValidator('resetForm', true);
+                }
+            });
+
+        });
+
+    $('#deleteForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                comment: {
+                    validators: {
+                        notEmpty: {
+                            message: '删除原因不能为空。'
+                        }
+                    }
+                }
+            }
+            })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var ids = $.map($('#accidentlist').bootstrapTable('getSelections'), function (row) {
+                var outputid = []
+                $.ajax({
+                    url:'{{ CMDBAPI_URL }}accident/accident/' + row.id + '/?format=json',
+                    type: 'PATCH',
+                    data: {
+                        'action': 'delete',
+                        'comment': $('#comment').val()
+                    },
+                    async:   false,
+                    headers:{'Authorization':'Token {{ API_TOKEN }}'},
+
+                    success: function( json ) {
+                        $('#delete').prop('disabled', true);
+                        outputid.push(row.id);
+                        $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>成功删除事故'+ row.accidentid +'</div>');
+                    },
+                    error: function( json ) {
+                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>删除事故'+row.accidentid+'失败!</strong>原因：' + JSON.parse(json.responseText)["detail"] +'</div>');
+                    }
+                });
+                return outputid;
+            });
+            $('#deleteModal').modal('hide');
+            $('#deleteForm').bootstrapValidator('resetForm', true);
+            $('#accidentlist').bootstrapTable('remove', {
+                field: 'id',
+                values: ids
+            });
+        });
+});
+</script>
+
+{% endblock %}

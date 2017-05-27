@@ -1,0 +1,709 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-multiselect/css/bootstrap-multiselect.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery-json/js/jquery.json.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-multiselect/js/bootstrap-multiselect.js"></script>
+
+<style>
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+   .table{
+        width: 100%;
+        table-layout: fixed;
+    }
+   .table tr:hover td{
+       overflow: visible;
+       white-space: normal;
+   }
+    .table td {
+        word-wrap: break-word;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .table th {
+        text-align: center;
+    }
+    .table > tbody > tr > td{
+        vertical-align: middle;
+    }
+
+    .table td xmp:hover{
+        overflow: visible;
+        white-space: normal;
+    }
+    .table td xmp {
+        word-wrap: break-word;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>
+
+<div id="alert">
+</div>
+
+<div id="toolbar">
+<div class="form-inline" role="form">
+
+    <select id="eventsource_select" class="form-control select_api_url multiselect" multiple="multiple">
+        {%  for item in event_source_list %}
+            <option value="{{ item.id }}">{{ item.name }}</option>
+        {%  endfor %}
+    </select>
+
+    <select id="eventtype_select" class="form-control select_api_url multiselect" multiple="multiple">
+        {%  for item in event_type_list %}
+            <option value="{{ item.id }}">{{ item.name }}</option>
+        {%  endfor %}
+    </select>
+
+    <select name="eventlevel_select[]" id="eventlevel_select" class="form-control select_api_url multiselect" multiple="multiple">
+        {%  for item in event_level_list %}
+            <option value="{{ item.id }}" title="{{ item.description }}">{{ item.name }}</option>
+        {%  endfor %}
+    </select>
+
+    <select id="app_select" class="form-control selectpicker">
+        <option value=" ">请选择Site/Pool</option>
+        {%  for item in app_list %}
+            <option value="{{ item.id }}">{{ item.site.name }}/{{ item.name }}</option>
+        {%  endfor %}
+    </select>
+
+    <label style="width: 65px;">开始时间:</label>
+    <input size="16" style="width: 130px" type="datetime" value="{{ start_time }}" name="start_time" id="start_time_picker" class="form-control datetimepicker">
+    <label style="width: 65px;">结束时间:</label>
+    <input size="16" style="width: 130px" type="text" value="{{ end_time }}" name="end_time" id="end_time_picker" class="form-control datetimepicker">
+
+    <button id="btn_refresh" type="button" class="btn btn-green  glyphicon glyphicon-refresh" title="刷新"> </button>
+</div>
+</div>
+
+<table id="event_table">
+</table>
+
+<div class="modal fade" id="commentModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="commentForm" method="POST" action="">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="addSite">备注</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="event_id" class="col-sm-3 control-label">ID</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="event_id" id="event_id" readonly/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="keyword" class="col-sm-3 control-label">内容</label>
+                        <div class='col-sm-6'>
+                            <textarea type='text' class="form-control" name="comment_content" id="comment_content" ></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal" id="add_cancel">取消</button>
+                    <button type="submit" class="btn btn-green" id="add_submit">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+var $table = $('#event_table');
+
+$('#app_select').selectpicker({
+    'liveSearch': true,
+    'liveSearchPlaceholder': '搜索',
+    'width': 'fit'
+}).change(function(){
+    var app = $("#app_select").val();
+    if (app!=''){
+        refresh_by_url(false);
+    }
+});
+
+$('.selectpicker').selectpicker({
+    'width': 'fit'
+});
+
+
+$('.datetimepicker').change(function(){
+    refresh_by_url(false);
+});
+
+function get_url(flag){
+    var starttime = $("#start_time_picker").val().trim();
+    var endtime = $("#end_time_picker").val().trim();
+    if (flag == true){
+        var now = new Date();
+        var t = now.getTime();
+        t += 60000;//1min
+        now = new Date(t);
+        now = now.Format("yyyy-MM-dd hh:mm");
+
+        $('#end_time_picker').val(now);
+        starttime = $("#start_time_picker").val().trim();
+        endtime = $("#end_time_picker").val().trim();
+    }
+
+    var s_date = new Date(starttime);
+    var e_date = new Date(endtime);
+    var s_t = s_date.getTime()/1000;
+    var e_t = e_date.getTime()/1000;
+
+    if (s_t < 0 || e_t < 0){
+        alert("时间区间不正确，请检查。");
+        return -1;
+    }
+
+    var source = '';
+    $("#eventsource_select option:selected").each(
+            function () {
+                if (source != '') {
+                source += ',';
+            }
+            source += $(this).val();
+            }
+    );
+
+    var type = '';
+    $("#eventtype_select option:selected").each(
+            function () {
+                if (type != '') {
+                type += ',';
+            }
+            type += $(this).val();
+            }
+    );
+
+    var level = '';
+    $('#eventlevel_select option:selected').each(
+        function() {
+            if (level != '') {
+                level += ',';
+            }
+            level += $(this).val();
+        }
+    );
+
+    var app = $("#app_select").val().trim();
+    var api_url_base = '{{ CMDBAPI_URL }}notification/event/?';
+    var params = ['format=json'];
+    params.push('converge_id=' + 0);
+    if (source !="") {
+        params.push('source__in='+source)
+    }
+    if (type !="") {
+        params.push('type__in=' + type)
+    }
+
+    if (level !="") {
+        params.push('level__in=' + level)
+    }
+
+    if (app!=""){
+        params.push('pool_id=' + app);
+    }
+
+    if (starttime!=""){
+        params.push('start_time=' + starttime);
+    }
+
+    if (endtime!=""){
+        params.push('end_time=' + endtime);
+    }
+
+    var api_url = api_url_base + params.join('&');
+    return api_url;
+}
+
+function refresh_by_url(refresh_flag) {
+    var api_url = get_url(refresh_flag);
+    if (api_url == -1) {
+        return;
+    }
+
+    $table.bootstrapTable('refresh', {
+        url: api_url
+    });
+}
+
+var sourceArray = [0];
+var typeArray = [0];
+var levelArray = [0];
+
+$(document).ready(function() {
+    window.operateEvents = {
+        'click .comment': function (e, value, row) {
+            $("#event_id").val(row.id);
+            $("#comment_content").val(value);
+            $("#commentModal").modal('show');
+        }
+    };
+
+    $('#eventsource_select').multiselect({
+        nonSelectedText:'请选择源',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'事件源',
+        numberDisplayed:1,
+        maxHeight:500,
+        onDropdownHide: function(event){
+            multiSelectFilter("eventsource_select");
+        }
+    });
+
+    $('#eventtype_select').multiselect({
+        nonSelectedText:'请选择类型',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'事件类型',
+        numberDisplayed:1,
+        maxHeight:500,
+        onDropdownHide: function(event){
+            multiSelectFilter("eventtype_select");
+        }
+    });
+
+    $('#eventlevel_select').multiselect({
+        nonSelectedText:'请选择等级',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'事件等级',
+        numberDisplayed:1,
+        onDropdownHide: function(event){
+            multiSelectFilter("eventlevel_select");
+        }
+    });
+
+    $('.datetimepicker').datetimepicker({
+        format: 'yyyy-mm-dd hh:ii',
+        autoclose: true,
+        minView: 0,
+        minuteStep:1
+    });
+
+    $(function () { $("[data-toggle='tooltip']").tooltip(); });
+    var display_columns = [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'source_name',
+                title: '来源',
+                formatter: getSourceDetail,
+                width: '6%'
+            },
+            {
+                field: 'pool_name',
+                title: 'Pool',
+                formatter: formatPoolname,
+                width: '18%'
+            },
+            {
+                field: 'ip',
+                title: 'IP',
+                width: '7%'
+            },
+            {
+                field: 'type_name',
+                title: '类型',
+                width: '8%'
+            },
+            {
+                field: 'level_name',
+                title: '等级',
+                align:'center',
+                cellStyle:formatTableUnit,
+                width: '4%'
+            },
+            {
+                field: 'message',
+                title: '内容',
+                formatter:formatMsg
+            },
+            {
+                field: 'level_adjustment_id',
+                title: '调级',
+                align: 'center',
+                formatter: levelAdjustmentFormatter,
+                width: '3%',
+                visible: false
+            },
+            {
+                field: 'get_time',
+                title: '发生时间',
+                align: 'center',
+                formatter: formatTime,
+                width: '11%'
+            },
+            {
+                field: 'create_time',
+                title: '创建时间',
+                align: 'center',
+                formatter: formatTime,
+                width: '11%',
+                visible: false
+            },
+            {
+                field: 'cancel_time',
+                title: '消除时间',
+                align: 'center',
+                formatter: formatTime,
+                width: '11%',
+                visible: false
+            },
+            {
+                field: 'status_name',
+                title: '消除方式',
+                align: 'center',
+                width: '5%',
+                visible: false
+            },
+            {
+                field: 'cancel_user',
+                title: '操作员',
+                width: '8%',
+                visible: false
+            },
+            {
+                field: 'comment',
+                title: '备注',
+                align: 'center',
+                formatter: commentFormatter,
+                events: operateEvents,
+                width: '3%',
+                visible: false
+            }
+        ];
+
+    var search = window.location.search;
+    var urlAddr = '{{ CMDBAPI_URL }}notification/event/?format=json&converge_id=0';
+    if(search.length > 1){
+        urlAddr += '&' + search.substr(1);
+        if(search.indexOf('id=') > -1){
+            $("#start_time_picker").val('')
+            $("#end_time_picker").val('')
+        }
+    }
+    else urlAddr = get_url(false);
+
+    $table.bootstrapTable({
+        url: urlAddr,
+        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+        columns:display_columns,
+        responseHandler: function (res) {
+            var result = {};
+            result.rows = res.results;
+            result.total = res.count;
+
+            for (event_index in result.rows){
+                var row = result.rows[event_index];
+                var event_detail = row.event_detail;
+                var ips=[];
+
+                if (row.status==0){
+                    row.cancel_time = "";
+                }
+
+                for (event_detail_index in event_detail){
+                    ips.push(event_detail[event_detail_index].ip);
+                }
+
+                row.ip = ips.join(", ")
+            }
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset / p.limit + 1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 30,
+        pageList: [10, 30, 100, 500],
+        sidePagination: 'server',
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false
+    });
+
+    function commentFormatter(value, row, index) {
+        var cmt_icon_class = "";
+        if (value == ""){
+            value = "备注";
+            cmt_icon_class = "glyphicon glyphicon-paperclip";
+        }
+        else {
+            cmt_icon_class = "glyphicon glyphicon-envelope";
+        }
+
+        return [
+            '<a href="#" class="comment" data-toggle="tooltip" title=' + value + '>',
+            '<span class="' + cmt_icon_class + '"></span>',
+            '</a> '
+        ].join('');
+    }
+});
+
+
+function formatTime(value, row, index) {
+    if (value==''){
+        return "";
+    }
+    return moment.unix(value).format('YYYY-MM-DD HH:mm:ss');
+}
+
+function formatTableUnit(value, row, index) {
+    var front_color, bg_color;
+    switch (row.level_id){
+        case 100:
+            front_color = "#b64fff";
+            bg_color = "White";
+            break;
+        case 200:
+            front_color = "#cc3529";
+            bg_color = "White";
+            break;
+        case 300:
+            front_color = "#fa8c42";
+            bg_color = "White";
+            break;
+        case 350:
+            front_color = "#b7b000";
+            bg_color = "White";
+            break;
+        case 400:
+            front_color = "#33b704";
+            bg_color = "White";
+            break;
+        case 500:
+            front_color = "#000";
+            bg_color = "White ";
+            break;
+        default :
+            front_color = "Aqua";
+            bg_color = "Fuchsia";
+    }
+
+    return {
+        css: {
+            "color":front_color,
+            "background-color": bg_color
+        }
+    };
+}
+
+function formatPoolname(value, row, index) {
+    var event_detail = row.event_detail;
+    var details={};
+    for (event_detail_index in event_detail){
+        var site_name = event_detail[event_detail_index].site_name;
+        var pool_name = event_detail[event_detail_index].pool_name;
+
+        if (site_name == null) {
+            site_name = '';
+        }
+        site_name += '/';
+
+        if (pool_name == null) {
+            pool_name = '';
+        }
+
+        var site_pool = site_name + pool_name;
+        if(site_pool == '/'){
+            site_pool = '';
+        }
+        details[site_pool] = site_pool;
+    }
+
+    var pool_name = "";
+    for(var key in details){
+        pool_name += " " + details[key];
+    }
+    return pool_name
+}
+
+function formatMsg(value, row, index) {
+    var msg = row.message;
+    if (msg.indexOf("<br>") != -1) {
+        var newmsg = msg.replace(/<br>/g, "");
+        msg = newmsg;
+    }
+
+    if (msg.indexOf("<table") != -1) {
+        var max_length = 300;
+        if (msg.length > max_length){
+            msg = msg.substring(0, max_length);
+        }
+        msg = "<xmp>" + msg + "</xmp>...";
+    }
+
+    return msg;
+}
+
+function getSourceDetail(value, row, index) {
+    return '<a href="{{ ROOT_URL }}srcdtl/?id=' + row.source_id + '" target="_blank" class="tooltip-show" data-toggle="tooltip" title="点击查看Domain详情">' + value + '</a>';
+
+}
+
+$('#commentForm').bootstrapValidator({
+    excluded: ':disabled',
+    fields: {
+        comment_content: {
+            validators: {
+                notEmpty: {
+                    message: '内容不能为空。'
+                }
+            }
+        }
+    }
+}).on('success.form.bv', function(e) {
+    e.preventDefault();
+
+    var inputdata = {};
+    var content = $.trim($("#comment_content").val());
+    if (content!=''){
+        inputdata['comment']= content;
+    }
+    var event_id = $("#event_id").val().trim();
+    inputdata['id'] = event_id;
+
+    $.ajax({
+        url: '{{ CMDBAPI_URL }}notification/event/' + event_id + '/',
+        type: 'PATCH',
+        async: false,
+        data: inputdata,
+        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+        success: function (json) {
+            $('#commentModal').modal('hide');
+            $table.bootstrapTable('refresh', {
+                silent: true
+            });
+            $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>备注成功!</strong></div>');
+            setTimeout(function(){$('#alert').empty();}, 1000);
+        },
+        error: function (json) {
+            $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误</strong>添加备注' + JSON.stringify(json.responseText) + '</div>');
+            $('#commentModal').modal('hide');
+        }
+    });
+});
+
+{# format time #}
+Date.prototype.Format = function (fmt) {
+    var o = {
+    "M+": this.getMonth() + 1, //月份
+    "d+": this.getDate(), //日
+    "h+": this.getHours(), //小时
+    "m+": this.getMinutes(), //分
+    "s+": this.getSeconds(), //秒
+    "q+": Math.floor((this.getMonth() + 3) / 3), //季度
+    "S": this.getMilliseconds() //毫秒
+    };
+    if (/(y+)/.test(fmt)) fmt = fmt.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
+    for (var k in o)
+    if (new RegExp("(" + k + ")").test(fmt)) fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
+    return fmt;
+};
+
+function multiSelectFilter(selector_name){
+    var selectedOptions = $("#"+selector_name+" option:selected");
+    var selectedLength = selectedOptions.length;
+
+    var flag = false;
+    var oldState;
+
+    switch (selector_name){
+        case "eventsource_select":
+            oldState = sourceArray;
+            break;
+        case "eventtype_select":
+            oldState = typeArray;
+            break;
+        case "eventlevel_select":
+            oldState = levelArray;
+            break;
+        default:
+            alert("unkown selector");
+            return;
+    }
+
+    if (oldState[0] != selectedLength){
+        flag = true;
+        oldState[0] = selectedLength;
+    }
+    else {
+        var i = 0;
+        for(;i<selectedLength;i++){
+            var optVal = selectedOptions[i].value;
+
+            if (optVal != oldState[i+1]){
+                flag = true;
+                break;
+            }
+        }
+    }
+
+    if (flag){
+        <!----save state -->
+        i = 1;
+        selectedOptions.each(function(){
+            oldState[i] = $(this).val();
+            i++;
+        });
+        <!---- refresh -->
+        refresh_by_url(false);
+    }
+
+}
+
+$("#btn_refresh").click(function(){
+    refresh_by_url(true);
+});
+
+
+function levelAdjustmentFormatter(value, row, index) {
+    var ret_label = "";
+    if (value <= 0){
+        ret_label = "否";
+    }
+    else {
+        ret_label = [
+            '<a href="{{ ROOT_URL }}eventadjust/?id=' +value+'"',
+            ' target="_blank" class="tooltip-show" data-toggle="tooltip" title=' + '点击查看调级规则' + '>',
+            '是',
+            '</a> '
+        ].join('');
+    }
+
+    return ret_label;
+}
+</script>
+{% endblock %}

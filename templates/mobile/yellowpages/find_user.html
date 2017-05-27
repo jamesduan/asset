@@ -1,0 +1,98 @@
+{% extends "mobile/base/yellowpages_base.html" %}
+
+{% block inner_content %}
+
+<div class="mui-input-row mui-search">
+    <input type="search" class="mui-input-clear" id="search_user" placeholder="输入用户名或电话号码">
+</div>
+
+<div id="user_content">
+
+</div>
+
+<script src="{{ STATIC_URL }}mobile/libs/mui/js/arttmpl.js"></script>
+
+<script type="text/templete" id="find_user_result">
+    <ul class="mui-table-view">
+        <% if (user_list.length > 0) { %>
+            <% for (var i in user_list){ var user = user_list[i]; %>
+                <li class="mui-table-view-cell find_user_li">
+                    <ul class="mui-list-inline">
+                        <li class="mui-pull-left"><%=user.username_ch%></li>
+                        <li class="mui-pull-right"><p><%=user.username%></p></li>
+                    </ul>
+                </li>
+            <% } %>
+        <% }else{ %>
+            <div class="mui-card-header"><p>无匹配用户</p></div>
+        <% } %>
+    </ul>
+</script>
+
+<script>
+    var init_api = '{{ ROOT_URL }}api/yellow/find_user/';
+    find_user();
+
+    //搜索框输入事件
+    document.getElementById("search_user").addEventListener('input',function(){
+        find_user();
+    });
+
+    //搜索查询，结果展示
+    function find_user() {
+        var keyword = document.getElementById('search_user').value;
+        var api_url = init_api;
+        if(keyword.trim() != ''){
+            api_url = init_api + '?key='+ keyword
+        }
+        mui.ajax(api_url, {
+            dataType: 'json',
+            type: 'get',
+            timeout: 3000,
+            headers: {'Content-Type': 'application/json'},
+            success: function (data) {
+                template.config('escape', false);
+                document.getElementById('user_content').innerHTML = template('find_user_result', {'user_list': data});
+                //查看搜索结果
+                look_user_detail();
+
+            },
+            error:function(xhr,type,errorThrown){
+                mui.toast(errorThrown);
+            }
+        });
+    }
+
+    //查看结果详情
+    function look_user_detail() {
+        mui(".mui-table-view").on('tap','.find_user_li',function(){
+            var username = this.firstChild.nextSibling.childNodes[2].nextSibling.firstChild.textContent;
+            var newpage = '{{ ROOT_URL }}yellow/find/user/?username='+ username;
+            mui.openWindow({
+                url: newpage,
+                id: newpage
+            });
+
+        });
+    }
+
+    //回车搜索用户
+{#    document.getElementById("search_user").addEventListener('keyup', function (event) {#}
+{#        var e = event || window.event || arguments.callee.caller.arguments[0];#}
+{#        var keyword = document.getElementById('search_user').value;#}
+{#        if(e && e.keyCode == 13){#}
+{#            if(keyword != ''){#}
+{#                look_user_detail();#}
+{#            }else{#}
+{#                mui.alert('搜索关键字不能为空！');#}
+{#            }#}
+{#        }#}
+{#    });#}
+
+    //搜索框取消事件
+    mui('#search_user')[0].addEventListener('focus', function(){
+        find_user(init_api);
+　　 });
+
+</script>
+{% endblock %}

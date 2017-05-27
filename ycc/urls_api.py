@@ -1,0 +1,82 @@
+# -*- coding: utf-8 -*-
+from django.conf.urls import patterns, url, include
+from rest_framework.routers import DefaultRouter
+import views_api
+
+router = DefaultRouter()
+router.register(r'group_v3', views_api.GroupV3ViewSet)
+
+urlpatterns = patterns(
+    'ycc.views_api',
+    url(r'^group/$', views_api.GroupList.as_view()),
+    url(r'^group/(?P<pk>[0-9]+)/$', views_api.GroupDetail.as_view()),
+    url(r'^group/importbygroup/$', 'syn_groupcontact'),
+    url(r'^proconfiginfo/v2/$', views_api.ProConfigInfoListV2.as_view()),
+    url(r'^configinfo/v2/$', views_api.ConfigInfoListV2.as_view()),
+    url(r'^configinfo/v3/$', views_api.ConfigInfoListV3.as_view()),
+    url(r'^soa_service/$', views_api.SoaServiceList.as_view()),
+    url(r'^soa_service_group/$', views_api.SoaServiceGroupList.as_view()),
+    url(r'^soa_service_group_create/$', views_api.SoaServiceGroupCreate.as_view()),
+    url(r'^soa_service_group/(?P<pk>[0-9]+)/$', views_api.SoaServiceGroupDetail.as_view()),
+    url(r'^soa_service_group_bind/$', views_api.SoaServiceGroupBindList.as_view()),
+    url(r'^soa_service_group_bind_create/$', views_api.SoaServiceGroupBindCreate.as_view()),
+    url(r'^soa_service_group_bind/(?P<pk>[0-9]+)/$', views_api.SoaServiceGroupBindDetail.as_view()),
+    url(r'^soa_service_group_bind_delete/$', 'soa_service_group_bind_delete'),
+    url(r'^soa_service_group_register/$', views_api.SoaServiceGroupRegisterList.as_view()),
+    url(r'^get_app_idc_env/$', 'get_app_idc_env'),
+    url(r'^get_del_ip/$', 'get_del_ip'),
+    url(r'^get_service_reg/$', 'get_service_reg'),
+    url(r'^get_userdserver_regserver/$', 'get_userdserver_regserver'),
+    url(r'^get_soa_group_used_servers_show/$', 'get_soa_group_used_servers_show'),
+    url(r'^get_soa_group_servers/$', 'get_soa_group_servers'),
+    url(r'^configinfo/parm_list/$', 'get_configinfos'),
+    # url(r'^configinfo/check_cmp/$', 'check_configinfo_cmp'),
+    url(r'^configinfo/v2/(?P<pk>[0-9]+)/$', views_api.ConfigInfoDetailV2.as_view()),
+    url(r'^configinfo/v3/(?P<pk>[0-9]+)/$', views_api.ConfigInfoDetailV3.as_view()),
+    url(r'^configinfoupload/$', 'ConfigInfoListUpload'),
+    url(r'^configinfouploadv3/$', 'ConfigInfoListUploadV3'),
+    url(r'^exceptionconfig/$', views_api.ExceptionConfigList.as_view()),
+    url(r'^dbupdate/$', views_api.DbUpdateList.as_view()),
+    url(r'^dbupdate/(?P<pk>[0-9]+)/$', views_api.DbUpdateDetail.as_view()),
+    url(r'^dbupdateone/$', views_api.DbUpdateListOne.as_view()),
+    url(r'^dbupdateurl/$', 'dburl_exists'),
+    url(r'^dbupdate/syn/$', 'syn_dbupdate'),
+    url(r'^config.co/$', 'configpull'),
+    url(r'^ycc$', 'serverlistpull'),
+    url(r'^client.ack', 'clientackpull'),
+    url(r'^export/$', 'exportGroupData'),
+    url(r'^copy/v2/$', 'copy_group_data_v2'),
+    url(r'^copy/v3/$', 'copy_group_data_v3'),
+    url(r'^copy', 'copyGroupData'),
+    url(r'^cmp/$', 'cmpconfiginfos'),
+    url(r'^diffcontent', 'diffcontent'),
+    url(r'^tridentcmp/$', 'tridentcmpconfiginfos'),
+    url(r'^procmp/$', 'procmpconfiginfos'),
+    url(r'^prodiffcontent', 'prodiffcontent'),
+    url(r'^oldgroup/$', views_api.OldGroupList.as_view()),
+    url(r'^notify.do/$', 'uploadMetaInfo'),
+    url(r'^status/$', views_api.ConfigGroupStatusListV2.as_view()),
+    url(r'^status_normal/$', views_api.ConfigGroupStatusListNormal.as_view()),
+    url(r'^status/(?P<pk>[0-9]+)/$', views_api.ConfigGroupStatusDetailV2.as_view()),
+    url(r'^opyccgroup/$', 'tridentDeployApi'),
+    url(r'^groupstatus/$', 'getGroupstatus'),
+    url(r'^grayrelease/$', 'grayReleaseIpSet'),
+    url(r'^subscribelog/$', views_api.ConfigSubscribeLogList.as_view()),
+    url(r'^config/maingroup/$', views_api.ConfigHostList.as_view()),
+    url(r'^revert/$', 'revert'),
+    url(r'^compare/$', 'compare'),
+    url(r'^group_cmp_idc/$', 'get_group_cmp_idc'),
+    url(r'^get_db_instance/$', 'get_db_instance'),
+    url(r'^configinfo/v3/$', views_api.ConfigInfoListV3.as_view()),
+    url(r'^grayrelease/blackip/$', views_api.GrayReleaseBlackIp.as_view()),
+    url(r'^grayrelease/blackipD/(?P<pk>[0-9]+)/$', views_api.GrayReleaseBlackIpD.as_view()),
+    url(r'^roomapps/$', views_api.RoomAppsList.as_view()),
+    url(r'^roomapps/(?P<pk>[0-9]+)/$', views_api.RoomAppsDetail.as_view()),
+    url(r'^configcalllist/$', 'configcalllist'),
+)
+
+urlpatterns += [
+    url(r'', include(router.urls)),
+]
+
+

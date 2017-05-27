@@ -1,0 +1,595 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %}路径配置{% endblock %}
+{% block content %}
+
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-combobox-v1.1.6/css/bootstrap-combobox.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"
+          rel="stylesheet"/>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-combobox-v1.1.6/js/bootstrap-combobox.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+
+    <!-- 新建FTP路径 -->
+    <div class="modal fade" id="modal_deploy_ftp_create" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:800px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="form_deploy_ftp_create">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">新建FTP路径</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="deploy_ftp_app_create" class="col-sm-2 control-label">Pool</label>
+                            <div class='col-sm-10'>
+                                <select id="deploy_ftp_app_create" name="deploy_ftp_app_create" class="form-control combobox">
+                                    <option value="">请选择站点/应用</option>
+                                    {% for app in app_queryset %}
+                                        <option value="{{ app.id }}">{{ app.site.name }}/{{ app.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="deploy_ftp_path_create" class="col-sm-2 control-label">路径</label>
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" id="deploy_ftp_path_create" name="deploy_ftp_path_create"/>
+                            </div>
+                        </div>
+
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- 修改FTP路径 -->
+    <div class="modal fade" id="modal_deploy_ftp_edit" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:800px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="form_deploy_ftp_edit">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">修改FTP路径</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="deploy_ftp_app_edit" class="col-sm-2 control-label">Pool</label>
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" id="deploy_ftp_app_edit" disabled="disabled"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="deploy_ftp_path_edit" class="col-sm-2 control-label">路径</label>
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" id="deploy_ftp_path_edit" name="deploy_ftp_path_edit"/>
+                            </div>
+                        </div>
+
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- 新建发布路径 -->
+    <div class="modal fade" id="modal_deploy_path_create" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:800px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="form_deploy_path_create">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">新建发布路径</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="deploy_path_app_create" class="col-sm-2 control-label">Pool</label>
+                            <div class='col-sm-10'>
+                                <select id="deploy_path_app_create" name="deploy_path_app_create" class="form-control combobox">
+                                    <option value="">请选择站点/应用</option>
+                                    {% for app in app_queryset %}
+                                        <option value="{{ app.id }}">{{ app.site.name }}/{{ app.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="deploy_path_name_create" class="col-sm-2 control-label">名称</label>
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" id="deploy_path_name_create" name="deploy_path_name_create"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="deploy_path_path_create" class="col-sm-2 control-label">路径</label>
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" id="deploy_path_path_create" name="deploy_path_path_create"/>
+                            </div>
+                        </div>
+
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- 修改发布路径 -->
+    <div class="modal fade" id="modal_deploy_path_edit" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:800px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="form_deploy_path_edit">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">修改发布路径</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="deploy_path_app_edit" class="col-sm-2 control-label">Pool</label>
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" id="deploy_path_app_edit" disabled="disabled"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="deploy_path_name_edit" class="col-sm-2 control-label">名称</label>
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" id="deploy_path_name_edit" name="deploy_path_name_edit"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="deploy_path_path_edit" class="col-sm-2 control-label">路径</label>
+                            <div class='col-sm-10'>
+                                <input type='text' class="form-control" id="deploy_path_path_edit" name="deploy_path_path_edit"/>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <select id="app" class="form-control combobox">
+        <option value="">请选择站点/应用</option>
+        {% for app in app_queryset %}
+            <option value="{{ app.id }}">{{ app.site.name }}/{{ app.name }}</option>
+        {% endfor %}
+    </select>
+    <div class="bs-example bs-example-tabs" data-example-id="togglable-tabs">
+        <ul id="myTabs" class="nav nav-tabs" role="tablist">
+            <li role="presentation" class="active"><a href="#deploy_ftp" id="deploy_ftp-tab" role="tab"
+                                                      data-toggle="tab" aria-controls="home" aria-expanded="true">FTP路径配置</a>
+            </li>
+            <li role="presentation"><a href="#deploy_path" role="tab" id="deploy_path-tab" data-toggle="tab"
+                                       aria-controls="profile">发布路径配置</a></li>
+        </ul>
+        <div id="myTabContent" class="tab-content">
+            <div role="tabpanel" class="tab-pane fade in active" id="deploy_ftp" aria-labelledBy="home-tab">
+                <div id="toolbar_deploy_ftp">
+                    <button class="btn btn-green" onclick="javascript:$('#modal_deploy_ftp_create').modal('show')">新增</button>
+                </div>
+                <table id="table_deploy_ftp" class="bootstrap-table"></table>
+            </div>
+            <div role="tabpanel" class="tab-pane fade" id="deploy_path" aria-labelledBy="profile-tab">
+                <div id="toolbar_deploy_path">
+                    <button class="btn btn-green" onclick="javascript:$('#modal_deploy_path_create').modal('show')">新增</button>
+                </div>
+                <table id="table_deploy_path" class="bootstrap-table"></table>
+            </div>
+        </div>
+    </div><!-- /example -->
+
+    <script>
+        $(document).ready(function () {
+            var deploy_ftp_id = null, deploy_path_id = null;
+            function operateFormatter(value, row, index) {
+                var edit = $('<a>').attr('class', 'edit').append(
+                        $('<span>').attr({
+                            class: 'glyphicon glyphicon-pencil',
+                            title: ' 编辑',
+                        }).css({
+                            cursor: 'pointer',
+                            'margin-right': '10px'
+                        }))
+                var remove = $('<a>').attr('class', 'remove').append(
+                        $('<span>').attr({
+                            class: 'glyphicon glyphicon-remove',
+                            title: ' 删除',
+                        }).css({
+                            cursor: 'pointer',
+                        }))
+                return edit[0].outerHTML + remove[0].outerHTML;
+            };
+            function ajax(url, method, data) {
+                $.ajax({
+                    url: url,
+                    async: false,
+                    method: method,
+                    data: data,
+                    headers: {
+                        Authorization: 'Token {{ API_TOKEN }}'
+                    },
+                    success: function (json) {
+                        bootbox.alert('操作成功');
+                    },
+                    error: function (json) {
+                        bootbox.alert('操作失败，原因为' + json.responseText);
+                    }
+                });
+            }
+
+            function table_refresh(table) {
+                $(table).bootstrapTable('refresh', {
+                    silent: false,
+                    query: $('#app').val() ? {
+                        app_id: $('#app').val()
+                    } : null
+                });
+            }
+            window.deployFtpEvents = {
+                'click .edit': function (e, value, row, index) {
+                    $('#deploy_ftp_app_edit').val(row.site_name+'/'+row.app_name);
+                    $('#deploy_ftp_path_edit').val(row.path);
+                    $('#modal_deploy_ftp_edit').modal('show');
+                }, 'click .remove': function (e, value, row, index) {
+                    bootbox.confirm('是否删除？', function (result) {
+                        if (result) {
+                            ajax(
+                                    '/api/deploy/ftp_path/' + row.id + '/',
+                                    'delete',
+                                    null
+                            )
+                            table_refresh('#table_deploy_ftp');
+                        }
+                    })
+                },
+            };
+            window.deployPathEvents = {
+                'click .edit': function (e, value, row, index) {
+                    $('#deploy_path_app_edit').val(row.site_name+'/'+row.app_name);
+                    $('#deploy_path_name_edit').val(row.name);
+                    $('#deploy_path_path_edit').val(row.path);
+                    $('#modal_deploy_path_edit').modal('show');
+                }, 'click .remove': function (e, value, row, index) {
+                    bootbox.confirm('是否删除？', function (result) {
+                        if (result) {
+                            ajax(
+                                    '/api/deploy/path/' + row.id + '/',
+                                    'delete',
+                                    null
+                            )
+                            table_refresh('#table_deploy_path');
+                        }
+                    })
+                },
+            };
+            $('select.combobox').combobox({});
+            $('#app').change(function () {
+                if ($(this).val())
+                    $('table.bootstrap-table').bootstrapTable('refresh', {
+                        silent: false,
+                        query: {
+                            app_id: $(this).val()
+                        }
+                });
+            })
+            $('#table_deploy_path').bootstrapTable({
+                url: '/api/deploy/path/',
+                ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                columns: [
+                    {
+                        field: 'id',
+                        title: 'id',
+                        visible: false
+                    },
+                    {
+                        field: 'app_id',
+                        title: 'app_id',
+                        visible: false
+                    },
+                    {
+                        field: 'pool',
+                        title: 'Pool',
+                        formatter: function (value, row, index) {
+                            return row.site_name + '/' + row.app_name;
+                        }
+                    },
+                    {
+                        field: 'name',
+                        title: '名称'
+                    },
+                    {
+                        field: 'path',
+                        title: '发布路径'
+                    },
+                    {
+                        field: 'operate',
+                        title: '操作',
+                        align: 'left',
+                        formatter: operateFormatter,
+                        events: deployPathEvents
+                    }
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search,
+                        format: 'json',
+                    };
+                },
+                pagination: true,
+                pageSize: 10,
+                pageList: [10, 20, 50, 100],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: true,
+                showColumns: true,
+                toolbar: "#toolbar_deploy_path",
+                cache: false
+            });
+            $('#table_deploy_ftp').bootstrapTable({
+                url: '/api/deploy/ftp_path/',
+                ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                columns: [
+                    {
+                        field: 'id',
+                        title: 'id',
+                        visible: false
+                    },
+                    {
+                        field: 'app_id',
+                        title: 'app_id',
+                        visible: false
+                    },
+                    {
+                        field: 'pool',
+                        title: 'Pool',
+                        formatter: function (value, row, index) {
+                            return row.site_name + '/' + row.app_name;
+                        }
+                    },
+                    {
+                        field: 'path',
+                        title: 'FTP路径'
+                    },
+                    {
+                        field: 'operate',
+                        title: '操作',
+                        align: 'left',
+                        formatter: operateFormatter,
+                        events: deployFtpEvents
+                    }
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search,
+                        format: 'json',
+                    };
+                },
+                pagination: true,
+                pageSize: 10,
+                pageList: [10, 20, 50, 100],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: false,
+                showColumns: true,
+                toolbar: "#toolbar_deploy_ftp",
+                cache: false
+            });
+            <!-- deploy_ftp_create -->
+            $('#form_deploy_ftp_create')
+                    .bootstrapValidator({
+                        excluded: ':disabled',
+                        fields: {
+                            deploy_ftp_app_create: {
+                                validators: {
+                                    notEmpty: {
+                                        message: 'Pool不能为空'
+                                    }
+                                }
+                            },
+                            deploy_ftp_path_create: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '路径不能为空。'
+                                    }
+                                }
+                            },
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        ajax(
+                                '/api/deploy/ftp_path/',
+                                'post',
+                                {
+                                    app_id: $('#deploy_ftp_app_create').val(),
+                                    path: $('#deploy_ftp_path_create').val()
+                                }
+                        );
+                        table_refresh('#table_deploy_ftp');
+                        $('#modal_deploy_ftp_create').modal('hide');
+                    });
+            $("#deploy_ftp_app_create").change(function () {
+                $('#form_deploy_ftp_create').data('bootstrapValidator')
+                        .updateStatus('deploy_ftp_app_create', 'NOT_VALIDATED').validateField('deploy_ftp_app_create');
+            });
+            $('#modal_deploy_ftp_create').on('hidden.bs.modal', function (e) {
+                $("#deploy_ftp_app_create").data('combobox').clearElement();
+                $('#form_deploy_ftp_create').bootstrapValidator('resetForm', true);
+            });
+            <!-- deploy_ftp_edit -->
+            $('#form_deploy_ftp_edit')
+                    .bootstrapValidator({
+                        excluded: ':disabled',
+                        fields: {
+                            deploy_ftp_path_edit: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '路径不能为空。'
+                                    }
+                                }
+                            },
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        ajax(
+                                '/api/deploy/ftp_path/'+deploy_ftp_id+'/',
+                                'patch',
+                                {
+                                    path: $('#deploy_ftp_path_edit').val()
+                                }
+                        );
+                        table_refresh('#table_deploy_ftp');
+                        $('#modal_deploy_ftp_edit').modal('hide');
+                    });
+            <!-- deploy_ftp_init -->
+            $('#modal_deploy_ftp_edit').on('hidden.bs.modal', function (e) {
+                $('#form_deploy_ftp_edit').bootstrapValidator('resetForm', true);
+            });
+
+            $('#table_deploy_ftp').on('click-row.bs.table', function (e, row, $element) {
+                deploy_ftp_id = row.id;
+            });
+            <!-- deploy_path_create -->
+            $('#form_deploy_path_create')
+                    .bootstrapValidator({
+                        excluded: ':disabled',
+                        fields: {
+                            deploy_path_app_create: {
+                                validators: {
+                                    notEmpty: {
+                                        message: 'Pool不能为空'
+                                    }
+                                }
+                            },
+                            deploy_path_name_create: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '名称不能为空。'
+                                    }
+                                }
+                            },
+                            deploy_path_path_create: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '路径不能为空。'
+                                    }
+                                }
+                            },
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        ajax(
+                                '/api/deploy/path/',
+                                'post',
+                                {
+                                    app_id: $('#deploy_path_app_create').val(),
+                                    name: $('#deploy_path_name_create').val(),
+                                    path: $('#deploy_path_path_create').val()
+                                }
+                        );
+                        table_refresh('#table_deploy_path');
+                        $('#modal_deploy_path_create').modal('hide');
+                    });
+            $("#deploy_path_app_create").change(function () {
+                $('#form_deploy_path_create').data('bootstrapValidator')
+                        .updateStatus('deploy_path_app_create', 'NOT_VALIDATED').validateField('deploy_path_app_create');
+            });
+            $('#modal_deploy_path_create').on('hidden.bs.modal', function (e) {
+                $("#deploy_path_app_create").data('combobox').clearElement();
+                $('#form_deploy_path_create').bootstrapValidator('resetForm', true);
+            });
+            <!-- deploy_path_edit -->
+            $('#form_deploy_path_edit')
+                    .bootstrapValidator({
+                        excluded: ':disabled',
+                        fields: {
+                            deploy_path_name_edit: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '名称不能为空。'
+                                    }
+                                }
+                            },
+                            deploy_path_path_edit: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '路径不能为空。'
+                                    }
+                                }
+                            },
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        ajax(
+                                '/api/deploy/path/'+deploy_path_id+'/',
+                                'patch',
+                                {
+                                    name: $('#deploy_path_name_edit').val(),
+                                    path: $('#deploy_path_path_edit').val()
+                                }
+                        );
+                        table_refresh('#table_deploy_path');
+                        $('#modal_deploy_path_edit').modal('hide');
+                    });
+            <!-- deploy_path_init -->
+            $('#modal_deploy_path_edit').on('hidden.bs.modal', function (e) {
+                $('#form_deploy_path_edit').bootstrapValidator('resetForm', true);
+            });
+
+            $('#table_deploy_path').on('click-row.bs.table', function (e, row, $element) {
+                deploy_path_id = row.id;
+            });
+            $('div.search>input[type="text"]').attr('placeholder', '名称').width(200);
+        })
+    </script>
+{% endblock %}

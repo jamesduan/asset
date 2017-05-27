@@ -1,0 +1,607 @@
+{% extends "common/base.html" %}
+{% block title %}es规则配置管理{% endblock %}
+{% block content %}
+    <link href="{{ STATIC_URL }}libs/bootstrap-combobox-v1.1.6/css/bootstrap-combobox.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-multiselect/css/bootstrap-multiselect.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" />
+    <link href="{{ STATIC_URL }}libs/dinggo/css/dinggo-loading.css" rel="stylesheet"/>
+
+    <script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-combobox-v1.1.6/js/bootstrap-combobox.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery/spin.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery/jquery.form.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery/jquery.validate.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-multiselect/js/bootstrap-multiselect.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/dinggo/js/dinggo-loading.js"></script>
+
+    <style>
+
+        .required:-moz-placeholder {
+            color: #ff0000!important;
+            opacity: 0.5;
+        }
+        .required::-moz-placeholder {
+            color: #ff0000!important;
+            opacity: 0.5;
+        }
+        .required ::-webkit-input-placeholder { color: #ff0000!important; opacity: 0.5;}
+        .required :-ms-input-placeholder { color: #ff0000!important; opacity: 0.5;}
+
+        .query{
+            margin-bottom: 5px;
+        }
+        .label-title{color: #286090}
+        .alert-tip{
+            width:500px;
+            left:50%;
+            margin-left:-250px;
+            position: fixed;
+            top:10%;
+            z-index: 99999;
+        }
+    </style>
+
+    <div class="inner-h1">
+        <h1>es规则配置管理</h1>
+    </div>
+    <div id="alert"></div>
+    <div id="loading"></div>
+    <div id="toolbar">
+        <button id="add" class="btn btn-green">
+            <i class="glyphicon glyphicon-plus"></i> 新增
+        </button>
+    </div>
+    <table id="reg"></table>
+
+    <!-- 修改信息 -->
+<div class="modal fade" id="edit-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document" style="width:90%;">
+    <div class="modal-content">
+      <div class="modal-header">
+{#        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>#}
+        <h4 class="modal-title"><label class="control-label" id="edit-modal-title">修改(请保存后再点击规则测试)</label></h4>
+      </div>
+      <div class="modal-body">
+        <form id="update-form">
+          <div class="form-border form">
+              <div class="form-group">
+                <div class="row">
+                    <div class="col-lg-4">
+                        <input type="hidden" class="form-control" id="_id" name="id"/>
+                        <input type="text" id='_title' class="form-control required" name="title" placeholder="标题"/>
+                    </div>
+                    <div class="col-lg-2">
+                        <select id="_type" name="type" class="form-control" >
+                            <option value="">类型</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2">
+                        <select id="_is_influence" name="is_influence" class="form-control" >
+                            <option value="">影响下单</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2">
+                        <input type="text" id='_applicant' class="form-control" name="applicant" placeholder="申请人"/>
+                    </div>
+                    <div class="col-lg-2">
+                        <input type="text" id='_apply_date' class="form-control" name="apply_date" class="form-control dateISO" placeholder="申请时间"/>
+                    </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <div class="row">
+                    <div class="col-lg-2">
+                        <input type="text" id='_interval_value' class="form-control required" name="interval_value" placeholder="区间范围(秒)"/>
+                    </div>
+                    <div class="col-lg-2">
+                        <select id="_comparison" name="comparison" class="form-control" >
+                            <option value="">比较符</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2">
+                        <input type="text" id='_count' class="form-control required" name="count" placeholder="比较值"/>
+                    </div>
+                    <div class="col-lg-2">
+                        <input type="text" id='_group_by' class="form-control required" name="group_by" placeholder="group by"/>
+                    </div>
+                    <div class="col-lg-2">
+                        <select id="_enable" name="enable" class="form-control" >
+                            <option value="">是否启用</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-2">
+                        <input type="text" id='_remark' class="form-control" name="remark" placeholder="备注"/>
+                    </div>
+                </div>
+              </div>
+              <div class="form-group">
+                  <h4 class="modal-title">
+                      <label class="control-label label-title">我的条件</label>
+                  </h4>
+              </div>
+              <div class="form-group">
+                <div class="row" id="_query">
+                </div>
+              </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="add_query" class="btn btn-green"> 新建条件 </button>
+        <button type="button" id="update-submit" class="btn btn-primary"> 保存 </button>
+        <button type="button" id="test_query" class="btn btn-warning"> 规则测试 </button>
+        <button type="button" id="close-submit" class="btn btn-default" data-dismiss="modal"> 关闭  </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- 修改信息 -->
+<!-- 测试规则弹出框 -->
+<div class="modal fade" id="test-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document" style="width:60%;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title"><label class="control-label" id="test-modal-title">测试结果</label></h4>
+      </div>
+      <div class="modal-body">
+        <form id="test-form" role="form" style="height:450px;">
+          <div class="form-border form">
+              <div class="form-group">
+                <div class="row">
+                    <div class="col-lg-6">
+                        <label style="color:#1387F4;width:100%;text-align: center;">request</label>
+                        <textarea id="test-request" class="form-control" style="height:430px;width:100%;">3</textarea>
+                    </div>
+                    <div class="col-lg-6">
+                        <label style="color:#1387F4;width:100%;text-align: center;">response</label>
+                        <textarea id="test-response" class="form-control" style="height:430px;width:100%;">3</textarea>
+                    </div>
+                </div>
+              </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="close-test" class="btn btn-default" data-dismiss="modal"> 关闭  </button>
+      </div>
+    </div>
+  </div>
+</div>
+    <!-- js-->
+    <script>
+        $(function(){
+//*********置顶
+            window.operateEvents = {
+                'click .edit': function (e, value, row, index) {
+                    $("#_id").val(row['id']);
+                    $("#edit-modal").modal({ show:true, backdrop:'static' });
+
+                    var comboxs_default = {};
+                    $.each(row, function(i, n){
+                        if($.inArray(i, ['type', 'is_influence', 'comparison', 'enable'])>-1) comboxs_default[i] = n;
+                        else $('#_'+i).val(n);
+                    });
+                    initAssembly(comboxs_default);
+
+                    var querys = [];
+                    if(row['query']) querys = JSON.parse(row.query);
+                    createQuerywith(querys);
+                }
+            }
+//*********变量
+            var tmp_query_id = 1;
+            var type_map = {
+                1: '防cc',
+                2: 'others'
+            };
+            var is_influence_map = {
+                0: '不影响',
+                1: '影响'
+            };
+            var enable_map = {
+                0: '启用',
+                1: '关闭'
+            };
+            var comparison_map = {
+                '>' : '>'
+            };
+
+            var reg_columns = [
+                {
+                    field: 'id',
+                    visible: false
+                }, {
+                    field: 'title',
+                    title: '标题'
+                }, {
+                    field: 'type',
+                    title: '类型',
+                    width: 80,
+                    formatter:mapFormatter('type')
+                }, {
+                    field: 'query',
+                    title: '规则',
+                    align: 'center',
+                    width: 80,
+                    formatter: actionFormatter,
+                    events: operateEvents
+                }, {
+                    field: 'interval_value',
+                    title: '区间范围',
+                    width: 50
+                }, {
+                    field: 'comparison',
+                    title: '比较符',
+                    width: 50
+                }, {
+                    field: 'count',
+                    title: '比较值',
+                    width: 50
+                }, {
+                    field: 'group_by',
+                    title: 'group by',
+                    width: 80
+                }, {
+                    field: 'is_influence',
+                    title: '影响下单',
+                    width: 50,
+                    formatter:mapFormatter('is_influence')
+                }, {
+                    field: 'enable',
+                    title: '是否启用',
+                    width: 50,
+                    formatter:mapFormatter('enable')
+                }, {
+                    field: 'applicant',
+                    title: '申请人',
+                    width: 100
+                }, {
+                    field: 'apply_date',
+                    title: '申请时间',
+                    width: 100
+                }, {
+                    field: 'remark',
+                    title: '备注'
+                }
+            ];
+//*********脚本
+            $("#test_query").click(function(){
+                var my_url = '{{ CMDBAPI_URL }}logplatform/test_reg/' + $("#_id").val() + '/';
+                var dinggo_loading = new dinggo.loading();
+                $.ajax({
+                    url: my_url,
+                    headers: {'Authorization':'Token {{ API_TOKEN }}'},
+                    success: function(data){
+                        dinggo_loading.destroy();
+                        $("#test-request").text(data['request']);
+                        $("#test-response").text(data['response']);
+                        $("#test-modal").modal('show');
+                    },
+                    error: function(XMLHttpRequest, textStatus, errorThrown){
+                        alert(XMLHttpRequest.responseText);
+                    }
+                });
+            });
+            $("#add").click(function(){
+                $("#_id").val('');
+                $("#_title").val("");
+                $("#_applicant").val("");
+                $("#_apply_date").val("");
+                $("#_interval_value").val("");
+                $("#_count").val("");
+                $("#_group_by").val("");
+                $("#_remark").val("");
+
+                initAssembly();
+                $("#edit-modal").modal({ show:true, backdrop:'static' });
+            });
+
+            $("#close-submit").click(function(){
+                $("#_query").empty();
+            });
+
+            $("#add_query").click(function(){
+                createQuery();
+            });
+
+            $("#update-submit").click(function(){
+                var form = $("#update-form").validate({
+                    submitHandler: function(form) {
+                        var update_id = $("#_id").val();
+                        var type = 'post';
+                        var url = '{{ CMDBAPI_URL }}logplatform/reg/';
+                        if(update_id){
+                            type = 'patch';
+                            url += update_id+'/';
+                        }
+                        $.ajax({
+                            url: url,
+                            type: type,
+                            data: getFormParams(),
+                            headers: {'Authorization':'Token {{ API_TOKEN }}'},
+                            success: function(data){
+                                if(data){
+                                    $("#_id").val(data['id']);
+                                }
+                                alertTips('保存成功，请测试.', 2500, 'success');
+                                //$("#edit-modal").modal('hide'); 为了直接规则测试，不关闭了
+                                $('#reg').bootstrapTable('refresh', {
+                                    silent: true
+                                });
+                                //$("#_query").empty(); 为了直接规则测试，不关闭了
+                            },
+                            error: function(XMLHttpRequest, textStatus, errorThrown){
+                                alert(XMLHttpRequest.responseText);
+                            }
+                        });
+{#                        $(form).ajaxSubmit({#}
+{#                            //剔除默认规则的params，空白的params，手动封装后传递#}
+{#                            beforeSubmit:function(data,a,c){#}
+{#                                c.data = {};#}
+{#                                var tmp_data = [];#}
+{#                                for(var i in data){#}
+{#                                    var index = data[i]['name'];#}
+{#                                    var value = data[i]['value'];#}
+{#                                    if((index != 'key')&&(index != 'value')&&(value != '')){#}
+{#                                        tmp_data.push(data[i]);#}
+{#                                    }#}
+{#                                }#}
+{#                                tmp_data['query'] = getQueryParamsToJson();#}
+{#                                data = tmp_data;#}
+{#                            },#}
+{#                            headers: {#}
+{#                                "Authorization": 'Token {{ API_TOKEN }}'#}
+{#                            },#}
+{#                            data: {'dc':'cs'},#}
+{#                            type: type,#}
+{#                            url: url,#}
+{#                            success: function(data) {#}
+{#                                alert(22);#}
+{#                            }#}
+{#                        });#}
+                    }
+                });
+                $("#update-form").submit();
+            });
+
+            $('#_apply_date').datetimepicker({
+                minView: "month",
+                format: "yyyy-mm-dd",
+                language: 'zh-CN',
+                autoclose: true
+            });
+
+            initAssembly();
+
+            $('#reg').bootstrapTable({
+                url: '{{ CMDBAPI_URL }}logplatform/reg/',
+                ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                columns: reg_columns,
+                responseHandler: function (res) {
+                    var result = {};
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        //group_name: 'YCC_ADMIN',
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search,
+                        format: 'json'
+                    };
+                },
+                pagination: true,
+                pageSize: 50,
+                pageList: [10, 20, 100],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: true,
+                showColumns: true,
+                toolbar: "#toolbar",
+                cache: false
+            });
+
+//*********函数
+            function mapFormatter(key) {
+                return function formatter(value, row, index){
+                    var tmp = eval(key+"_map["+value+"]");
+                    if((key == 'enable')&&(tmp != undefined)){
+                        var font_color = (value == 0) ? 'green' : 'gray';
+                        return '<span style="color:'+font_color+';">'+tmp+'</span>';
+                    }
+                    return (tmp == undefined) ? '' : tmp;
+                }
+            }
+
+            function actionFormatter(value, row, index) {
+                return '<button class="btn btn-sm btn-green edit">编辑</button>';
+            }
+
+            function initComb(map){
+                var my_list = [];
+                for(var i in map['list']){
+                    my_list.push({text:map['list'][i], value:i});
+                }
+                var cfg = {
+		    		renderTo: map['render'],
+		    		optionList: my_list,
+		    		placeholder: map['placeholder']
+		    	};
+                if(map['defaultValue']) cfg.defaultValue = map['defaultValue'];
+                initCombobox(cfg);
+
+            }
+
+            function initAssembly(default_values) {
+                if(default_values == undefined) default_values = {};
+                var c = {
+                    list: type_map,
+                    render: '_type',
+                    placeholder: '类型'
+                };
+                if(default_values.hasOwnProperty('type')) c['defaultValue'] = default_values['type'].toString();
+                initComb(c);
+
+                c = {
+                    list: is_influence_map,
+                    render: '_is_influence',
+                    placeholder: '影响下单'
+                };
+                if(default_values.hasOwnProperty('is_influence')) c['defaultValue'] = default_values['is_influence'].toString();
+                initComb(c);
+
+                c = {
+                    list: comparison_map,
+                    render: '_comparison',
+                    placeholder: '比较符'
+                };
+                if(default_values.hasOwnProperty('comparison')) c['defaultValue'] = default_values['comparison'];
+                initComb(c);
+
+                c = {
+                    list: enable_map,
+                    render: '_enable',
+                    placeholder: '是否启用'
+                };
+                if(default_values.hasOwnProperty('enable')) c['defaultValue'] = default_values['enable'].toString();
+                initComb(c);
+            }
+
+            function getFormParams(){
+                var l = {};
+                for(var i in reg_columns){
+                    var tmp = reg_columns[i];
+                    var field = tmp['field'];
+                    if((field != 'id')&&(field != 'query')){
+                        var v;
+{#                        if(tmp.hasOwnProperty('dinggo_val')) v = $("#_"+field).val();#}
+                        v = $("#_"+field).val();
+                        if(v){
+                            l[field] = v;
+                        }
+                    }
+                }
+                var q = getQueryParamsToJson();
+                if(q) l['query'] = q;
+                return l;
+            }
+
+            function getQueryParamsToJson(){
+                var els_key = $(".query-key");
+                var els_operator = $(".query-operator option:selected");
+                var els_value = $(".query-value");
+
+                var json = [];
+
+                var length = els_key.length;
+                if(length == 0) return '';
+                for(var i=0; i<length;i++){
+                    json.push({
+                        key:els_key[i]['value'],
+                        operator:$(els_operator[i]).val() ? $(els_operator[i]).val() : 'reg',
+                        value:els_value[i]['value']
+                    });
+                }
+                return JSON.stringify(json);
+            }
+
+            function createQuery(){
+                var idd = 'query_id_' + tmp_query_id;
+                var template = [
+                    '<div class="col-lg-2">',
+                        '<input type="text" class="required form-control query query-key" name="key" placeholder="key"/>',
+                    '</div>',
+                    '<div class="col-lg-2">',
+                        '<select id="'+idd+'" class="form-control query query-operator" >',
+                            '<option value="">操作符</option>',
+                            '<option value=">">\></option>',
+                            '<option value="=">=</option>',
+                            '<option value="reg">reg</option>',
+                        '</select>',
+                    '</div>',
+                    '<div class="col-lg-8">',
+                        '<input type="text" class="required form-control query query-value" name="value" placeholder="值"/>',
+                    '</div>'
+                ].join('');
+                var $t = $(template);
+                $t.css("opacity","0");
+                $("#_query").append($t);
+                $("#"+idd).combobox();
+                $t.animate({opacity:1},500);
+                tmp_query_id += 1;
+            }
+
+            function createQuerywith(querys){
+                var length = querys.length;
+
+                for(var i=0;i<length;i++){
+                    var idd = 'query_id_' + tmp_query_id;
+                    var t = querys[i];
+                    init(idd, t['key'], t['operator'], t['value']);
+                    tmp_query_id += 1;
+                }
+
+                function init(id, key, operator, value){
+                    var k_v = "";
+                    var v_v = '';
+                    if(key) k_v = "value=" + key;
+                    if(value) v_v = "value=" + htmlEscape(value);
+
+                    var template = [
+                        '<div class="col-lg-2">',
+                            '<input type="text" class="required form-control query query-key" name="key" placeholder="key" '+ k_v +' />',
+                        '</div>',
+                        '<div class="col-lg-2">',
+                            '<select id="'+id+'" class="form-control query query-operator" >',
+                                '<option value="">操作符</option>',
+                            '</select>',
+                        '</div>',
+                        '<div class="col-lg-8">',
+                            '<input type="text" class="required form-control query query-value" name="value" placeholder="值" '+ v_v +' />',
+                        '</div>'
+                    ].join('');
+                    $("#_query").append(template);
+                    initCombobox({
+                        optionList: [{text:'>', value:'>'},{text:'=', value:'='},{text:'reg', value:'reg'}],
+                        renderTo: id,
+                        defaultValue: operator
+                    });
+                }
+
+            }
+            function alertTips(context, sec, type){
+                var c = 'alert-warning';
+                if(type == 'success') c = 'alert-success';
+                if(type == 'danger') c = 'alert-danger';
+                if(type == 'info') c = 'alert-info';
+
+                $('<div class="alert '+c+' alert-tip"><strong>'+type+'</strong>'+context+'</div>').
+                        appendTo("body").
+                        fadeIn(sec).
+                        fadeOut(sec,function(){
+                            this.remove();
+                        })
+            }
+
+            function htmlEscape(str){
+                if(str == null){
+                    return "";
+                }
+                str = str.replace("&", "&amp;");
+                str = str.replace("<", "&lt;");
+                str = str.replace(">", "&gt;");
+                str = str.replace("'", "&apos;");
+                str = str.replace("\"", "&quot;");
+                return str;
+            }
+        })
+    </script>
+{% endblock %}

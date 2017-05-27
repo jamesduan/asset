@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<!-- 标题自定义的内页通用模板 -->
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>乐道App</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link href="{{ STATIC_URL }}mobile/libs/mui/css/mui.min.css" rel="stylesheet" />
+    <link href="{{ STATIC_URL }}mobile/css/glyphicon.css" rel="stylesheet" />
+    <link href="{{ STATIC_URL }}mobile/css/base.css" rel="stylesheet" />
+    <script src="{{ STATIC_URL }}mobile/js/app.js"></script>
+    <script src="{{ STATIC_URL }}mobile/libs/mui/js/mui.min.js"></script>
+{#    <script src="{{ STATIC_URL }}mobile/js/jquery/jquery-1.11.2.min.js"></script>#}
+</head>
+<style>
+    html,
+    body {
+        background-color: #efeff4;
+    }
+    .mui-ios #segmentedControl{position:fixed; top:60px;}
+    .mui-android #segmentedControl { position:fixed; top:40px;}
+</style>
+<body>
+    <!--header-->
+    <header class="mui-bar mui-bar-nav">
+       <h1 class="mui-title">{% block title %}内页标题{% endblock %}</h1>
+    </header>
+
+    <!--footer-->
+    <footer class="mui-bar mui-bar-tab">
+        <a class="mui-tab-item" id="main_menu_monitor" href="{{ ROOT_URL }}monitor/"><span class="mui-icon mui-icon-camera"></span><span class="mui-tab-label">监控</span></a>
+        <a class="mui-tab-item" id="main_menu_yellowpages" href="{{ ROOT_URL }}yellow/"><span class="mui-icon mui-icon-compose"></span><span class="mui-tab-label">黄页</span></a>
+        <a class="mui-tab-item" id="main_menu_personal" href="{{ ROOT_URL }}personal/"><span class="mui-icon mui-icon-person"></span><span class="mui-tab-label">我的</span></a>
+    </footer>
+
+
+    <!--content-->
+    <section class="mui-content">
+        <div class="mui-slider" id="slider" style="position:static;">
+            <!--子菜单-->
+            {% block inner_menu %}{% endblock %}
+
+            <!--内容-->
+            {% block content %}{% endblock %}
+        </div>
+    </section>
+
+
+<script type="text/javascript">
+    //MUI初始化与内页跳转
+    mui.init();
+    mui(".mui-bar-tab").on("tap","a",function(e) {
+        var newpage = this.getAttribute("href");
+        mui.openWindow({
+            url: newpage,
+            id: newpage
+        });
+    });
+    //默认禁止横屏
+{#    mui.plusReady(function () {#}
+{#        plus.screen.lockOrientation("portrait-primary");#}
+{#    });#}
+
+{#    mui.plusReady(function() {#}
+{#        plus.screen.lockOrientation("landscape-primary");#}
+{#    });#}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,571 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+<script src="{{ STATIC_URL }}libs/jquery/spin.min.js" ></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css" rel="stylesheet">
+<script src="{{ STATIC_URL }}libs/bootstrap-select-1.12.0/dist/js/bootstrap-select.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-select-1.12.0/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+{#<div class="inner-h1">技术部黄页</div>#}
+<div id="toobar">
+    <div class="form-inline" role="form" >
+</div>
+</div>
+
+<ul class="nav nav-tabs">
+     <li class="active">
+        <a href="#panel_pool" data-toggle="tab">POOL信息查询</a>
+    </li>
+    <li >
+        <a href="#panel_rota" data-toggle="tab">值班信息查询</a>
+    </li>
+
+{#    <li>#}
+{#        <a href="#panel_user" data-toggle="tab">联系人查询</a>#}
+{#    </li>#}
+</ul>
+<div class="tab-content">
+
+     <div class="tab-pane active" id="panel_pool">
+        <div  style="margin-top: 10px">
+            <div class="form-inline" role="form">
+            <input type="radio"  name="optionsRadios"  value="0"  checked >
+
+            <label for="app_id" class="control-label">按Pool查询：</label>
+{#            <select name="site_id" id="site_id" class="form-control api_url">#}
+{#            <option value="">--请选择站点--</option>#}
+{#            {%  for item in sitelist %}#}
+{#                <option value="{{ item.id }}">{{ item.name}}</option>#}
+{#            {%  endfor %}#}
+{#            </select>#}
+            <select name="app_id" id="app_id" class="form-control">
+                <option value="">--请选择POOL--</option>
+                {% for item in applist %}
+                    <option value="{{ item.id }}">{{ item.site.name }}/{{ item.name }}</option>
+                {% endfor %}
+            </select>
+            </input>
+            &nbsp;&nbsp;&nbsp;
+            <input type="radio"  name="optionsRadios" value="1" >
+
+
+            <label for="url" class="control-label">按URL查询：</label>
+            <input type="text"  style="width:350px;" name="url" id="url"  class="form-control " disabled placeholder="例如：http://pis.yihaodian.com/shark-manager/" />
+            <button id="urlbtn"  class="btn btn-green">
+                查询
+            </button>
+            </div>
+            <div id="urltable" style="display:none;margin-top: 20px" >
+                <table id="urltablenew"  >
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-pane" id="panel_rota">
+        <div style="margin-top: 10px">
+            <div class="form-inline" role="form" id="toolbar1" >
+            <input type="radio"  name="DutyRadios"  value="0"  >
+            <label for="activity" class="control-label">按值班活动查询：</label>
+
+            <select name="activity" id="activity" class="form-control" disabled>
+                <option value="">--请选择活动--</option>
+                    {% for item in activities %}
+                    <option value="{{ item.id }}">{{ item.name }}</option>
+                    {% endfor %}
+            </select>
+            <input type="radio"  name="DutyRadios"  value="1"  checked >
+            <label for="rota_time" class="control-label">按值班日期查询:</label>
+            <input type="text" name="rota_time" id="rota_time"  class="form-control datepicker" placeholder="请选择日期" />
+            <button id="a" class="btn" style="border:0;background-color: transparent" >
+
+
+            <a  href="#"><u>今日值班信息</u></a>
+            </button>
+            </div>
+
+            <table id="rotatable" >
+            </table>
+        </div>
+    </div>
+
+
+</div>
+
+
+
+<script>
+$(document).ready(function() {
+
+    $('#site_id,#app_id,#activity').selectpicker({
+        'liveSearch': true,
+		'liveSearchPlaceholder': '搜索',
+        'width':'200px',
+	})
+
+    $('.datepicker').datetimepicker({
+        format: 'yyyy-mm-dd ',
+        autoclose: true,
+        minView: 2,
+    })
+
+    $('#url').val('');
+    $('#app_id').selectpicker('val','');
+{#    $('#site_id').selectpicker('val','');#}
+    $('#activity').selectpicker('val','');
+
+    $('#rota_time').val(currentdate());
+    $("input[name='DutyRadios'][value='1']").prop("checked",true);
+     $('#rota_time').prop('disabled',false)
+     $('#activity').prop('disabled',true);
+        $('#activity').selectpicker("refresh");
+    $("input[name=optionsRadios]").change(function(){
+
+        if( $('input[name=optionsRadios]:checked').val()==0){
+        $('#url').prop('disabled',true);
+        $('#app_id').prop('disabled',false);
+        $('#app_id').selectpicker("refresh");
+{#        $('#site_id').prop('disabled',false);#}
+{#        $('#site_id').selectpicker("refresh");#}
+        $('#url').val('');
+        };
+        if( $('input[name=optionsRadios]:checked').val()==1){
+        $('#url').prop('disabled',false);
+        $('#app_id').prop('disabled',true);
+        $('#app_id').selectpicker("refresh");
+        $('#app_id').selectpicker('val','');
+{#        $('#site_id').prop('disabled',true);#}
+{#        $('#site_id').selectpicker("refresh");#}
+{#        $('#site_id').selectpicker('val','');#}
+{#        $("#app_id").find("option").remove();#}
+{#        $('#app_id').append($('<option>').text('--请选择Pool--').attr('value', ''));#}
+{#        {%  for item in applist %}#}
+{#            $('#app_id').append($('<option>').text('{{ item.site.name }}/{{ item.name }}').attr('value', {{ item.id }}));#}
+{#        {% endfor %}#}
+{#        $("#app_id").selectpicker('refresh');#}
+        };
+    });
+
+    $("input[name=DutyRadios]").change(function(){
+
+        if( $('input[name=DutyRadios]:checked').val()==0){
+        $('#rota_time').prop('disabled',true);
+        $('#a').prop('disabled',true);
+
+        $('#activity').prop('disabled',false);
+        $('#activity').selectpicker("refresh");
+        $('#rota_time').val('');
+        };
+        if( $('input[name=DutyRadios]:checked').val()==1){
+        $('#rota_time').prop('disabled',false);
+        $('#a').prop('disabled',false);
+        $('#activity').prop('disabled',true);
+
+        $('#activity').selectpicker("refresh");
+        $('#activity').selectpicker('val','');
+        };
+    });
+
+    $('#rota_time').change(function(){
+    $('#activity').selectpicker('val','');
+    var date = $("#rota_time").val().toString()+ ' 00:00:00';
+    date = new Date(Date.parse(date.replace(/-/g, "/"))).getTime();
+    var duty_date_0 =  parseInt(date)/1000;
+    var duty_date_24 = duty_date_0 + 24*60*60;
+    var duty_date_0_format = moment.unix(duty_date_0).format('YYYY-MM-DD HH:mm');
+    var duty_date_24_format = moment.unix(duty_date_24).format('YYYY-MM-DD HH:mm');
+    if($('#rota_time').val()){
+    var url = '{{ CMDBAPI_URL }}cmdb/rotaenter/?fotmat=json&duty_date_0=' + duty_date_0_format +'&duty_date_24=' + duty_date_24_format;
+    $('#rotatable').bootstrapTable('refresh' , {url: url,});
+    }
+    });
+    $('#activity').change(function(){
+    $('#rota_time').val('')
+    if ($('#activity').val()){
+    var url = '{{ CMDBAPI_URL }}cmdb/rotaenter/?fotmat=json&activity='+$('#activity').val();
+    $('#rotatable').bootstrapTable('refresh' , {url: url,});
+    }
+    });
+
+    $('#a').click(function(){
+        $('#activity').selectpicker('val','');
+        $('#rota_time').val(currentdate());
+        var date = $("#rota_time").val().toString()+ ' 00:00:00';
+        date = new Date(Date.parse(date.replace(/-/g, "/"))).getTime();
+        var duty_date_0 =  parseInt(date)/1000;
+        var duty_date_24 = duty_date_0 + 24*60*60;
+        var duty_date_0_format = moment.unix(duty_date_0).format('YYYY-MM-DD HH:mm');
+        var duty_date_24_format = moment.unix(duty_date_24).format('YYYY-MM-DD HH:mm');
+        if($('#rota_time').val()) {
+        var url = '{{ CMDBAPI_URL }}cmdb/rotaenter/?fotmat=json&duty_date_0=' + duty_date_0_format + '&duty_date_24=' + duty_date_24_format;
+        $('#rotatable').bootstrapTable('refresh', {url: url,});
+        }
+        })
+
+
+
+    $('#urlbtn').click(function(){
+            var urltrim = $('#url').val().trim()
+            urltrim=urltrim.replace('#','?').split('?')[0];
+            var judge=urltrim.indexOf('http://');
+            if (judge!=-1)
+            {
+                urltrim=urltrim.substring(7,urltrim.length);
+            }
+            if(urltrim!='') {
+
+                var urlarr = urltrim.split('/');
+
+                var path='';
+                for (var j=1;j<urlarr.length;j++){
+                    path=path + '/'+urlarr[j]
+                }
+                if (urlarr[urlarr.length-1]!=''){
+                    path=path +'/';
+                }
+
+                if(path=='/'){
+                   var url = '{{ CMDBAPI_URL }}cmdb/url/?format=json&hdr='+ urlarr[0] ;
+                    $('#urltablenew').bootstrapTable('showColumn', 'hdr');
+                    $('#urltablenew').bootstrapTable('hideColumn', 'path_beg');
+                    $('#urltablenew').bootstrapTable('hideColumn', 'id');
+                    $('#urltablenew').bootstrapTable('refresh', {url: url,});
+                    $('#urltable').show();
+                }
+                else {
+                    $('#urltablenew').bootstrapTable('showColumn', 'hdr');
+                    $('#urltablenew').bootstrapTable('showColumn', 'path_beg');
+                    $('#urltablenew').bootstrapTable('hideColumn', 'id');
+                    var url = '{{ CMDBAPI_URL }}cmdb/url/?format=json&hdr=' + urlarr[0] + '&path_beg=' + path;
+                    $('#urltablenew').bootstrapTable('refresh', {url: url,});
+
+                    $('#urltable').show();
+                }
+
+            }
+    });
+
+{#     $('#site_id').change(function() {#}
+{#     var site_id = $('#site_id').val();#}
+{#         if (site_id != "") {#}
+{##}
+{#             var api_url = '{{ CMDBAPI_URL }}cmdb/app/?format=json&page_size=1000';#}
+{#             if (site_id != "") {#}
+{#                 api_url = api_url + '&site_id=' + site_id;#}
+{#             }#}
+{#             $('#urltablenew').bootstrapTable('hideColumn', 'hdr');#}
+{#             $('#urltablenew').bootstrapTable('hideColumn', 'path_beg');#}
+{#             $('#urltablenew').bootstrapTable('refresh', {#}
+{#                         url: api_url#}
+{#             });#}
+{#             $('#urltable').show();#}
+{##}
+{##}
+{#         $.ajax({#}
+{#             url: api_url,#}
+{#             dataType: 'json',#}
+{#             type: 'GET',#}
+{#             headers: {'Authorization': 'Token {{ API_TOKEN }}'},#}
+{#             success: function (json) {#}
+{#                 var data = eval(json);#}
+{#                 $("#app_id").find("option").remove();#}
+{#                 $('#app_id').append($('<option>').text('--请选择Pool--').attr('value', ''));#}
+{#                 if (data.count == 0) {#}
+{#                     $('#app_id').append($('<option>').text('未搜索到所属Pool').attr('value', '0'));#}
+{#                 } else {#}
+{#                     var rs = data.results;#}
+{#                     $.each(rs, function (key, val) {#}
+{#                         $('#app_id').append($('<option>').text(val.site_name + '/' + val.name).attr('value', val.id));#}
+{#                     });#}
+{#                 }#}
+{#                 $("#app_id").selectpicker('refresh');#}
+{#             }#}
+{#         });#}
+{#     }else{#}
+{#             $("#app_id").find("option").remove();#}
+{#             $('#app_id').append($('<option>').text('--请选择Pool--').attr('value', ''));#}
+{#             {%  for item in applist %}#}
+{#                 $('#app_id').append($('<option>').text('{{ item.site.name }}/{{ item.name }}').attr('value', {{ item.id }}));#}
+{#             {% endfor %}#}
+{#             $("#app_id").selectpicker('refresh');#}
+{#         }#}
+{#    });#}
+
+    $('#app_id').change(function(){
+        var app_id=$('#app_id').val();
+        if (app_id !='' ){
+            var url='{{ CMDBAPI_URL }}cmdb/app/?format=json&id=' + app_id;
+            $('#urltablenew').bootstrapTable('hideColumn', 'hdr');
+            $('#urltablenew').bootstrapTable('hideColumn', 'path_beg');
+            $('#urltablenew').bootstrapTable('hideColumn', 'id');
+            $('#urltablenew').bootstrapTable('refresh' , {url: url});
+
+            $('#urltable').show();
+         }
+{#        else{#}
+{##}
+{#            if ($('#site_id').val()){#}
+{#                var url='{{ CMDBAPI_URL }}cmdb/app/?format=json';#}
+{#                url=url+'&site_id='+$('#site_id').val();#}
+{#                $('#urltablenew').bootstrapTable('hideColumn', 'hdr');#}
+{#                $('#urltablenew').bootstrapTable('hideColumn', 'path_beg');#}
+{#                $('#urltablenew').bootstrapTable('refresh' , {url: url});#}
+{##}
+{#                $('#urltable').show();#}
+{#            }#}
+{#        }#}
+
+
+    });
+
+      function currentdate(){
+      var date = new Date();
+      var month = date.getMonth()+1;
+      var strdate = date.getDate();
+      if(month>=1&&month<=9){
+          month = "0" + month;
+      };
+      if(strdate>=1&&strdate<=9){
+          strdate = "0" + strdate;
+      };
+      var currentdate = date.getFullYear()+"-"+ month +"-"+ strdate ;
+      return currentdate
+    };
+
+    var time=currentdate();
+    var date = time.toString()+ ' 00:00:00';
+    date = new Date(Date.parse(date.replace(/-/g, "/"))).getTime();
+    var duty_date_0 =  parseInt(date)/1000;
+    var duty_date_24 = duty_date_0 + 24*60*60;
+    var duty_date_0_format = moment.unix(duty_date_0).format('YYYY-MM-DD HH:mm');
+    var duty_date_24_format = moment.unix(duty_date_24).format('YYYY-MM-DD HH:mm');
+
+    $('#rotatable').bootstrapTable({
+        url:  '{{ CMDBAPI_URL }}cmdb/rotaenter/?fotmat=json&duty_date_0=' + duty_date_0_format +'&duty_date_24=' + duty_date_24_format,
+        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+        columns: [
+             {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'activity_name',
+                title: '值班活动',
+                align: 'center'
+            },
+            {
+                field: 'duty_date_start',
+                title: '值班时间',
+                formatter: getExpire_date,
+                align: 'center'
+            },
+            {
+                field: 'duty_domain_name',
+                title: '值班Domain',
+                align: 'center'
+            },
+            {
+                field: 'duty_man',
+                title: '值班人员',
+                align: 'center',
+                formatter: getnameform
+            },
+            {
+                field: 'duty_way_name',
+                title: '值班方式',
+                align: 'center'
+            },
+            {
+                field: 'duty_backup',
+                title: 'Backup',
+                align: 'center',
+                formatter: getnameform
+            },
+            {
+                field: 'comment',
+                title: '备注',
+                align: 'center',
+            },
+
+        ],
+        responseHandler: function (res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset / p.limit + 1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [10, 50, 100],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false,
+{#        sortName:'duty_date_start',#}
+{#        sortStatus:true#}
+        showExport:true,
+    });
+
+     function getExpire_date(value, row, index) {
+        var str = value.replace('T',' ');
+        var str_end = row.duty_date_end.replace('T',' ');
+        return str.substring(0,str.length-3)+' ~ '+str_end.substring(0,str.length-3);
+
+    };
+    function getnameform(value, row, index){
+        var str=[];
+        var strname=[];
+         $.each(value,function(key,val){
+{#            var display=val.display_name;#}
+{#            display=display.split('_');#}
+{#            display= display[display.length-1].split(')')#}
+{#            strname.push(display[0]);#}
+            strname.push(val.username_ch);
+             str.push(val.username_ch+':'+val.telephone);
+        });
+        str.join(',');
+        strname.join(',');
+        return '<a title="'+str+'" > '+strname+' </a>';
+
+    };
+
+        $('#urltablenew').bootstrapTable({
+        url:  '',
+        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'hdr',
+                title: '域名',
+                align: 'center'
+            },
+            {
+                field: 'path_beg',
+                title: '路径',
+                align: 'center'
+            },
+            {
+                field: 'id',
+                title: 'Pool_id',
+                align: 'center'
+            },
+            {
+                field: 'site_name',
+                title: 'Site',
+                align: 'center'
+            },
+            {
+                field: 'name',
+                title: 'Pool',
+                align: 'center'
+            },
+            {
+                field: 'domain_name',
+                title: 'Domain',
+                align: 'center'
+            },
+            {
+                field: 'domain_email',
+                title: 'Domain邮箱组',
+                align: 'center'
+            },
+            {
+                field: 'DL',
+                title: 'DomainLeader',
+                align: 'center',
+                formatter: getdl,
+            },
+            {
+                field: 'Backup_DL',
+                title: 'BackupLeader',
+                align: 'center',
+                formatter: getba,
+            },
+            {
+                field: 'department_name',
+                title: '部门',
+                align: 'center'
+            },
+            {
+                field: 'department_leader',
+                title: '部门Leader',
+                align: 'center',
+                formatter: getle,
+            },
+            {
+                field: 'sre',
+                title: 'Sre',
+                align: 'center',
+                formatter: getsre,
+            },
+            {
+                field: 'sre_backup',
+                title: 'BackupSre',
+                align: 'center',
+                formatter: getbasre,
+            },
+
+        ],
+        responseHandler: function (res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset / p.limit + 1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [10, 50, 100],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false
+    });
+
+    function getdl(value, row, index){
+        return value+ '('+row.DL_tel+')';
+    };
+    function getba(value, row, index){
+        return value+ '('+row.Backup_DL_tel+')';
+    };
+     function getle(value, row, index){
+        return value+ '('+row.department_leader_tel+')';
+    };
+    function getsre(value, row, index){
+        return value+ '('+row.sre_no+')';
+    };
+     function getbasre(value, row, index){
+        return value+ '('+row.sre_backup_no+')';
+    };
+
+
+
+{#    $('div.search>input[type="text"]').attr('placeholder', '值班活动、Domain、人员查询').width(200);#}
+    $('div.search:last>input[type="text"]').attr('placeholder', '值班活动、Domain、人员查询').width(200);
+    });
+</script>
+ {% endblock %}

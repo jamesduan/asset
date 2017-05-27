@@ -1,0 +1,456 @@
+{% extends "common/base.html" %}
+{% block title %}防CC规则配置管理{% endblock %}
+{% block content %}
+    <link href="{{ STATIC_URL }}libs/bootstrap-combobox-v1.1.6/css/bootstrap-combobox.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-multiselect/css/bootstrap-multiselect.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" />
+    <link href="{{ STATIC_URL }}libs/dinggo/css/dinggo-loading.css" rel="stylesheet"/>
+
+    <script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-combobox-v1.1.6/js/bootstrap-combobox.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery/spin.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery/jquery.form.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery/jquery.validate.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-multiselect/js/bootstrap-multiselect.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/dinggo/js/dinggo-loading.js"></script>
+
+    <style>
+
+        .required:-moz-placeholder {
+            color: #ff0000!important;
+            opacity: 0.5;
+        }
+        .required::-moz-placeholder {
+            color: #ff0000!important;
+            opacity: 0.5;
+        }
+        .required ::-webkit-input-placeholder { color: #ff0000!important; opacity: 0.5;}
+        .required :-ms-input-placeholder { color: #ff0000!important; opacity: 0.5;}
+
+        .query{
+            margin-bottom: 5px;
+        }
+        .label-title{color: #286090}
+        .alert-tip{
+            width:500px;
+            left:50%;
+            margin-left:-250px;
+            position: fixed;
+            top:10%;
+            z-index: 99999;
+        }
+    </style>
+
+    <div class="inner-h1">
+        <h1>防CC规则配置管理 <a href="http://oms.yihaodian.com.cn/manual/ledao/security_CC.html#id4" target="_blank">使用文档</a></h1>
+    </div>
+    <div id="alert"></div>
+    <div id="loading"></div>
+    <div id="toolbar">
+        <div class="form-inline" role="form">
+            <button id="add" class="btn btn-green">
+                <i class="glyphicon glyphicon-plus"></i> 新增
+            </button>
+            <select name="params_enable" id="params_enable" class="form-control control_api_url selectpicker">
+                <option value="">启用状态</option>
+                <option value="0">启用</option>
+                <option value="1">关闭</option>
+            </select>
+        </div>
+    </div>
+    <table id="reg"></table>
+
+    <!-- 修改信息 -->
+<div class="modal fade" id="edit-modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+  <div class="modal-dialog" role="document" style="width:60%;">
+    <div class="modal-content">
+      <div class="modal-header">
+{#        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>#}
+        <h4 class="modal-title"><label class="control-label" id="edit-modal-title">配置规则</label></h4>
+      </div>
+      <div class="modal-body">
+        <form id="update-form">
+          <div class="form-border form">
+              <div class="form-group">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <input type="hidden" class="form-control" id="_id" name="id"/>
+                        <input type="text" id='_query' class="form-control required" name="query" placeholder="规则"/>
+                    </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <div class="row">
+                    <div class="col-lg-3">
+                        <select id="_interval_value" name="interval_value" class="form-control" >
+                            <option value="">单位</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-3">
+                        <input type="text" id='_count' class="form-control required" name="count" placeholder="阀值"/>
+                    </div>
+                    <div class="col-lg-3">
+                        <select id="_is_influence" name="is_influence" class="form-control" >
+                            <option value="">影响下单</option>
+                        </select>
+                    </div>
+                    <div class="col-lg-3">
+                        <select id="_enable" name="enable" class="form-control" >
+                            <option value="">是否启用</option>
+                        </select>
+                    </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <input type="text" id='_remark' class="form-control" name="remark" placeholder="备注"/>
+                    </div>
+                </div>
+              </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="update-submit" class="btn btn-primary"> 保存 </button>
+        <button type="button" id="test_query" class="btn btn-warning"> 趋势图 </button>
+        <button type="button" id="close-submit" class="btn btn-default" data-dismiss="modal"> 关闭  </button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- 修改信息 -->
+
+    <!-- js-->
+    <script>
+        $(function(){
+//*********置顶
+            var edit_row;
+            window.operateEvents = {
+                'click .edit': function (e, value, row, index) {
+                    edit_row = row;
+                    $("#_id").val(row['id']);
+                    $("#edit-modal").modal({ show:true });
+
+                    var comboxs_default = {};
+                    $.each(row, function(i, n){
+                        if($.inArray(i, ['is_influence', 'interval_value', 'enable'])>-1) comboxs_default[i] = n;
+                        else $('#_'+i).val(n);
+                    });
+                    initAssembly(comboxs_default);
+                },
+                'click .copy': function (e, value, row, index) {
+                    $("#edit-modal").modal({ show:true });
+
+                    var comboxs_default = {};
+                    $.each(row, function(i, n){
+                        if($.inArray(i, ['is_influence', 'interval_value', 'enable'])>-1) comboxs_default[i] = n;
+                        else if(i != 'id') $('#_'+i).val(n);
+                    });
+                    initAssembly(comboxs_default);
+                },
+                'click .block': function (e, value, row, index) {
+                    var my_url = 'http://oms.yihaodian.com.cn/ipblock/?action=ipblock&method=history&content=防CC规则ID<'+row['id']+'>';
+                    window.open(encodeURI(my_url));
+                },
+                'click .accesslog': function (e, value, row, index) {
+                    var my_url = "http://kibana.oms.yihaodian.com.cn/app/kibana#/discover?_g=(refreshInterval:(display:Off,pause:!f,value:0),time:(from:now-15m,mode:quick,to:now))&_a=(columns:!(_source),index:'accesslog-*',interval:auto,query:(query_string:(analyze_wildcard:!t,query:'"+encodeURIComponent("type:haproxy AND "+row['query'])+"')),sort:!('@timestamp',desc))";
+                    window.open(my_url);
+                },
+                'click .logline': function (e, value, row, index) {
+                    var query = row['query'];
+                    if(query) {
+                        query = "type:haproxy AND "+query;
+                        var my_url = 'http://oms.yihaodian.com.cn/log/accessLogLine.action?query='+query;
+                        window.open(encodeURI(my_url));
+                    }
+                }
+            }
+
+            var is_influence_map = {
+                0: '不影响',
+                1: '影响'
+            };
+            var enable_map = {
+                0: '启用',
+                1: '关闭'
+            };
+            var interval_value_map = {
+                60: '1分钟',
+                3600: '1小时'
+            };
+
+            var reg_columns = [
+                {
+                    field: 'id',
+                    title: 'ID'
+                }, {
+                    field: 'query',
+                    title: '规则'
+                }, {
+                    field: 'interval_value',
+                    title: '单位',
+                    width: 60,
+                    formatter:mapFormatter('interval_value')
+                }, {
+                    field: 'count',
+                    title: '阀值',
+                    width: 50
+                }, {
+                    field: 'is_influence',
+                    title: '影响下单',
+                    width: 50,
+                    formatter:mapFormatter('is_influence')
+                }, {
+                    field: 'enable',
+                    title: '是否启用',
+                    width: 50,
+                    formatter:mapFormatter('enable')
+                }, {
+                    field: 'updater',
+                    title: '更新人',
+                    width: 100
+                }, {
+                    field: 'update_time',
+                    title: '更新时间',
+                    width: 170
+                }, {
+                    field: 'remark',
+                    title: '备注'
+                }, {
+                    field: 'operate_field',
+                    title: '操作',
+                    align: 'center',
+                    width: 320,
+                    formatter: actionFormatter,
+                    events: operateEvents
+                }
+            ];
+
+            $("#test_query").click(function(){
+                var query = $("#_query").val();
+                if(query) {
+                    query = "type:haproxy AND "+query;
+                    var my_url = 'http://oms.yihaodian.com.cn/log/accessLogLine.action?query='+query;
+                    window.open(encodeURI(my_url));
+                }
+            });
+
+            $("#add").click(function(){
+                $("#_id").val("");
+                $("#_query").val("");
+                $("#_interval_value").val("");
+                $("#_count").val("");
+                $("#_is_influence").val("");
+                $("#_enable").val("");
+                $("#_remark").val("");
+
+                initAssembly();
+                $("#edit-modal").modal({ show:true });
+            });
+
+            $("#close-submit").click(function(){
+                $("#_query").empty();
+            });
+
+            $("#update-submit").click(function(){
+                var form = $("#update-form").validate({
+                    submitHandler: function(form) {
+                        var update_id = $("#_id").val();
+                        var type = 'post';
+                        var url = '{{ CMDBAPI_URL }}logplatform/reg/';
+                        if(update_id){
+                            type = 'patch';
+                            url += update_id+'/';
+
+                            var changed = false;
+                            $.each(edit_row, function(i, n){
+                                if($.inArray(i, ['query', 'count', 'remark', 'is_influence', 'interval_value', 'enable'])>-1 && $('#_'+i).val() != n) {
+                                    changed = true;
+                                }
+                            });
+                            if(!changed) {
+                                $("#edit-modal").modal('hide');
+                                $("#_id").val("");
+                                $("#_query").val("");
+                                $("#_interval_value").val("");
+                                $("#_count").val("");
+                                $("#_is_influence").val("");
+                                $("#_enable").val("");
+                                $("#_remark").val("");
+                                return;
+                            }
+                        }
+                        $.ajax({
+                            url: url,
+                            type: type,
+                            data: getFormParams(),
+                            headers: {'Authorization':'Token {{ API_TOKEN }}'},
+                            success: function(data){
+                                if(data){
+                                    $("#_id").val(data['id']);
+                                }
+                                alertTips('保存成功', 2500, 'success');
+                                $("#edit-modal").modal('hide');
+                                $("#_id").val("");
+                                $("#_query").val("");
+                                $("#_interval_value").val("");
+                                $("#_count").val("");
+                                $("#_is_influence").val("");
+                                $("#_enable").val("");
+                                $("#_remark").val("");
+                                $('#reg').bootstrapTable('refresh', {
+                                    silent: true
+                                });
+                            },
+                            error: function(XMLHttpRequest, textStatus, errorThrown){
+                                alert(XMLHttpRequest.responseText);
+                            }
+                        });
+                    }
+                });
+                $("#update-form").submit();
+            });
+
+            initAssembly();
+
+            $('#reg').bootstrapTable({
+                url: '{{ CMDBAPI_URL }}logplatform/reg/',
+                ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                columns: reg_columns,
+                responseHandler: function (res) {
+                    var result = {};
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        //group_name: 'YCC_ADMIN',
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search,
+                        format: 'json'
+                    };
+                },
+                pagination: true,
+                pageSize: 50,
+                pageList: [10, 20, 100],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: true,
+                showColumns: true,
+                toolbar: "#toolbar",
+                cache: false
+            });
+
+//*********函数
+            function mapFormatter(key) {
+                return function formatter(value, row, index){
+                    var tmp = eval(key+"_map["+value+"]");
+                    if((key == 'enable')&&(tmp != undefined)){
+                        var font_color = (value == 0) ? 'green' : 'gray';
+                        return '<span style="color:'+font_color+';">'+tmp+'</span>';
+                    }
+                    return (tmp == undefined) ? '' : tmp;
+                }
+            }
+
+            function actionFormatter(value, row, index) {
+                return '<button class="btn btn-sm btn-green edit">编辑</button> <button class="btn btn-sm btn-green copy">复制</button> <button class="btn btn-sm btn-green block">拦截IP</button> <button class="btn btn-sm btn-green accesslog">访问日志</button> <button class="btn btn-sm btn-green logline">趋势图</button>';
+            }
+
+            function initComb(map){
+                var my_list = [];
+                for(var i in map['list']){
+                    my_list.push({text:map['list'][i], value:i});
+                }
+                var cfg = {
+		    		renderTo: map['render'],
+		    		optionList: my_list,
+		    		placeholder: map['placeholder']
+		    	};
+                if(map['defaultValue']) cfg.defaultValue = map['defaultValue'];
+                initCombobox(cfg);
+
+            }
+
+            function initAssembly(default_values) {
+                if(default_values == undefined) default_values = {};
+
+                c = {
+                    list: interval_value_map,
+                    render: '_interval_value',
+                    placeholder: '单位'
+                };
+                if(default_values.hasOwnProperty('interval_value')) c['defaultValue'] = default_values['interval_value'].toString();
+                initComb(c);
+
+                c = {
+                    list: is_influence_map,
+                    render: '_is_influence',
+                    placeholder: '影响下单'
+                };
+                if(default_values.hasOwnProperty('is_influence')) c['defaultValue'] = default_values['is_influence'].toString();
+                initComb(c);
+
+                c = {
+                    list: enable_map,
+                    render: '_enable',
+                    placeholder: '是否启用'
+                };
+                if(default_values.hasOwnProperty('enable')) c['defaultValue'] = default_values['enable'].toString();
+                initComb(c);
+            }
+
+            function getFormParams(){
+                var l = {};
+                for(var i in reg_columns){
+                    var tmp = reg_columns[i];
+                    var field = tmp['field'];
+                    if((field != 'id')){
+                        var v;
+                        v = $("#_"+field).val();
+                        if(v || field == 'remark'){
+                            l[field] = v;
+                        }
+                    }
+                }
+                return l;
+            }
+
+            $(".control_api_url").change(function() {
+                var params_enable = $("#params_enable option:selected").val();
+                var api_url_base = '{{ CMDBAPI_URL }}logplatform/reg/?';
+                var params = ['format=json'];
+                if (params_enable !="") {
+                    params.push('enable=' + params_enable)
+                }
+                var api_url = api_url_base + params.join('&')
+                $('#reg').bootstrapTable('refresh', {
+                    url: api_url
+                });
+            });
+
+            function alertTips(context, sec, type){
+                var c = 'alert-warning';
+                if(type == 'success') c = 'alert-success';
+                if(type == 'danger') c = 'alert-danger';
+                if(type == 'info') c = 'alert-info';
+
+                $('<div class="alert '+c+' alert-tip"><strong>'+type+'</strong>'+context+'</div>').
+                        appendTo("body").
+                        fadeIn(sec).
+                        fadeOut(sec,function(){
+                            this.remove();
+                        })
+            }
+        })
+    </script>
+{% endblock %}

@@ -1,0 +1,53 @@
+/**
+ * Global.css v1.0 | yinwei@yihaodian.com
+ * http://oms.yihaodian.com.cn
+ */
+
+/* =Reset
+----------------------------------------*/
+body, div, dl, dt, dd, ul, ol, li,
+h1, h2, h3, h4, h5, h6, pre, code,
+form, fieldset, legend, input, button,
+textarea, p, blockquote, th, td { margin:0; padding:0;}
+img { border:0;}
+:focus { outline:0;}
+h1, h2, h3, h4, h5, h6 { font-size:100%; font-weight:normal;}
+input, button, textarea,
+select, optgroup, option { font-family:inherit; font-size:inherit; font-style:inherit; font-weight:inherit;}
+ol, ul { list-style:none;}
+table { border-collapse:collapse; border-spacing:0;}/* still need 'cellspacing="0"' */
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure,
+footer, header, hgroup, menu, nav, section { display:block;}
+/* Clear float */
+.clearfix:after { content:'.'; display:block; height:0; clear:both; visibility:hidden; font-size:0;}
+.clearfix { min-height:1%;}
+/* =Structure
+----------------------------------------*/
+body { color:#333; font:14px/1.5 'Microsoft yahei';}
+a, a:hover { color:#1369ae; text-decoration:none;}
+a:hover { text-decoration:underline;}
+/* Grid */
+.grid .hd { height:18px; padding:5px 10px; color:#fff; line-height:17px; background:#1369ae; border-radius:3px 3px 0 0; -moz-box-sizing:content-box; box-sizing:content-box;}
+.grid .bd { padding:5px 10px;}
+/* Table */
+.table th { text-align:left; font-weight:normal; padding:5px; background:#eee;}
+.table td { padding:5px;}
+/* Commons Grid */
+.grid-title { margin:10px 0; font-size:14px;}
+.commons-grid { width:100%; border:1px solid #eee;}
+.commons-grid th, .commons-grid td { padding:5px; border:1px solid #eee; word-break:break-all;}
+.commons-grid tr:nth-of-type(even) td { background:#fafafa;}
+.commons-grid th { text-align:left; background:#fafafa;}
+/* tabs */
+.tabs nav { background:#1369ae; border-top:1px solid #1369ae;}
+.tabs nav li { float:left; height:17px; padding:5px 10px; color:#fff; line-height:16px; cursor:pointer; border-radius:3px 3px 0 0;}
+.tabs nav li:hover { background:#45a1eb;}
+.tabs nav .current, .tabs nav .current:hover { color:#333; background:#fff;}
+.tabs .bd { display:none;}
+.tabs .show { display:block;}
+/* form modules */
+.input-text { height:19px; padding:2px; border:1px solid #ccc; font-size:14px; line-height:19px; vertical-align:middle;}
+.textarea { padding:2px; border:1px solid #ccc; font-size:14px; line-height:19px; resize:none;}
+.btn { padding:2px 10px 3px 10px; border:1px solid #093050; color:#fff; font-size:12px; line-height:16px; border-radius:3px; vertical-align:middle; cursor:pointer; background:#1369ae; background-image:-webkit-linear-gradient(top, #2591e8, #1574c0 3%, #115d9b); background-image:-moz-linear-gradient(top, #2591e8, #1574c0 3%, #115d9b); background-image:-o-linear-gradient(top, #2591e8, #1574c0 3%, #115d9b); background-image:-ms-linear-gradient(top, #2591e8, #1574c0 3%, #115d9b);}
+.btn:hover { background:#45a1eb; background-image:-webkit-linear-gradient(top, #45a1eb, #1887e0 3%, #1471bc); background-image:-moz-linear-gradient(top, #45a1eb, #1887e0 3%, #1471bc); background-image:-o-linear-gradient(top, #45a1eb, #1887e0 3%, #1471bc); background-image:-ms-linear-gradient(top, #45a1eb, #1887e0 3%, #1471bc);}

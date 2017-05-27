@@ -1,0 +1,9 @@
+乐道app整体架构:
+    WebView(由1号店App设计团队提供@刘伟) + Python + Django + Mui(前端 ios&android通用)
+
+部署:
+    保持现有Django服务部署一致性即可
+
+后期考虑改造(参考):
+    舍弃第三方团队提供的webView 考虑到后期可能会使用ios&android原生层的东西
+    可启用【MUI + (5+Runtime浏览器引擎,支持40W+的原生api)】【官方文档】 + 数据API(python-django)

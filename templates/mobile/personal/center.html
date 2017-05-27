@@ -1,0 +1,92 @@
+{% extends "mobile/base/base.html" %}
+
+{% block title %}我的{% endblock %}
+
+{% block content %}
+    <style>
+        .mui-table-view:first-child {
+            margin-top: 15px;
+        }
+        .mui-table-view:last-child {
+            margin-bottom: 30px;
+        }
+    </style>
+
+    <ul class="mui-table-view" style="margin-top: 25px;">
+        <li class="mui-table-view-cell mui-media">
+            <a href="javascript:;">
+                <img class="mui-media-object mui-pull-left" src="{{ STATIC_URL }}mobile/img/person.png">
+                <div class="mui-media-body" style="text-align: left">
+                    {{ user.username_ch }}
+                    <p class='mui-ellipsis'>账号：{{ user.username }}</p>
+                </div>
+            </a>
+        </li>
+
+        <li class="mui-table-view-cell">
+            <ul class="mui-list-inline">
+                <li class="mui-pull-left">部门</li>
+                <li class="mui-pull-right"><p>{% if dept %} {{ dept.deptname }} {% else %} {% endif %}</p></li>
+            </ul>
+        </li>
+        <li class="mui-table-view-cell">
+            <ul class="mui-list-inline">
+                <li class="mui-pull-left">Head</li>
+                <li class="mui-pull-right"><p>{% if dept %} {{ dept.deptleaderaccount }}  {% else %} {% endif %}</p></li>
+            </ul>
+        </li>
+        {% if domain_list %}
+            {% if domain %}
+                <li class="mui-table-view-cell">
+                    <ul class="mui-list-inline">
+                        <li class="mui-pull-left">Domain</li>
+                        <li class="mui-pull-right"><p>{{ domain.domainname }}</p></li>
+                    </ul>
+                </li>
+                <li class="mui-table-view-cell">
+                    <ul class="mui-list-inline">
+                        <li class="mui-pull-left">DL</li>
+                        <li class="mui-pull-right"><p>{{ domain.domainleaderaccount }}</p></li>
+                    </ul>
+                </li>
+            {% else %}
+                <li class="mui-table-view-cell mui-collapse"><a class="mui-navigate-right" href="#">所属Domain</a>
+                    <ul class="mui-table-view mui-table-view-chevron">
+                        {% for dm in domain_list %}
+                            <li class="mui-table-view-cell">
+                                <ul class="mui-list-inline">
+                                    <li class="mui-pull-left">{{ dm.domainname }}</li>
+                                    <li class="mui-pull-right"><p>DL： {{ dm.domainleaderaccount }}</p></li>
+                                </ul>
+                            </li>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% endif %}
+        {% else %}
+            <div><p>用户不存在</p></div>
+        {% endif %}
+    </ul>
+
+    <ul class="mui-table-view mui-table-view-chevron" style="margin-top: 25px;">
+        <li class="mui-table-view-cell">
+            <a href="{{ ROOT_URL }}personal/info/" class="mui-navigate-right"><span class="mui-icon mui-icon-info"></span>关于</a>
+        </li>
+    </ul>
+    <ul class="mui-table-view">
+        <li class="mui-table-view-cell">
+            <a style="text-align: center;color: #FF3B30;" href="{{ ROOT_URL }}loginout/">
+                退出乐道
+            </a>
+        </li>
+    </ul>
+<script>
+    //指定"我的"菜单高亮
+    mui(".mui-bar-tab a").each(function () {
+        this.classList.remove();
+    });
+    document.getElementById('main_menu_personal').classList.add('mui-active');
+</script>
+{% endblock %}
+

@@ -1,0 +1,47 @@
+@charset "utf-8";
+
+a:focus,
+a:hover{text-decoration: none;outline: none 0;}
+
+/*
+ *@Description: 乐道-事故中心-影响范围
+ *@Author: shiwen2
+ *@Update: shiwen2(2016-11-25)
+*/
+/*整体内容*/
+.influence_region{max-width: 1800px;padding-top: 10px;text-align: left;}
+@media (max-width: 1000px) {
+    .influence_region{text-align: center;}
+}
+
+/*标题*/
+.influence_tit .tit_main{display: inline-block;font-size: 20px;color: #333;margin-bottom: 10px;}
+.influence_tit .tit_note{display: inline-block;margin-left: 26px;color: #999;font-size: 14px;}
+.influence_tit .tit_note span{color: #ff5d5d;}
+
+/* 部门列表-S */
+.section_list{margin-top: 10px;}
+.section_list li.item{width: 284px;margin:0px 20px 10px 0px;text-align: left;}
+@media (max-width: 750px) {
+  .section_list li.item{margin: 0 auto;}
+}
+.section_list li.item .item_tit{margin: 0 0 14px;color: #333;text-align: left;}
+.section_list .item_tit span{color: #999;}
+
+.has_tooltip{position: relative;float: left;width: 21px;height: 21px;}
+.incident{position: absolute;z-index: 1;display: inline-block;width: 20px;height: 20px;background: #4ca964;border-right: 1px solid #fff;border-bottom: 1px solid #fff;cursor: pointer;}
+.red_tooltip .incident{background: #ff5d5d;}
+/*hover内容-S*/
+.incident_cont{position: absolute;top: 20px;z-index: 2;display: none;width: 306px;border: 1px solid #ebebeb;border-radius: 4px;box-shadow: 0 0 5px 3px #f3f3f3;}
+.incident_cont.laft_show{right: 0;}
+.incident_cont.center_show{right: 50%;margin-left: 153px;}
+.incident_cont li{font-size: 12px;font-family: simsun;line-height: 1.2;}
+.incident_hd{padding: 10px 20px 6px;border-bottom: 1px solid #ddd;background: #f7f7f7;color: #333;}
+
+.incident_detail{padding: 8px 20px 6px 34px;background: #fff;}
+.incident_detail li{list-style: square; color: #4ca964;}
+.red_tooltip .incident_detail li{color: #ff5d5d;}
+/*hover内容-E*/
+/* 部门列表-E */
+
+

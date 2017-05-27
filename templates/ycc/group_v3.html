@@ -1,0 +1,1204 @@
+{% extends "common/common_menu_base.html" %}
+{% block title %}配置组管理{% endblock %}
+{% block content %}
+
+    <link href="{{ STATIC_URL }}libs/bootstrap-select-1.10.0/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.11.0/bootstrap-table.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/jsdifflib/diffview.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-multiselect/css/bootstrap-multiselect.css" rel="stylesheet"/>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.11.0/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.11.0/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-select-1.10.0/dist/js/bootstrap-select.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/difflib.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/diffview.js"></script>
+    <script src="{{ STATIC_URL }}libs/jsdifflib/jsdiff.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-multiselect/js/bootstrap-multiselect.js"></script>
+    <script src="{{ STATIC_URL }}libs/jquery-json/js/jquery.json.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+
+    <style>
+        table.diff {
+            width: 100%;
+        }
+
+        table.diff tbody th {
+            width: 10px;
+        }
+
+        table.diff tbody td {
+            TABLE-LAYOUT: fixed;
+            WORD-BREAK: break-all;
+            width: 48%
+        }
+
+        p {
+            font-size: large;
+            font-weight: bold
+        }
+    </style>
+
+    <div id="alert">
+    </div>
+
+    <!-- main -->
+    <div id="toolbar">
+        <button data-toggle="modal" data-target="#modal_create" class="btn btn-green">
+            <i class="glyphicon glyphicon-plus"></i> 新增
+        </button>
+        <a href="/deploy/yccv2/configinfo/v3/" class="btn btn-green" target="_blank">
+            <i class="glyphicon glyphicon-share-alt"></i>配置文件管理
+        </a>
+    </div>
+
+    <table id="table">
+    </table>
+
+    <!-- create -->
+    <div class="modal fade" id="modal_create" tabindex="-1" role="dialog" aria-labelledby="label_create"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="form_create">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">新增配置组</h4>
+                    </div>
+                    <div class="modal-body">
+                        请联系<a href="mailto:IT_OPS_DEV@yhd.com">平台研发</a>进行相关操作
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- copy -->
+    <div class="modal fade" id="modal_copy" tabindex="-1" role="dialog" aria-labelledby="label_copy"
+         aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog" style="width:70%;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="form_copy">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                                aria-hidden="true">&times;</span></button>
+                        <h4 class="modal-title" id="label_copy">复制配置组文件</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div id="alert_copy" class="alert_container"></div>
+                        <div class="form-group">
+                            <div class="col-sm-5 col-sm-offset-2">
+                                <p class="form-control-static">源</p>
+                            </div>
+                            <div class="col-sm-5">
+                                <p class="form-control-static">目的</p>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="src_group" class="col-sm-2 control-label">配置组</label>
+                            <div class='col-sm-5'>
+                                <select name="src_group" id="src_group" class="form-control selectpicker" disabled>
+                                </select>
+                            </div>
+                            <div class='col-sm-5'>
+                                <select name="dst_group" id="dst_group" class="form-control selectpicker"
+                                        data-live-search="true">
+                                    <option value="">选择目的配置组</option>
+                                    {% for config_group in config_group_queryset %}
+                                        <option value="{{ config_group.group_id }}">{{ config_group.group_id }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="src_version" class="col-sm-2 control-label">版本</label>
+                            <div class='col-sm-5'>
+                                <select name="src_version" id="src_version" class="form-control selectpicker" disabled>
+                                    <option value="0">0(编辑)</option>
+                                </select>
+                            </div>
+                            <div class='col-sm-5'>
+                                <select name="dst_version" id="dst_version" class="form-control selectpicker" disabled>
+                                    <option value="0">0(编辑)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="src_data" class="col-sm-2 control-label">配置</label>
+                            <div class="col-sm-2">
+                                <div class="checkbox">
+                                    <label>
+                                        <input type="checkbox"> 复制部分
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-sm-3">
+                                <select name="src_data" id="src_data" class="form-control multiselect"
+                                        multiple="multiple"
+                                        disabled>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green">复制</button>
+                    </div>
+                </form>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+
+    <!-- download -->
+    <div class="modal fade" id="modal_download" tabindex="-1" role="dialog" aria-labelledby="label_download"
+         aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="form_download">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="downloadLabel">下载配置文件</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div id="alert_download" class="alert_container"></div>
+                        <div class="form-group">
+                            <label for="group" class="col-sm-2 control-label">配置组</label>
+                            <div class='col-sm-10'>
+                                <select name="group" id="group" class="form-control selectpicker">
+                                    <option value="">选择配置组</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="env" class="col-sm-2 control-label">环境</label>
+                            <div class='col-sm-10'>
+                                <select name="env" id="env" class="form-control selectpicker">
+                                    <option value="">选择目的环境</option>
+                                    {% for config_env in config_env_queryset %}
+                                        <option value="{{ config_env.id }}">{{ config_env.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="version" class="col-sm-2 control-label">版本</label>
+                            <div class='col-sm-10'>
+                                <select name="version" id="version" class="form-control selectpicker">
+                                    <option value="">选择版本</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green">下载</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modal_config_group" tabindex="-1" role="dialog"
+         aria-labelledby="label_config_group" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog" style="width:60%">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="form_config_group">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span
+                                aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="label_config_group">配置组</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div id="alert_config_group" class="alert_container"></div>
+                        <table id="table_config_group"></table>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modal_diff" tabindex="-1" role="dialog"
+         aria-labelledby="label_diff" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog" style="width:80%">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span
+                            class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="label_diff"></h4>
+                </div>
+                <div class="modal-body">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-green" data-dismiss="modal" id="button_next">提交</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modal_diff2" tabindex="-1" role="dialog"
+         aria-labelledby="label_diff2" aria-hidden="true" data-backdrop="static">
+        <div class="modal-dialog" style="width:80%">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span
+                            class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="label_diff2"></h4>
+                </div>
+                <div class="modal-body">
+                    <div id="diff_output" style="clear:both;width:100%;">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="toolbar_config_group">
+        <div class="staging">
+            <button type="button" class="btn btn-green" id="button_restart">重启应用</button>
+        </div>
+        <div class="production">
+            <button type="button" class="btn btn-green" id="button_commit">提交审核</button>
+            <div class="btn-group">
+                {% if is_admin %}
+                    <button type="button" class="btn btn-green" id="button_audit">审核</button>
+                {% endif %}
+                <button type="button" class="btn btn-green" id="button_rmvaudit">删除审核</button>
+            </div>
+            {% if is_admin %}
+                <div class="btn-group">
+                    <button type="button" class="btn btn-green" id="button_publish">发布</button>
+                    <button type="button" class="btn btn-green" id="button_rmvpublish">删除发布</button>
+                </div>
+                <button type="button" class="btn btn-danger" id="button_rollback">回滚</button>
+            {% endif %}
+        </div>
+        <div class="remove">
+            <button type="button" class="btn btn-green" id="button_remove">删除</button>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            var button_target = null;
+            <!-- main -->
+            function operateFormatter(value, row, index) {
+                var button_group = $('<div>').attr({
+                    class: 'btn-group',
+                    role: 'group'
+                });
+                button_group.append($('<button>').text('下载').attr({
+                    class: 'btn btn-sm btn-green download',
+                }));
+                button_group.append($('<button>').text('复制').attr({
+                    class: 'btn btn-sm btn-green copy',
+                }));
+                {% if is_admin %}
+                    button_group.append($('<button>').text('删除').attr({
+                        class: 'btn btn-sm btn-danger remove',
+                    }));
+                {% endif %}
+                return button_group[0].outerHTML;
+            }
+
+            function stagingFormatter(value, row, index) {
+                var button_group = $('<div>').attr({
+                    class: 'btn-group',
+                    role: 'group'
+                });
+                button_group.append($('<button>').text('重启应用').attr({class: 'btn btn-sm btn-green staging'}));
+                return button_group[0].outerHTML;
+            }
+
+            function productionFormatter(value, row, index) {
+                var button_group = $('<div>').attr({
+                    class: 'btn-group',
+                    role: 'group'
+                });
+                button_group.append($('<button>').text('提交/删除审核').attr('class', 'btn btn-sm btn-green production'));
+                return button_group[0].outerHTML;
+            }
+
+            window.operateEvents = {
+                'click .copy': function (e, value, row, index) {
+                    bootbox.confirm([
+                        '出于一致性考虑，不允许通过先前的方式任意复制，当前只允许批量的对等复制，例如：',
+                        'GroupA_SH_staging -> GroupB_SH_staging',
+                        'GroupA_JQ_staging -> GroupB_JQ_staging',
+                        'GroupA_SH_production -> GroupB_SH_production',
+                        'GroupA_JQ_production -> GroupB_JQ_production',
+                        '是否继续？如有任何问题，请联系lihaowei'].join('<br>'), function (result) {
+                        if (!result)
+                            return;
+                        $.ajax({
+                            url: '/api/ycc/configinfo/v2/',
+                            async: false,
+                            data: {
+                                group_status__group__id: row.id,
+                                group_status__version: 0,
+                                group_status__status: 0,
+                                env: 7,
+                                page_size: 1000
+                            },
+                            headers: {
+                                Authorization: 'Token {{ API_TOKEN }}'
+                            },
+                            success: function (data, textStatus, jqXHR) {
+                                $('#src_data').empty();
+                                $.each(data.results, function (index, value) {
+                                    $('#src_data').append($('<option>').text(value.data_id).val(value.id));
+                                });
+                                $('#src_data').multiselect('rebuild');
+                                $('#src_data').multiselect($('#modal_copy input[type=checkbox]').prop('checked') ? 'enable' : 'disable');
+                                $('#src_group').empty();
+                                $('#src_group').append($('<option>').val(row.group_id).text(row.group_id));
+                                $('#src_group').selectpicker('refresh');
+                                $('#modal_copy').modal('show');
+                            },
+                            error: function (jqXHR, textStatus, errorThrown) {
+                                console.log(jqXHR.responseText)
+                            }
+                        });
+                    });
+                },
+                'click .download': function (e, value, row, index) {
+                    $.ajax({
+                        url: '/api/ycc/group_v3/',
+                        async: false,
+                        method: 'get',
+                        data: {
+                            group_id: row.group_id,
+                            group_name: 'YCC_ADMIN',
+                            idc__ycc_display: 'True',
+                            format: 'json'
+                        },
+                        headers: {
+                            Authorization: 'Token {{ API_TOKEN }}'
+                        },
+                        success: function (data, textStatus, jqXHR) {
+                            $('#group').children('option:gt(0)').remove();
+                            $.each(data.results, function (index, value) {
+                                $('#group').append($('<option>').val(value.id).text(value.group_id + '_' + value.ycc_code).attr({
+                                    'data-idc': value.idc,
+                                    'data-group_id': value.group_id
+                                }))
+                            })
+                            $('#group').selectpicker('refresh');
+                        },
+                        error: function (jqXHR, textStatus, errorThrown) {
+                            console.log(JSON.stringify(jqXHR.responseText))
+                        }
+                    });
+                    $('#modal_download').modal('show');
+                },
+                'click .remove': function (e, value, row, index) {
+                    button_target = $(e.target);
+                    $('#table_config_group').bootstrapTable('refreshOptions', {
+                        url: '/api/ycc/group_v3/',
+                        queryParams: function (p) {
+                            return {
+                                group_id: row.group_id,
+                                group_name: 'YCC_ADMIN',
+                                idc__ycc_display: 'True',
+                                page_size: p.limit,
+                                page: p.offset / p.limit + 1,
+                                search: p.search,
+                                format: 'json'
+                            };
+                        },
+                    });
+                    $('#table_config_group').bootstrapTable('hideColumn', 'all_status');
+                    $('#table_config_group').bootstrapTable('hideColumn', 'to_be_committed');
+                    $('#toolbar_config_group').children('div').hide();
+                    $('#toolbar_config_group').children('div.remove').show();
+                    $('#modal_config_group').modal('show');
+                }
+            };
+            window.stagingEvents = {
+                'click .staging': function (e, value, row, index) {
+                    if (row.app_status == 1) {
+                        bootbox.alert('该配置组对应的Pool已经处于禁用状态，无法进行任何操作');
+                        return false;
+                    }
+                    button_target = $(e.target);
+                    $('#table_config_group').bootstrapTable('refreshOptions', {
+                        url: '/api/ycc/group_v3/',
+                        queryParams: function (p) {
+                            return {
+                                group_id: row.group_id,
+                                group_name: 'YCC_ADMIN',
+                                idc__ycc_display: 'True',
+                                page_size: p.limit,
+                                page: p.offset / p.limit + 1,
+                                search: p.search,
+                                format: 'json'
+                            };
+                        },
+                    });
+                    $('#table_config_group').bootstrapTable('hideColumn', 'all_status');
+                    $('#table_config_group').bootstrapTable('hideColumn', 'to_be_committed');
+                    $('#toolbar_config_group').children('div').hide();
+                    $('#toolbar_config_group').children('div.staging').show();
+                    $('#modal_config_group').modal('show');
+                }
+            };
+            window.productionEvents = {
+                'click .production': function (e, value, row, index) {
+                    if (row.app_status == 1) {
+                        bootbox.alert('该配置组对应的Pool已经处于禁用状态，无法进行任何操作');
+                        return false;
+                    }
+                    button_target = $(e.target);
+                    $('#table_config_group').bootstrapTable('refreshOptions', {
+                        url: '/api/ycc/group_v3/',
+                        queryParams: function (p) {
+                            return {
+                                group_id: row.group_id,
+                                group_name: 'YCC_ADMIN',
+                                idc__ycc_display: 'True',
+                                page_size: p.limit,
+                                page: p.offset / p.limit + 1,
+                                search: p.search,
+                                format: 'json'
+                            };
+                        },
+                    });
+                    $('#table_config_group').bootstrapTable('showColumn', 'all_status');
+                    $('#table_config_group').bootstrapTable('showColumn', 'to_be_committed');
+                    $('#toolbar_config_group').children('div').hide();
+                    $('#toolbar_config_group').children('div.production').show();
+                    $('#modal_config_group').modal('show');
+                }
+            };
+            <!-- common -->
+            function init_alert(alert_obj, alert_class, alert) {
+                alert_obj.empty();
+                $('<div>').attr({
+                    class: ['alert', alert_class, 'alert-dismissible'].join(' '),
+                    role: 'alert'
+                }).append($('<button>').attr({
+                            type: 'button',
+                            class: 'close',
+                            'data-dismiss': 'alert',
+                            'aria-label': 'Close'
+                        }).append($('<span>').attr('aria-hidden', 'true').html('&times;'))
+                ).append($('<strong>').html(alert)).prependTo(alert_obj);
+            }
+
+            function ajax(url, method, data) {
+                $.ajax({
+                    url: url,
+                    async: false,
+                    method: method,
+                    data: data,
+                    headers: {
+                        Authorization: 'Token {{ API_TOKEN }}'
+                    },
+                    success: function (json) {
+                    },
+                    error: function (json) {
+                        init_alert($('#alert_config_group'), 'alert-danger', JSON.stringify(json.responseText));
+                    }
+                });
+            }
+
+            function statusFormatter(value, row, index) {
+                var status_array = $.map(value, function (i) {
+                    return i.status
+                });
+                var committed = $.inArray(1, status_array) != -1 ? true : false;
+                var approved = $.inArray(2, status_array) != -1 ? true : false;
+                if (committed)
+                    return '待审核';
+                else if (approved)
+                    return '待发布';
+                else
+                    return '待编辑';
+            }
+
+            function staging_button() {
+                var button = $('#toolbar_config_group>div.staging>button');
+                button.prop('disabled', true);
+                $.each($('#table_config_group').bootstrapTable('getSelections'), function (index, value) {
+                    button.prop('disabled', false);
+                    return false;
+                })
+            }
+
+            function production_button() {
+                $('#toolbar_config_group>div.production button').prop('disabled', true);
+                var status = null, identical = true, rollback = true, to_be_committed = true;
+                $.each($('#table_config_group').bootstrapTable('getSelections'), function (index, value) {
+                    var current_status, status_array = $.map(value.all_status, function (i) {
+                        return i.status
+                    });
+                    var committed = $.inArray(1, status_array) != -1 ? true : false;
+                    var approved = $.inArray(2, status_array) != -1 ? true : false;
+                    var published = $.inArray(4, status_array) != -1 ? true : false;
+                    var history = $.inArray(5, status_array) != -1 ? true : false;
+                    if (committed)
+                        current_status = 'committed';
+                    else if (approved)
+                        current_status = 'approved';
+                    else
+                        current_status = 'editing';
+                    if (status == null)
+                        status = current_status;
+                    else if (current_status != status)
+                        identical = false;
+                    rollback = rollback && published && history;
+                    if (!value.to_be_committed)
+                        to_be_committed = false;
+                });
+                if (identical) {
+                    switch (status) {
+                        case 'editing':
+                            if (to_be_committed)
+                                $('#button_commit').prop('disabled', false);
+                            break;
+                        case 'committed':
+                            $('#button_audit').prop('disabled', false);
+                            $('#button_rmvaudit').prop('disabled', false);
+                            break;
+                        case 'approved':
+                            $('#button_publish').prop('disabled', false);
+                            $('#button_rmvpublish').prop('disabled', false);
+                            break;
+                    }
+                }
+                if (rollback)
+                    $('#button_rollback').prop('disabled', false);
+            }
+
+            function diffFormatter(value, row, index) {
+                var desc_obj = {
+                    0: '相同',
+                    1: '不同',
+                    2: '新增',
+                    3: '删除'
+                }, desc = desc_obj[value] || '未知';
+                return $('<a>').attr('class', 'viewcmppro').append(
+                        $('<span>').attr('class', 'glyphicon glyphicon-info-sign').css({
+                            cursor: 'pointer',
+                            color: row.cmpcolor
+                        }).text(desc)
+                )[0].outerHTML;
+            }
+
+            function show_diff(title, status) {
+                $('#label_diff').text(title);
+                $('#modal_diff div.modal-body').empty();
+                $('#modal_diff div.modal-body').append($('<ul>').attr({
+                    'class': 'nav nav-tabs',
+                    'role': 'tablist'
+                }));
+                $('#modal_diff div.modal-body').append($('<div>').attr('class', 'tab-content'));
+                $.each($('#table_config_group').bootstrapTable('getSelections'), function (index, value) {
+                    var li = $('<li>').attr({
+                        'role': 'presentation',
+                    }).append($('<a>').attr({
+                        'href': '#div_' + value.idc,
+                        'aria-controls': 'div_' + value.idc,
+                        'role': 'tab',
+                        'data-toggle': 'tab'
+                    }).text(value.idc_name));
+                    var group = value.id;
+                    $('#modal_diff div.modal-body>ul').append(li);
+                    $('#modal_diff div.modal-body>ul>li:first').addClass('active');
+                    $('#modal_diff div.modal-body>div').append($('<div>').attr({
+                        'role': 'tabpanel',
+                        'class': 'tab-pane',
+                        'id': 'div_' + value.idc,
+                        'data-group': value.id
+                    }).append($('<table>').attr('id', 'table_' + value.idc)));
+                    $('#modal_diff div.modal-body>div>div:first').addClass('active');
+                    $('#table_' + value.idc).bootstrapTable({
+                        url: '/api/ycc/procmp/',
+                        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                        columns: [
+                            {
+                                field: 'data_id',
+                                title: '配置文件',
+                                align: 'center'
+                            },
+                            {
+                                field: 'cmpres',
+                                title: 'Current vs. Published',
+                                align: 'center',
+                                formatter: diffFormatter,
+                                events: diffEvents
+                            },
+                        ],
+                        responseHandler: function (res) {
+                            var result = new Object();
+                            result.rows = res.results;
+                            result.total = res.count;
+                            return result
+                        },
+                        queryParams: function (p) {
+                            return {
+                                page_size: p.limit,
+                                page: p.offset / p.limit + 1,
+                                group: value.id,
+                                curstatus: status,
+                                format: 'json'
+                            };
+                        },
+                        pagination: true,
+                        pageSize: 50,
+                        pageList: [10, 20, 100],
+                        sidePagination: 'server',
+                        showRefresh: false,
+                        search: false,
+                        showColumns: false,
+                        cache: false
+                    });
+                    $('#modal_diff').modal('show');
+                })
+            }
+
+            function update_group_status(id, group, op, new_status) {
+                ajax(
+                        '/api/ycc/status/' + id + '/',
+                        'patch',
+                        {
+                            'group': group,
+                            'op': op,
+                            'status': new_status
+                        }
+                )
+            }
+
+            function get_group_status_id(group, op, status) {
+                var group_status_id = null;
+                $.ajax({
+                    url: '/api/ycc/status/',
+                    async: false,
+                    method: 'get',
+                    data: {
+                        group: group,
+                        op: op,
+                        status: status,
+                        format: 'json'
+                    },
+                    headers: {
+                        Authorization: 'Token {{ API_TOKEN }}'
+                    },
+                    success: function (json) {
+                        group_status_id = json.results[0].id;
+                    },
+                });
+                return group_status_id;
+            }
+
+            function create_group_status(group) {
+                ajax(
+                        '/api/ycc/status/',
+                        'post',
+                        {
+                            'group': group,
+                            'status': 0,
+                            'version': 0,
+                            'pre_version': 0
+                        }
+                )
+            }
+
+            function diffUsingJS(content1, content2, baseTextName, newTextName, div) {
+                content1 = difflib.stringAsLines(content1);
+                content2 = difflib.stringAsLines(content2);
+                if (content1 == '')
+                    content1 = [];
+                if (content2 == '')
+                    content2 = [];
+                var sm = new difflib.SequenceMatcher(content1, content2);
+                var opcodes = sm.get_opcodes();
+                var diffoutputdiv = document.getElementById(div);
+                while (diffoutputdiv.firstChild)
+                    diffoutputdiv.removeChild(diffoutputdiv.firstChild);
+                var contextSize = 1;
+                contextSize = contextSize ? contextSize : null;
+                diffoutputdiv.appendChild(diffview.buildView({
+                    baseTextLines: content1,
+                    newTextLines: content2,
+                    opcodes: opcodes,
+                    baseTextName: baseTextName,
+                    newTextName: newTextName,
+                    contextSize: contextSize,
+                    viewType: 0
+                }));
+            }
+
+            window.diffEvents = {
+                'click .viewcmppro': function (e, value, row, index) {
+                    $('#label_diff2').text('对比:' + row.data_id);
+                    var action = $('#button_next').attr('class').split(' ').pop();
+                    var status_obj = {
+                        'commit': 0,
+                        'audit': 1,
+                        'publish': 2,
+                        'rollback': 5,
+                        'rmvaudit': 1,
+                        'rmvpublish': 2
+                    }
+                    $.ajax({
+                        url: '/api/ycc/prodiffcontent/',
+                        type: 'get',
+                        async: false,
+                        data: {
+                            group: $('#modal_diff div.modal-body>div>div.active').attr('data-group'),
+                            data_id: row.data_id,
+                            cur_group_status: status_obj[action],
+                            cmp_group_status: 4,
+                            format: 'json'
+                        },
+                        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                        success: function (json) {
+                            diffUsingJS(json.cmpcontent, json.curcontent, '已发布', '待发布', 'diff_output');
+                            $('#modal_diff2').modal('show');
+                        },
+                        error: function (json) {
+                            console.log(JSON.stringify(json.responseText));
+                        }
+                    });
+                }
+            };
+            $('#form_copy')
+                    .bootstrapValidator({
+                        fields: {
+                            dst_group: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '目的配置组不能为空'
+                                    }
+                                }
+                            },
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        if ($('#src_group').val() == $('#dst_group').val()) {
+                            init_alert($('#alert_copy'), 'alert-danger', '不允许源配置组和目的配置组相同！');
+                            return;
+                        }
+                        if ($('#modal_copy input[type=checkbox]').prop('checked') && !$('#src_data option:selected').length) {
+                            init_alert($('#alert_copy'), 'alert-danger', '请选择配置文件！');
+                            return;
+                        }
+                        var src_data_id_array = $('#modal_copy input[type=checkbox]').prop('checked') ? $.map($('#src_data option:selected'), function (i) {
+                            return i.text;
+                        }) : [];
+                        var confirm_msg = $('#modal_copy input[type=checkbox]').prop('checked') ? '下列配置文件将被覆盖：' + $.toJSON(src_data_id_array) : '所有配置文件将被覆盖';
+                        bootbox.confirm('是否继续？' + confirm_msg, function (result) {
+                            if (result) {
+                                $.ajax({
+                                    url: '/api/ycc/copy/v3/',
+                                    method: 'post',
+                                    async: false,
+                                    data: {
+                                        src_group_id: $('#src_group').val(),
+                                        src_data_partial: $.toJSON($('#modal_copy input[type=checkbox]').prop('checked')),
+                                        src_data_id_list: $.toJSON(src_data_id_array),
+                                        dst_group_id: $('#dst_group').val(),
+                                    },
+                                    headers: {
+                                        Authorization: 'Token {{ API_TOKEN }}'
+                                    },
+                                    success: function (data, textStatus, jqXHR) {
+                                        init_alert($('#alert_copy'), 'alert-success', '复制成功');
+                                    },
+                                    error: function (jqXHR, textStatus, errorThrown) {
+                                        init_alert($('#alert_copy'), 'alert-danger', jqXHR.responseText);
+                                    }
+                                });
+                            }
+                        })
+                    });
+            $('#form_download')
+                    .bootstrapValidator({
+                        fields: {
+                            group: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '配置组不能为空'
+                                    }
+                                }
+                            },
+                            env: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '环境不能为空'
+                                    }
+                                }
+                            },
+                            version: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '版本不能为空'
+                                    }
+                                }
+                            },
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        var obj = {
+                            'group': $('#group option:selected').attr('data-group_id'),
+                            'idc': $('#group option:selected').attr('data-idc'),
+                            'env': $('#env option:selected').text(),
+                            'version': $('#version').val()
+                        };
+                        window.open('/api/ycc/export/?' + $.map(obj, function (value, index) {
+                                    return index + '=' + value
+                                }).join('&'));
+                    });
+            <!-- main -->
+            $('#table').bootstrapTable({
+                url: '/api/ycc/group_v3/',
+                ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                columns: [
+                    {
+                        field: 'site_name',
+                        title: '站点名'
+                    },
+                    {
+                        field: 'app_name',
+                        title: '应用名'
+                    },
+                    {
+                        field: 'group_id',
+                        title: '配置组'
+                    },
+                    {
+                        field: 'type_name',
+                        title: '类型'
+                    },
+                    {% if YCC_ENV == 'production' %}
+                    {
+                        title: 'Staging',
+                        formatter: stagingFormatter,
+                        events: stagingEvents
+                    },
+                    {
+                        title: 'Production',
+                        formatter: productionFormatter,
+                        events: productionEvents
+                    },
+                    {% endif %}
+                    {
+                        title: '操作',
+                        align: 'left',
+                        formatter: operateFormatter,
+                        events: operateEvents
+                    }
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        group_name: 'YCC_ADMIN',
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search,
+                        idc: 1,
+                        format: 'json'
+                    };
+                },
+                pagination: true,
+                pageSize: 50,
+                pageList: [10, 20, 100],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: true,
+                showColumns: true,
+                toolbar: "#toolbar",
+                cache: false
+            });
+            $('#table_config_group').bootstrapTable({
+                ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                columns: [
+                    {
+                        field: 'state',
+                        checkbox: true
+                    },
+                    {
+                        field: 'site_name',
+                        title: '站点名'
+                    },
+                    {
+                        field: 'app_name',
+                        title: '应用名'
+                    },
+                    {
+                        field: 'group_id',
+                        title: '配置组'
+                    },
+                    {
+                        field: 'type_name',
+                        title: '类型'
+                    },
+                    {
+                        field: 'idc_name',
+                        title: 'IDC'
+                    },
+                    {
+                        field: 'all_status',
+                        title: '状态',
+                        formatter: statusFormatter
+                    },
+                    {
+                        field: 'to_be_committed',
+                        title: '是否更改',
+                        formatter: function (value, row, index) {
+                            return value ? '是' : '否'
+                        }
+                    },
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        group_name: 'YCC_ADMIN',
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search,
+                        format: 'json'
+                    };
+                },
+                pagination: true,
+                pageSize: 50,
+                pageList: [10, 20, 100],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: false,
+                showColumns: false,
+                toolbar: "#toolbar_config_group",
+                cache: false
+            });
+            $('#table_config_group').on('post-body.bs.table', function (e, options) {
+                if (button_target.hasClass('production')) {
+                    $('#toolbar_config_group>div.production button').prop('disabled', true);
+                    $.each($(this).bootstrapTable('getData'), function (index, value) {
+                        if (value.to_be_committed)
+                            $('#table_config_group').bootstrapTable('check', index);
+                    })
+                }
+                else
+                    $(this).bootstrapTable('checkAll');
+            }).on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function (e) {
+                if (button_target.hasClass('staging'))
+                    staging_button();
+                else if (button_target.hasClass('production'))
+                    production_button();
+            });
+            $('#button_restart').bind('click', function () {
+                bootbox.confirm("是否继续？", function (result) {
+                    if (result) {
+                        var alert_class = 'alert-success', alert_array = [];
+                        $.each($('#table_config_group').bootstrapTable('getSelections'), function (index, value) {
+                            $.ajax({
+                                url: '/ticket/api/index.php/',
+                                type: 'get',
+                                async: false,
+                                data: {
+                                    action: 'ticket',
+                                    method: 'restartTomcat',
+                                    pool_id: value.app_id,
+                                    idc_id: value.idc,
+                                    env_id: 1,
+                                    reason: 'ycc',
+                                    reset_type: 2,
+                                    reset_time: 1,
+                                    reason_type: 2,
+                                    from_user: '{{ user.username }}'
+                                },
+                                success: function (data, textStatus, jqXHR) {
+                                    data = $.parseJSON(data);
+                                    if (data.code == 100)
+                                        alert_array.push(
+                                                [value.idc_name + ':打开' + $('<a>').attr({
+                                                    href: '/ticket/?action=ticket&method=newGetMyticketSmarty',
+                                                    target: '_blank'
+                                                }).text('已发流程')[0].outerHTML, '点击流程编号为<font color="red">' + data.uniq_id + '</font>的<font color="red">进度</font>'].join(',')
+                                        );
+                                    else {
+                                        alert_class = 'alert-danger';
+                                        alert_array.push(value.idc_name + ':' + data.msg);
+                                    }
+                                },
+                                error: function (jqXHR, textStatus, errorThrown) {
+                                    alert_class = 'alert-danger';
+                                    alert_array.push(value.idc_name + ':' + errorThrown);
+                                }
+                            });
+                        });
+                        init_alert($('#alert_config_group'), alert_class, alert_array.join('<br/>'))
+                    }
+                });
+            });
+            $('#button_commit').bind('click', function () {
+                $('#button_next').attr('class', 'btn btn-green commit');
+                show_diff('提交审核', 0);
+            });
+            $('#button_audit').bind('click', function () {
+                $('#button_next').attr('class', 'btn btn-green audit');
+                show_diff('审核', 1);
+            });
+            $('#button_publish').bind('click', function () {
+                $('#button_next').attr('class', 'btn btn-green publish');
+                show_diff('发布', 2);
+            });
+            $('#button_rollback').bind('click', function () {
+                $('#button_next').attr('class', 'btn btn-green rollback');
+                show_diff('回滚', 5);
+            });
+            $('#button_rmvaudit').bind('click', function () {
+                $('#button_next').attr('class', 'btn btn-green rmvaudit');
+                show_diff('删除审核', 1);
+            });
+            $('#button_rmvpublish').bind('click', function () {
+                $('#button_next').attr('class', 'btn btn-green rmvpublish');
+                show_diff('删除发布', 2);
+            });
+            $('#button_remove').bind('click', function () {
+                bootbox.confirm("是否继续？", function (result) {
+                    if (result) {
+                        var alert_class = 'alert-success', alert_array = [];
+                        $.each($('#table_config_group').bootstrapTable('getSelections'), function (index, value) {
+                            $.ajax({
+                                url: '/api/ycc/group/' + value.id + '/',
+                                type: 'patch',
+                                async: false,
+                                data: {
+                                    status: 0,
+                                    rmid: value.id
+                                },
+                                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                                success: function (data, textStatus, jqXHR) {
+                                    alert_array.push('删除配置组(' + value.group_id + '_' + value.ycc_code + ')成功');
+                                },
+                                error: function (jqXHR, textStatus, errorThrown) {
+                                    alert_class = 'alert-danger';
+                                    alert_array.push('删除配置组(' + value.group_id + '_' + value.ycc_code + ')失败，原因为：' + JSON.stringify(jqXHR.responseText));
+                                }
+                            });
+                        });
+                        init_alert($('#alert_config_group'), alert_class, alert_array.join('<br/>'))
+                        $('table').bootstrapTable('refresh', {
+                            silent: false
+                        });
+                    }
+                })
+            });
+            $('#button_next').bind('click', function () {
+                $.each($('#table_config_group').bootstrapTable('getSelections'), function (index, value) {
+                    if ($('#button_next').hasClass('commit')) {
+                        create_group_status(value.id);
+                    }
+                    else if ($('#button_next').hasClass('audit')) {
+                        var group_status_id = get_group_status_id(value.id, 'audit', 1);
+                        if (group_status_id != null)
+                            update_group_status(group_status_id, value.id, 'audit', 2);
+                    }
+                    else if ($('#button_next').hasClass('publish')) {
+                        var group_status_id = get_group_status_id(value.id, 'publish', 2);
+                        if (group_status_id != null)
+                            update_group_status(group_status_id, value.id, 'publish', 4);
+                    }
+                    else if ($('#button_next').hasClass('rollback')) {
+                        var group_status_id = get_group_status_id(value.id, 'rollback', 5);
+                        if (group_status_id != null)
+                            update_group_status(group_status_id, value.id, 'rollback', 4);
+                    }
+                    else if ($('#button_next').hasClass('rmvaudit')) {
+                        var group_status_id = get_group_status_id(value.id, 'rmvaudit', 1);
+                        if (group_status_id != null)
+                            update_group_status(group_status_id, value.id, 'rmvaudit', 8);
+                    }
+                    else if ($('#button_next').hasClass('rmvpublish')) {
+                        var group_status_id = get_group_status_id(value.id, 'rmvpublish', 2);
+                        if (group_status_id != null)
+                            update_group_status(group_status_id, value.id, 'rmvpublish', 7);
+                    }
+                })
+                $('#table_config_group').bootstrapTable('refresh', {
+                    silent: false
+                });
+                production_button();
+            })
+            $('.multiselect').multiselect({
+                includeSelectAllOption: true,
+                enableFiltering: true,
+                selectAllValue: 'select-all-value',
+                buttonWidth: '100%'
+            });
+            $('#modal_copy input[type=checkbox]').change(function () {
+                $('#src_data').multiselect($(this).prop('checked') ? 'enable' : 'disable');
+            })
+            $('#env,#group').change(function () {
+                if (!$('#env').val() || !$('#group').val())
+                    return;
+                $('#version').children('option:gt(0)').remove();
+                $.ajax({
+                    url: '/api/ycc/status/',
+                    async: false,
+                    data: {
+                        group: $('#group').val(),
+                        page_size: 500
+                    },
+                    headers: {
+                        Authorization: 'Token {{ API_TOKEN }}'
+                    },
+                    success: function (data, textStatus, jqXHR) {
+                        $.each(data.results, function (index, value) {
+                            switch ($('#env').val()) {
+                                case '7':
+                                    $('#version').append($('<option>').text(value.version + '(' + value.status_desc + ')').val(value.version));
+                                    break;
+                                default:
+                                    if (value.version == 0)
+                                        $('#version').append($('<option>').text(value.version + '(' + value.status_desc + ')').val(value.version));
+                            }
+                        });
+                        $("#version").selectpicker('refresh');
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        console.log(JSON.stringify(jqXHR.responseText))
+                    }
+                });
+            });
+            $('div.modal').on('hidden.bs.modal', function (e) {
+                $('#dst_group').selectpicker('val', '');
+                $(this).find('div.alert_container').empty();
+                $(this).find('form').bootstrapValidator('resetForm', true);
+                if ($('#modal_copy input[type=checkbox]').prop('checked'))
+                    $('#modal_copy input[type=checkbox]').click();
+            })
+            $('#modal_diff2 ').on('hidden.bs.modal', function () {
+                $('#modal_diff').css({'overflow-y': 'scroll'});
+            });
+        })
+    </script>
+
+{% endblock %}

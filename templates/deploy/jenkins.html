@@ -1,0 +1,50 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block title %} JenkinsJob {% endblock %}
+
+{% block content %}
+    {#    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/d3/css/styles.css"/>#}
+    {#    <script type="text/javascript" src="{{ STATIC_URL }}libs/d3/js/d3.js"></script>#}
+    <script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+
+    <table class="table table-bordered">
+    </table>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            $.ajax({
+                url: '/api/deploy/jenkins/job/',
+                type: 'get',
+                async: false,
+                headers: {
+                    'Authorization': 'Token {{ API_TOKEN }}'
+                },
+                success: function (data, textStatus, jqXHR) {
+                    $.each(data, function (index, value) {
+                        $.each(value, function (i, v) {
+                            var location = '未知';
+                            if (/jenkins_sh/.test(v))
+                                location = '上海';
+                            else if (/jenkins_wh/.test(v))
+                                location = '武汉'
+                            var a = $('<a>').attr({href: v, target: '_blank'}).text(v);
+                            if (i == 0)
+                                $('<tr>').append($('<td>').attr('rowspan', value.length).text(index)).append($('<td>').text('Jenkins' + location)).append($('<td>').append(a)).appendTo($('table.table'));
+                            else
+                                $('<tr>').append($('<td>').text('Jenkins' + location)).append($('<td>').append(a)).appendTo($('table.table'));
+                        })
+                    })
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    alert(jqXHR.responseText);
+                }
+            })
+            {% if not domains %}
+                var a = $('<a>')
+                        .attr({href: 'http://oms.yihaodian.com.cn/home/myInfo.action', target: '_blank'})
+                        .text('此处')[0].outerHTML;
+                bootbox.alert('无domain信息，请点击' + a + '查看修复方法，或者联系SA');
+            {% endif %}
+        })
+    </script>
+{% endblock %}

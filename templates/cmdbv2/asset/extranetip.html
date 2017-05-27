@@ -1,0 +1,519 @@
+{% extends "common/common_menu_base.html" %}
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/daterangepicker-bs3.css"rel="stylesheet" type="text/css" media="all"  />
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/daterangepicker.js" type="text/javascript" ></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+
+<style>
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+</style>
+<!-- <div class="inner-h1">外网IP管理</div> -->
+
+<div id="alert">
+</div>
+<div id="toolbar">
+<div class="form-inline" role="form">
+  <button class="btn btn-green" id="muti_modify" data-toggle="modal" data-target="#mutiValue" disabled> 批量修改 </button>
+    <select name="owner_search" id="owner_search" class="form-control select_api_url" >
+        <option value="-1">所有运营商</option>
+        <option value="1" {% if owner_search == 1 %} selected="selected" {% endif %}>中国电信</option>
+        <option value="2" {% if owner_search == 2 %} selected="selected" {% endif %}>中国联通</option>
+        <option value="3" {% if owner_search == 3 %} selected="selected" {% endif %}>BGP</option>
+    </select>
+    <select name="idc_search" id="idc_search" class="form-control select_api_url" >
+        <option value="-1" selected>所有IDC</option>
+        {% for item in room %}
+        <option value="{{ item.id }}" {% if idc_search == item.id %} selected="selected" {% endif %}>{{ item.comment }}</option>
+        {% endfor %}
+    </select>
+    <select name="asset_type_search" id="asset_type_search" class="form-control select_api_url" >
+        <option value="-1">所有类型</option>
+        <option value="0" {% if asset_type_search == '0' %} selected="selected" {% endif %}>暂无</option>
+        <option value="1" {% if asset_type_search == '1' %} selected="selected" {% endif %}>路由器</option>
+        <option value="2" {% if asset_type_search == '2' %} selected="selected" {% endif %}>交换机</option>
+        <option value="3" {% if asset_type_search == '3' %} selected="selected" {% endif %}>防火墙</option>
+        <option value="4" {% if asset_type_search == '4' %} selected="selected" {% endif %}>A10</option>
+        <option value="5" {% if asset_type_search == '5' %} selected="selected" {% endif %}>NETSCALER</option>
+        <option value="6" {% if asset_type_search == '6' %} selected="selected" {% endif %}>HAPROXY</option>
+        <option value="7" {% if asset_type_search == '7' %} selected="selected" {% endif %}>临时设备</option>
+        <option value="8" {% if asset_type_search == '8' %} selected="selected" {% endif %}>软路由</option>
+        <option value="9" {% if asset_type_search == '9' %} selected="selected" {% endif %}>VPN设备</option>
+        <option value="10" {% if asset_type_search == '10' %} selected="selected" {% endif %}>服务器</option>
+    </select>
+    <select name="is_used_search" id="is_used_search" class="form-control select_api_url" >
+            <option value="-1">是否使用</option>
+            <option value="0" {% if is_used_search == '0' %} selected="selected" {% endif %}>空闲</option>
+            <option value="1" {% if is_used_search == '1' %} selected="selected" {% endif %}>使用</option>
+    </select>
+    <select name="is_virtual_search" id="is_virtual_search" class="form-control select_api_url" >
+            <option value="-1">是否虚IP</option>
+            <option value="0" {% if is_virtual_search == '1' %} selected="selected" {% endif %}>不是</option>
+            <option value="1" {% if is_virtual_search == '1' %} selected="selected" {% endif %}>是</option>
+    </select>
+    <button type="button" class="btn btn-green" id="inquiry"> 查询 </button>
+    <button class="btn btn-green" data-toggle="modal" data-target="#searchValue"> 批量查询 </button>
+  </div>
+</div>
+
+<table id="iptable">
+</table>
+<!--修改madal-->
+<div class="modal fade" id="editValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="attributeForm" method="POST">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="myModalLabel">修改IP信息</h4>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" name="id" value="">
+    <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">使用类型</label>
+        <div class='col-sm-6'>
+            <select name="asset_type" id="asset_type" class="form-control selectpicker" >
+                <option value="0">暂无</option>
+                <option value="1">路由器</option>
+                <option value="2">交换机</option>
+                <option value="3">防火墙</option>
+                <option value="4">A10</option>
+                <option value="5">NETSCALER</option>
+                <option value="6">HAPROXY</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="inputEmail3" class="col-sm-3 control-label">绑定设备</label>
+        <div class='col-sm-6'>
+            <input type='text' class="form-control" name="asset_info" placeholder="IP如果已使用，必须填写绑定的设备" />
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="inputEmail3" class="col-sm-3 control-label">业务信息</label>
+        <div class='col-sm-6 '>
+            <input type='text' class="form-control" name="business_info" placeholder="可为空" />
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">是否已使用</label>
+        <div class='col-sm-6'>
+            <select name="is_used" id="is_used" class="form-control selectpicker" >
+                <option value="0">空闲</option>
+                <option value="1">使用</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">是虚IP？</label>
+        <div class='col-sm-6'>
+            <select name="is_virtual" id="is_virtual" class="form-control selectpicker" >
+                <option value="0">不是</option>
+                <option value="1">是</option>
+            </select>
+        </div>
+    </div>
+
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn btn-green" id="submit1">保存</button>
+  </div>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+<!--修改modal-->
+ <!--批量修改modal-->
+<div class="modal fade" id="mutiValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+    <form class="form-horizontal" role="form" id="mutiform" method="POST">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="myModalLabel">批量修改IP信息</h4>
+  </div>
+  <div class="modal-body">
+    <input type="hidden" name="id" value="">
+    <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">使用类型</label>
+        <div class='input-group date col-sm-6'>
+            <select name="asset_type1" id="asset_type1" class="form-control selectpicker" >
+                <option value="-1">不修改</option>
+                <option value="0">暂无</option>
+                <option value="1">路由器</option>
+                <option value="2">交换机</option>
+                <option value="3">防火墙</option>
+                <option value="4">A10</option>
+                <option value="5">NETSCALER</option>
+                <option value="6">HAPROXY</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">是否已使用</label>
+        <div class='input-group date col-sm-6'>
+            <select name="is_used1" id="is_used1" class="form-control selectpicker" >
+                <option value="-1">不修改</option>
+                <option value="0">空闲</option>
+                <option value="1">使用</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">是虚IP？</label>
+        <div class='input-group date col-sm-6'>
+            <select name="is_virtual1" id="is_virtual1" class="form-control selectpicker" >
+                <option value="-1">不修改</option>
+                <option value="0">不是</option>
+                <option value="1">是</option>
+            </select>
+        </div>
+    </div>
+
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn btn-green" id="submit2">保存</button>
+  </div>
+</div>
+</form>
+</div>
+</div>
+</div>
+ <!--批量修改modal-->
+<!--批量查询modal-->
+
+<div class="modal fade" id="searchValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+    <form class="form-horizontal" role="form" id="searchform" method="POST" >
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="myModalLabel">批量查询信息</h4>
+  </div>
+  <div class="modal-body">
+    <textarea class="form-control" rows="10" id="muti_key" name="muti_key"></textarea>
+
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn btn-green" id="submit3">查询</button>
+  </div>
+</div>
+</form>
+</div>
+</div>
+</div>
+
+<!--批量查询modal-->
+
+
+<script>
+$(document).ready(function() {
+    var $table = $('#iptable'),
+    $muti_modify=$('#muti_modify');
+    $('.select_api_url').selectpicker({
+        'width': 'auto'
+    });
+    $("#muti_modify").attr("disabled",true);
+    <!--edit modal显示-->
+     window.operateEvents = {
+        'click .edit': function (e, value, row) {
+
+             $.ajax({
+
+                url:'{{ CMDBAPI_URL }}asset/ip2/' + row.id + '/?format=json&type=1',
+                type: 'GET',
+                async:   false,
+                headers:{'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                $("input[name='id']").val(json.id);
+                $("#asset_type").val(json.asset_type );
+                $("input[name='asset_info']").val( json.asset_info );
+                $("input[name='business_info']").val(json.business_info);
+                $("#is_used").val( json.is_used );
+                $("#is_virtual").val( json.is_virtual );
+                $('.selectpicker').selectpicker('refresh');
+            }
+        });
+            $('#editValue').modal('show');
+        }
+    };
+    <!--click pencilshow-->
+    <!--iptable-->
+     $('#iptable').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}asset/ip2/?format=json&type=1',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'state',
+                checkbox: true
+            },
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'ip',
+                title: 'IP',
+                align: 'center'
+            },
+            {
+                field: 'room_comment',
+                title: '机房',
+                align: 'center'
+            },
+              {
+                field: 'ipsegment_owner',
+                title: '运营商',
+                align: 'center',
+
+            },
+
+            {
+                field: 'asset_type_name',
+                title: '使用类型',
+                align: 'center'
+            },
+            {
+                field: 'asset_info',
+                title: '绑定设备',
+                align: 'center'
+            },
+            {
+                field: 'business_info',
+                title: '业务信息',
+                align: 'center'
+            },
+            {
+                field: 'is_used_name',
+                title: '已使用？',
+                align: 'center'
+            },
+            {
+                field: 'is_virtual_name',
+                title: '虚IP？',
+                align: 'center'
+            },
+
+            {
+                field: 'operate',
+                title: '操作',
+                align: 'center',
+                formatter: operateFormatter,
+                events: operateEvents,
+            },
+        ],
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [10,20,50,100],
+        sidePagination: 'server',
+        clickToSelect: true,
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false
+    });
+    <!--iptable-->
+    <!--click pencilform-->
+    function operateFormatter(value, row, index) {
+        return [
+            '<a href="#" class="edit">',
+            '<span class="glyphicon glyphicon-pencil"></span>',
+            '</a>&nbsp;&nbsp;&nbsp;&nbsp; '
+        ].join('');
+    }
+    <!--click pencilform-->
+
+    <!--修改表单-->
+    $('#attributeForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                is_used: {
+                    validators: {
+                        notEmpty: {
+                            message: '是否使用不能为空'
+                        }
+                    }
+                },
+            }
+            })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var urll ='{{ CMDBAPI_URL }}asset/ip2/'  + $("input[name='id']").val() + '/';
+            var cdata ={
+                'asset_type':$("#asset_type option:selected").val(),
+                'asset_info':$("input[name='asset_info']").val(),
+                 'business_info':$("input[name='business_info']").val(),
+                'is_used': $("#is_used option:selected").val(),
+                'is_virtual': $("#is_virtual option:selected").val(),
+            };
+            $.ajax({
+                url: urll,
+                type: 'PATCH',
+                data: cdata,
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                  success: function( json ) {
+                      $('#attributeForm').bootstrapValidator('resetForm', true);
+                    $('#editValue').modal('hide');
+                      alert('成功修改外网IP管理记录！');
+                    $('#iptable').bootstrapTable('refresh', {
+                        silent: true
+                    });
+
+
+
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>修改外网IP管理' + JSON.stringify(json.responseText) +'</div>');
+                    $('#editValue').modal('hide');
+                }
+            });
+        });
+    <!--修改表单-->
+
+     $table.on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+     $muti_modify.prop('disabled', !$table.bootstrapTable('getSelections').length);
+    });
+    <!--批量修改-->
+ $('#mutiform')
+        .bootstrapValidator({})
+        .on('success.form.bv', function(e) {
+             e.preventDefault();
+             var count = $table.bootstrapTable('getSelections').length;
+             var i = 0;
+             var is_used = $("#is_used1 option:selected").val();
+             var is_virtual = $("#is_virtual1 option:selected").val();
+             var asset_type = $("#asset_type1 option:selected").val();
+             var ccdata = [];
+             if (is_used != "-1") {
+                 ccdata.push("is_used=" + is_used);
+             }
+             if (is_virtual != "-1") {
+                 ccdata.push("is_virtual=" + is_virtual);
+             }
+             if (asset_type != "-1") {
+                 ccdata.push("asset_type=" + asset_type);
+             }
+             var params = ccdata.join('&');
+             $.map($table.bootstrapTable('getSelections'), function (row) {
+
+                 {#                        alert(i);#}
+
+                 $.ajax({
+                     url: '{{ CMDBAPI_URL }}/asset/ip2/' + row.id + '/?format=json&type=1',
+                     type: 'PATCH',
+                     data: params,
+                     headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                     success: function (json) {
+{#                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>批量修改外网IP管理</div>');#}
+                         $('#iptable').bootstrapTable('refresh', {
+                             silent: true
+                         });
+
+                     },
+
+                     error: function (json) {
+                         $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>批量修改外网IP管理记录' + JSON.stringify(json.responseText) + '</div>');
+                         $('#mutiValue').modal('hide');
+                     }
+                 });
+
+             });
+                 $("#muti_modify").attr("disabled",true);
+                 $('#mutiValue').modal('hide');
+                 $('#mutiform').bootstrapValidator('resetForm', true);
+                 $("#is_used1").val('-1');
+                 $("#is_virtual1").val('-1');
+                 $("#asset_type1").val('-1');
+                 $('.selectpicker').selectpicker('refresh');
+         });
+
+<!--关键字查询-->
+    $( "#inquiry" ).click(function() {
+      var api_url_base = '{{ CMDBAPI_URL }}asset/ip2/?';
+      var params = ['format=json&type=1'];
+        var owner_search = $("#owner_search option:selected").val();
+        var idc_search = $("#idc_search option:selected").val();
+        var asset_type_search = $("#asset_type_search option:selected").val();
+{#        var ip_search=$("input[name='ip_search']").val()#}
+        var is_used_search=$("#is_used_search option:selected").val();
+        var is_virtual_search=$("#is_virtual_search option:selected").val();
+        if (owner_search !="-1") {
+            params.push('ip_segment__owner=' + owner_search);
+        }
+        if (idc_search !="-1") {
+            params.push('idc=' + idc_search);
+        }
+        if (asset_type_search !="-1") {
+            params.push('asset_type=' + asset_type_search);
+        }
+{#        if (ip_search !="") {#}
+{#            params.push('ip_search=' + ip_search);#}
+{#        }#}
+        if (is_used_search !="-1") {
+            params.push('is_used=' + is_used_search);
+        }
+        if (is_virtual_search !="-1") {
+            params.push('is_virtual=' + is_virtual_search);
+        }
+        var api_url = api_url_base + params.join('&');
+        $('#iptable').bootstrapTable('refresh', {
+            url: api_url
+        });
+    });
+<!--批量查询-->
+$('#searchform')
+ .bootstrapValidator({})
+ .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var string = $('#muti_key').val().trim();
+             var batch_uri = '{{ CMDBAPI_URL }}asset/ip2/?format=json&type=1&muti_key='+ string.split('\n') +'';
+             $('#iptable').bootstrapTable('refresh', {
+                url: batch_uri,
+            });
+            $('#searchform').bootstrapValidator('resetForm', true);
+            $('#searchValue').modal('hide');
+            $('#muti_key').val('');
+        });
+
+<!--批量查询-->
+});
+
+</script>
+{% endblock %}

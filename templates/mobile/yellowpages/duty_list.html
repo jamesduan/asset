@@ -1,0 +1,81 @@
+{% extends "mobile/base/yellowpages_base.html" %}
+
+{% block inner_content %}
+
+<div id="duty_content">
+
+</div>
+
+<script src="{{ STATIC_URL }}mobile/libs/mui/js/arttmpl.js"></script>
+
+<script type="text/templete" id="today_duty_list">
+<% if (all_count <= 0) {  %>
+    <div class="mui-card"><div class="mui-card-header"><p>今日无值班信息</p></div></div>
+<% }else{ %>
+    <% if (all_count <= 5){ %>
+        <% for (var i in results) { var act = results[i]; %>
+            <% for (var j in act.duty_detail) { var rota = act.duty_detail[j]; %>
+                <div class="mui-card">
+                    <div class="mui-card-header"><%=act.name%></div>
+                    <div class="mui-card-content">
+                        <div class="mui-card-content-inner">
+                            <%=rota.duty_domain%><br/>
+                            &nbsp;&nbsp;&nbsp;&nbsp;值班人员：<%=rota.duty%> <br/>
+                            &nbsp;&nbsp;&nbsp;&nbsp;Backup人员：<%=rota.duty_backup%>
+                        </div>
+                    </div>
+                    <div class="mui-card-footer">
+                        <p><%=rota.start_time%> - <%=rota.end_time%></p>
+                        <% if(rota.duty_way == 0){ %>
+                            <span class="mui-pull-right mui-badge mui-badge-success mui-badge-inverted"><%=rota.duty_way_name%></span>
+                        <% }else if(rota.duty_way == 1){ %>
+                            <span class="mui-pull-right mui-badge mui-badge-primary mui-badge-inverted"><%=rota.duty_way_name%></span>
+                        <% }else { %>
+                            <span class="mui-pull-right mui-badge mui-badge-warning mui-badge-inverted"><%=rota.duty_way_name%></span>
+                        <% } %>
+                    </div>
+                </div>
+            <% } %>
+        <% } %>
+    <% }else { %>
+        <% for (var i in results) { var act = results[i]; %>
+            <div class="mui-card">
+                <div class="mui-card-header"><%=act.name%></div>
+                <div class="mui-card-footer">
+                    <p><%=act.start_time%> - <%=act.end_time%></p>
+                    <p><a href="/yellow/duty/detail/?activity_id=<%=act.id%>"><span class="mui-badge mui-badge-success"><%=act.count%></span></a></p>
+                </div>
+            </div>
+        <% } %>
+    <% } %>
+<% } %>
+</script>
+
+<script>
+    //指定"黄页"菜单高亮
+    mui("#segmentedControl .mui-scroll a").each(function () {
+        this.classList.remove('mui-active');
+    });
+    document.getElementById('yellow_menu_duty').classList.add('mui-active');
+
+    var init_api = '{{ ROOT_URL }}api/yellow/duty/info/';
+    find_user(init_api);
+
+    //默认展示今日值班
+    function find_user(api_url) {
+        mui.ajax(api_url, {
+            dataType: 'json',
+            type: 'get',
+            timeout: 3000,
+            headers: {'Content-Type': 'application/json'},
+            success: function (data) {
+                template.config('escape', false);
+                document.getElementById('duty_content').innerHTML = template('today_duty_list', JSON.parse(data));
+            },
+            error:function(xhr,type,errorThrown){
+                mui.toast(errorThrown);
+            }
+        });
+    }
+</script>
+{% endblock %}

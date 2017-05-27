@@ -1,0 +1,786 @@
+{% extends "deploy/base.html" %}
+
+{% block title %}
+    <title>boot.sh管理平台</title>
+{% endblock %}
+
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/bootstrap/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" />
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/fancytree/css/skin-win7/ui.fancytree.min.css" />
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/jsdifflib/diffview.css" />
+    <style>
+        ins {
+            background-color: #c6ffc6;
+            text-decoration: none;
+        }
+        del {
+            background-color: #ffc6c6;
+        }
+    </style>
+{% endblock %}
+
+{% block js %}
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/bootstrap/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/fancytree/js/jquery.fancytree-all.min.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/jquery-json/js/jquery.json.min.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/jsdifflib/difflib.js"></script>
+    <script type="text/javascript" src="{{ STATIC_URL }}libs/jsdifflib/diffview.js"></script>
+    <script>
+        var content, edit_path=null
+        var select_binding = function(url, id) {
+            $.ajax({
+                url: url,
+                type: 'get',
+                async: false,
+                headers: {
+                    'Authorization': 'Token {{ API_TOKEN }}'
+                },
+                success: function(json) {
+                    $('#' + id).html('<option value="0">--</option>')
+                    $.each(json.results, function(index, value) {
+                        $("<option></option>")
+                                .val(value.id)
+                                .text(value.name)
+                                .appendTo($('#' + id));
+                    })
+                },
+                error: function(jqXHR) {
+                    bootbox.alert($.parseJSON(jqXHR.responseText).detail);
+                }
+            })
+        };
+        var crud = function(method, path, content, target) {
+            if(path==null)
+                return;
+            $.ajax({
+                url: '/api/git/crud/',
+                type: method,
+                async: false,
+                data: {
+                    working_tree_dir: '{{ WORKING_TREE_DIR }}',
+                    path: path,
+                    content: content
+                },
+                headers: {
+                    'Authorization': 'Token {{ API_TOKEN }}'
+                },
+                success: function(json) {
+                    if(method == 'get') {
+                        target.val(json.msg);
+                    } else if(method == 'put') {
+                        refresh();
+                        bootbox.alert(json.msg);
+                    } else if(method == 'post') {
+                        refresh();
+                        bootbox.alert(json.msg);
+                    } else if(method == 'delete') {
+                        refresh();
+                        bootbox.alert(json.msg);
+                    }
+                },
+                error: function(jqXHR) {
+                    bootbox.alert($.parseJSON(jqXHR.responseText).detail);
+                }
+            })
+        };
+        var refresh = function(){
+            $("#uncommited_tree").fancytree("getTree").reload();
+            $("#deleted_tree").fancytree("getTree").reload();
+            $("#unmerged_tree").fancytree("getTree").reload();
+        };
+        var checkout = function(stage){
+            $.ajax({
+                url: '/api/git/checkout/',
+                type: 'put',
+                async: false,
+                data: {
+                    working_tree_dir: '{{ WORKING_TREE_DIR }}',
+                    path: edit_path,
+                    stage: stage
+                },
+                headers: {
+                    'Authorization': 'Token {{ API_TOKEN }}'
+                },
+                success: function(json) {
+                    refresh();
+                    bootbox.alert(json.msg);
+                },
+                error: function(jqXHR) {
+                    bootbox.alert($.parseJSON(jqXHR.responseText).detail);
+                }
+            })
+        };
+        var show_log = function(path){
+            if(path==null)
+                return;
+            $('#table_log').bootstrapTable('refresh', {
+                silent: true,
+                query: {
+                    path: path
+                }
+            });
+            $('#modal_log').modal('show');
+        };
+        var edit = function(path, title, bool){
+            crud('get', path, '', $("#modal_edit textarea"));
+            edit_path = path;
+            $("#modal_edit .modal-title").text(title);
+            $("#modal_edit").modal("show");
+        };
+        var diff = function(baseTextLines, newTextLines, baseTextName, newTextName, target){
+            var baseTextLines = difflib.stringAsLines(baseTextLines);
+            var newTextLines = difflib.stringAsLines(newTextLines);
+            var sm = new difflib.SequenceMatcher(baseTextLines, newTextLines);
+            var opcodes = sm.get_opcodes();
+            var diffoutput = diffview.buildView({
+                baseTextLines: baseTextLines,
+                newTextLines: newTextLines,
+                opcodes: opcodes,
+                baseTextName: baseTextName,
+                newTextName: newTextName,
+                contextSize: null,
+                viewType: 0
+            });
+            target.html(diffoutput.outerHTML);
+        };
+        $(document).ready(function(){
+            $("div.modal").modal({
+                backdrop: "static",
+                keyboard: false,
+                show: false
+            });
+            select_binding('/api/cmdb/site/?format=json', 'site');
+            select_binding('/api/cmdb/app/?format=json&page_size=1000&site_id='+$('#site').val(), 'app');
+            $('#site').change(function(){
+                select_binding('/api/cmdb/app/?format=json&page_size=1000&site_id='+$('#site').val(), 'app');
+            });
+            $("#uncommited_tree").fancytree({
+                source: {
+                    url: "/api/git/boot_sh/tree/",
+                    data: {
+                        working_tree_dir: '{{ WORKING_TREE_DIR }}',
+                        letter_list: $.toJSON(['A', 'M'])
+                    },
+                    cache: false
+                },
+                checkbox: false,
+                selectMode: 3,
+                click: function(event, data) {
+                    var node = data.node;
+                    edit_path = node.data.path;
+                    if(node.title == 'boot.sh'){
+                        $.ajax({
+                            url: '/api/git/diff/cached/',
+                            type: 'get',
+                            async: false,
+                            data: {
+                                format: 'json',
+                                working_tree_dir: '{{ WORKING_TREE_DIR }}',
+                                path: node.data.path
+                            },
+                            headers: {
+                                'Authorization': 'Token {{ API_TOKEN }}'
+                            },
+                            success: function(json) {
+                                $('#reset').attr('disabled', json.commit==null ? true : false);
+                                diff(json.commit || '', json.index, "Latest Commit", "Index", $('#modal_diff .modal-body div'));
+                            },
+                            error: function(jqXHR) {
+                                bootbox.alert($.parseJSON(jqXHR.responseText).detail);
+                            }
+                        });
+                        $('#reset').show();
+                        $("#modal_diff").modal("show");
+                    }
+               }
+            });
+            $("#deleted_tree").fancytree({
+                source: {
+                    url: "/api/git/boot_sh/tree/",
+                    data: {
+                        working_tree_dir: '{{ WORKING_TREE_DIR }}',
+                        letter_list: $.toJSON(['D'])
+                    },
+                    cache: false
+                },
+                checkbox: false,
+                selectMode: 3
+            });
+            $("#unmerged_tree").fancytree({
+                source: {
+                    url: "/api/git/boot_sh/tree/",
+                    data: {
+                        working_tree_dir: '{{ WORKING_TREE_DIR }}',
+                        letter_list: $.toJSON(['U'])
+                    },
+                    cache: false
+                },
+                checkbox: false,
+                selectMode: 3,
+                click: function(event, data) {
+                    var node = data.node;
+                    if(node.title == 'boot.sh'){
+                        $.ajax({
+                            url: '/api/git/unmerged_blobs/',
+                            type: 'get',
+                            async: false,
+                            data: {
+                                working_tree_dir: '{{ WORKING_TREE_DIR }}',
+                                path: node.data.path,
+                                format: 'json'
+                            },
+                            headers: {
+                                'Authorization': 'Token {{ API_TOKEN }}'
+                            },
+                            success: function(json) {
+                                diff(json[2], json[3], "Theirs", "Yours", $('#modal_conflict .modal-body div'));
+                            },
+                            error: function(jqXHR) {
+                                bootbox.alert($.parseJSON(jqXHR.responseText).detail);
+                            }
+                        });
+                        edit_path = node.data.path;
+                        $("#modal_conflict").modal("show");
+                    }
+                }
+            });
+            $('#edit').bind('click', function(){
+                bootbox.confirm('确认？', function(result){
+                    if(result){
+                        crud('put', edit_path, $("#modal_edit textarea").val(), null);
+                        $("#modal_edit").modal("hide");
+                    }
+                })
+            });
+            $('#commit').bind('click', function(){
+                bootbox.prompt('请输入提交信息：', function(result){
+                    if(result){
+                        $.ajax({
+                            url: '/api/git/commit/',
+                            type: 'post',
+                            async: false,
+                            data: {
+                                working_tree_dir: '{{ WORKING_TREE_DIR }}',
+                                msg: result
+                            },
+                            headers: {
+                                'Authorization': 'Token {{ API_TOKEN }}'
+                            },
+                            success: function(json) {
+                                refresh();
+                                bootbox.alert(json.msg);
+                            },
+                            error: function(jqXHR) {
+                                refresh();
+                                bootbox.alert($.parseJSON(jqXHR.responseText).detail);
+                            }
+                        })
+                    }
+                })
+            });
+            $('#public_log').bind('click', function(){
+                show_log('boot.sh');
+            });
+            $('#public_edit').bind('click', function(){
+                edit('boot.sh', '修改公共boot.sh', false);
+            });
+            $('#table_manage').bootstrapTable({
+                url: '/api/git/boot_sh/app/list/?format=json',
+                ajaxOptions: {
+                    'headers':{
+                        'Authorization':'Token {{ API_TOKEN }}'
+                    }
+                },
+                columns: [
+                    {
+                        field: 'app_id',
+                        visible: false
+                    },
+                    {
+                        field: 'site_name',
+                        title: '站点名',
+                        width: 300
+                    },
+                    {
+                        field: 'app_name',
+                        title: '应用名',
+                        width: 300
+                    },
+                    {
+                        field: 'operate',
+                        title: '操作',
+                        width: 100,
+                        formatter: function(value, row, index){
+                            return [
+                                '<a class="remove" href="javascript:void(0)">删除</a>',
+                                '<a class="edit" href="javascript:void(0)">编辑</a>',
+                                '<a class="log" href="javascript:void(0)">日志</a>',
+                            ].join('|');
+                        },
+                        events: {
+                            'click .remove': function (event, value, row, index) {
+                                bootbox.confirm('是否删除？', function(result){
+                                    if(result){
+                                        $.ajax({
+                                            url: '/api/git/boot_sh/app/'+row.app_id+'/',
+                                            type: 'delete',
+                                            async: false,
+                                            headers: {
+                                                'Authorization': 'Token {{ API_TOKEN }}'
+                                            },
+                                            success: function(json) {
+                                                $('#table_manage').bootstrapTable('refresh', {
+                                                    silent: true
+                                                });
+                                                crud('delete', [row.site_name, row.app_name, 'boot.sh'].join('/'), null, null);
+                                            },
+                                            error: function(jqXHR) {
+                                                bootbox.alert($.parseJSON(jqXHR.responseText).detail);
+                                            }
+                                        });
+                                    }
+                                })
+                            },
+                            'click .edit': function (event, value, row, index) {
+                                var path = [row.site_name, row.app_name, 'boot.sh'].join('/');
+                                edit(path, '修改'+path, false);
+                            },
+                            'click .log': function (event, value, row, index) {
+                                show_log([row.site_name, row.app_name, 'boot.sh'].join('/'));
+                            }
+                        }
+                    }
+                ],
+                responseHandler: function(res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        page_size: p.limit,
+                        page: p.offset/p.limit+1,
+                        search: p.search
+                    };
+                },
+                pagination: true,
+                pageSize: 5,
+                pageList: [5, 10, 25, 50, 100, 'ALL'],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: false,
+                showColumns: false,
+                toolbar: "#toolbar",
+                cache: false
+            });
+            $('#table_log').bootstrapTable({
+                url: '/api/git/log/?format=json',
+                ajaxOptions: {
+                    'headers':{
+                        'Authorization':'Token {{ API_TOKEN }}'
+                    }
+                },
+                columns: [
+                    {
+                        field: 'path',
+                        visible: false
+                    },
+                    {
+                        field: 'hash',
+                        visible: false
+                    },
+                    {
+                        field: 'author',
+                        title: 'Author',
+                        width: 200
+                    },
+                    {
+                        field: 'message',
+                        title: 'Commit Message',
+                        width: 350
+                    },
+                    {
+                        field: 'date',
+                        title: 'Date',
+                        width: 200
+                    },
+                    {
+                        field: 'operate',
+                        title: '操作',
+                        width: 250,
+                        formatter: function(value, row, index){
+                            return ['<a class="diff" href="javascript:void(0)">对比</a>',
+                                    '<a class="puppet" href="javascript:void(0)">Puppet结果</a>'].join('|');
+                        },
+                        events: {
+                            'click .diff': function (event, value, row, index) {
+                                $.ajax({
+                                    url: '/api/git/diff/',
+                                    type: 'get',
+                                    async: false,
+                                    data: {
+                                        format: 'json',
+                                        working_tree_dir: '{{ WORKING_TREE_DIR }}',
+                                        path: row.path,
+                                        revision: row.hash
+                                    },
+                                    headers: {
+                                        'Authorization': 'Token {{ API_TOKEN }}'
+                                    },
+                                    success: function(json) {
+                                        diff(json.last_commit, json.commit, "Last Commit", "Current Commit", $('#modal_diff .modal-body div'));
+                                    },
+                                    error: function(jqXHR) {
+                                        bootbox.alert($.parseJSON(jqXHR.responseText).detail);
+                                    }
+                                });
+                                $('#reset').hide();
+                                $("#modal_diff").modal("show");
+                            },
+                            'click .puppet': function (event, value, row, index) {
+                                $.ajax({
+                                    url: '/api/git/boot_sh/puppet/result/',
+                                    type: 'get',
+                                    async: false,
+                                    data: {
+                                        format: 'json',
+                                        hash: row.hash
+                                    },
+                                    headers: {
+                                        'Authorization': 'Token {{ API_TOKEN }}'
+                                    },
+                                    success: function(json) {
+                                        var result_array = new Array();
+                                        $.each(json.puppet, function(index, value){
+                                            if(value.success)
+                                                result_array.push(index+'更新module成功');
+                                            else
+                                                result_array.push(index+'更新module失败，原因为'+value.output);
+                                        });
+                                        bootbox.alert(result_array.join(';'));
+                                    },
+                                    error: function(jqXHR) {
+                                        bootbox.alert($.parseJSON(jqXHR.responseText).detail);
+                                    }
+                                })
+                            }
+                        }
+                    }
+                ],
+                responseHandler: function(res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        page_size: p.limit,
+                        page: p.offset/p.limit+1,
+                        search: p.search,
+                        working_tree_dir: '{{ WORKING_TREE_DIR }}',
+                        path: 'boot.sh'
+                    };
+                },
+                pagination: true,
+                pageSize: 5,
+                pageList: [5, 10, 25, 50, 100, 'ALL'],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: false,
+                showColumns: false,
+                cache: false
+            });
+            $('#manage_app').bind('click', function(){
+                $('#table_manage').bootstrapTable('refresh', {
+                    silent: true
+                });
+                $("#model_app").modal("show");
+            });
+            $('#add_app').bind('click', function () {
+                if($('#app').val() == '0')
+                    return;
+                bootbox.confirm('是否添加？', function (result) {
+                    if (result) {
+                        $("#modal_create textarea").val('');
+                        $("#modal_create .modal-title").text('新增文件');
+                        $("#modal_create").modal("show");
+                    }
+                })
+            });
+            $('#create').bind('click', function(){
+                var toolbar_path = [$('#site option:selected').text(), $('#app option:selected').text(), 'boot.sh'].join('/')
+                crud('post', toolbar_path, $("#modal_create textarea").val(), null);
+                $.ajax({
+                    url: '/api/git/boot_sh/app/list/',
+                    type: 'post',
+                    async: false,
+                    data: {
+                        app: $('#app').val()
+                    },
+                    headers: {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    },
+                    success: function (json) {
+                        $('#table_manage').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                    },
+                    error: function (jqXHR) {
+                        bootbox.alert($.parseJSON(jqXHR.responseText).detail);
+                    }
+                });
+                $("#modal_create").modal("hide");
+                $("#model_app").modal("show");
+            });
+            $('#button_theirs').bind('click', function(){
+                bootbox.confirm('确认？', function (result) {
+                    if(result){
+                        $('#modal_conflict').modal('hide');
+                        checkout("2");
+                    }
+                })
+            });
+            $('#button_yours').bind('click', function(){
+                bootbox.confirm('确认？', function (result) {
+                    if(result){
+                        $('#modal_conflict').modal('hide');
+                        checkout("3");
+                    }
+                })
+            });
+            $('#button_merge').bind('click', function(){
+                $('#modal_conflict').modal('hide');
+                edit(edit_path, '修改冲突的文件', true);
+            });
+            $('#reset').bind('click', function(){
+                bootbox.confirm('确认？', function(result){
+                    if(result){
+                        $.ajax({
+                            url: '/api/git/reset/',
+                            type: 'put',
+                            async: false,
+                            data: {
+                                working_tree_dir: '{{ WORKING_TREE_DIR }}',
+                                path: edit_path
+                            },
+                            headers: {
+                                'Authorization': 'Token {{ API_TOKEN }}'
+                            },
+                            success: function(json) {
+                                $('#modal_diff').modal('hide');
+                                refresh();
+                                bootbox.alert(json.msg);
+                            },
+                            error: function(jqXHR) {
+                                refresh();
+                                bootbox.alert($.parseJSON(jqXHR.responseText).detail);
+                            }
+                        })
+                    }
+                })
+            })
+        })
+    </script>
+{% endblock %}
+
+{% block body %}
+    <!-- 弹出框(管理特殊应用) -->
+    <div class="modal fade" id="model_app" tabindex="-1" role="dialog" aria-labelledby="myModalLabel_manage" aria-hidden="true">
+      <div class="modal-dialog" style="width: 800px">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            <h4 class="modal-title" id="myModalLabel_manage">管理特殊应用</h4>
+          </div>
+          <div class="modal-body">
+            <!-- 工具条 -->
+            <div id="toolbar">
+                <form class="form-inline">
+                    <div class="form-group">
+                        <label>站点</label>
+                        <select class="form-control" id="site" style="width: 200px">
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>应用</label>
+                        <select class="form-control" id="app" style="width: 200px">
+                        </select>
+                    </div>
+                    <button id="add_app" class="btn btn-default" type="button">
+                        <i class="glyphicon glyphicon-plus"></i>新增
+                    </button>
+                </form>
+            </div>
+            <table id="table_manage"></table>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 弹出框(更新信息) -->
+    <div class="modal fade" id="modal_edit" tabindex="-1" role="dialog" aria-labelledby="myModalLabel_edit" aria-hidden="true">
+      <div class="modal-dialog" style="width: 800px">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            <h4 class="modal-title" id="myModalLabel_edit"></h4>
+          </div>
+          <div class="modal-body">
+            <textarea class="form-control" rows="20"></textarea>
+            <input type="hidden" id="edit_path" />
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" id="edit">修改</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 弹出框(冲突信息) -->
+    <div class="modal fade" id="modal_conflict" tabindex="-1" role="dialog" aria-labelledby="myModalLabel_conflict" aria-hidden="true">
+      <div class="modal-dialog" style="width: 1000px">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            <h4 class="modal-title" id="myModalLabel_conflict">解决冲突问题</h4>
+          </div>
+          <div class="modal-body">
+            <div></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" id="button_theirs">Accept Theirs</button>
+            <button type="button" class="btn btn-default" id="button_yours">Accept Yours</button>
+            <button type="button" class="btn btn-default" id="button_merge">Merge...</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 弹出框(创建信息) -->
+    <div class="modal fade" id="modal_create" tabindex="-1" role="dialog" aria-labelledby="myModalLabel_create" aria-hidden="true">
+      <div class="modal-dialog" style="width: 800px">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            <h4 class="modal-title" id="myModalLabel_create"></h4>
+          </div>
+          <div class="modal-body">
+            <textarea class="form-control" rows="20"></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" id="create">确定</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 弹出框(历史信息) -->
+    <div class="modal fade" id="modal_log" tabindex="-1" role="dialog" aria-labelledby="myModalLabel_log" aria-hidden="true">
+      <div class="modal-dialog" style="width: 800px">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            <h4 class="modal-title" id="myModalLabel_log">查看历史</h4>
+          </div>
+          <div class="modal-body">
+            <table id="table_log"></table>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- 弹出框(差异信息) -->
+    <div class="modal fade" id="modal_diff" tabindex="-1" role="dialog" aria-labelledby="myModalLabel_diff" aria-hidden="true">
+      <div class="modal-dialog" style="width: 1000px">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+            <h4 class="modal-title" id="myModalLabel_diff">修改详情</h4>
+          </div>
+          <div class="modal-body">
+            <div></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" id="reset">Reset</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container-fluid">
+        <div class="row" style="margin-top: 20px">
+            <nav class="navbar navbar-default">
+              <div class="container-fluid">
+                <!-- Brand and toggle get grouped for better mobile display -->
+                <div class="navbar-header">
+                  <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#bs-example-navbar-collapse-1" aria-expanded="false">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                  </button>
+                  <a class="navbar-brand" href="javascript:void(0)">{{ USERNAME }}</a>
+                </div>
+                <!-- Collect the nav links, forms, and other content for toggling -->
+                <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+                  <ul class="nav navbar-nav">
+                    <li class="dropdown">
+                      <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">特殊应用 <span class="caret"></span></a>
+                      <ul class="dropdown-menu">
+                        <li><a href="javascript:void(0)" id="manage_app">管理</a></li>
+                      </ul>
+                    </li>
+                    <li class="dropdown">
+                      <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">公共应用 <span class="caret"></span></a>
+                      <ul class="dropdown-menu">
+                        <li><a href="javascript:void(0)" id="public_edit">编辑boot.sh</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="javascript:void(0)" id="public_log">日志</a></li>
+                      </ul>
+                    </li>
+                  </ul>
+                  <ul class="nav navbar-nav navbar-right">
+                    <li><a href="javascript:void(0)" id="commit">提交</a></li>
+                  </ul>
+                </div><!-- /.navbar-collapse -->
+              </div><!-- /.container-fluid -->
+            </nav>
+        </div>
+        <div class="row">
+            <!-- 左侧 -->
+            <div class="col-md-3">
+                <div class="panel panel-default">
+                  <div class="panel-heading">待提交的文件</div>
+                  <div class="panel-body">
+                    <div id="uncommited_tree"></div>
+                  </div>
+                </div>
+                <div class="panel panel-default">
+                  <div class="panel-heading">待刪除的文件</div>
+                  <div class="panel-body">
+                    <div id="deleted_tree"></div>
+                  </div>
+                </div>
+                <div class="panel panel-default">
+                  <div class="panel-heading">未合并的文件</div>
+                  <div class="panel-body">
+                    <div id="unmerged_tree"></div>
+                  </div>
+                </div>
+            </div>
+            <!-- 右侧 -->
+            <div class="col-md-9">
+                <textarea class="form-control" rows="25" readonly="readonly" id="content"></textarea>
+            </div>
+        </div>
+    </div>
+{% endblock %}

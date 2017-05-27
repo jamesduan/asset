@@ -1,0 +1,1088 @@
+{% extends "common/common_menu_base.html" %}
+{#{% block title %}DB数据库实例管理{% endblock %}#}
+{% block content %}
+
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css"
+          rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+
+    <!--   <div class="inner-h1">
+          <h1>DB数据库实例管理 </h1>
+      </div>
+   -->
+    <div id="alert" style="margin-top: 10px;">
+    </div>
+
+    <div class="modal fade" id="addValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true"
+         data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="addForm" method="POST">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">新增数据库实例</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-3 control-label">数据库名</label>
+
+                            <div class='col-sm-6'>
+                                <input type='text' class="form-control" name="dbname" id="dbname"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-3 control-label">数据库类型</label>
+
+                            <div class='col-sm-6'>
+                                <select name="db_type" id="db_type" class="form-control">
+                                    <option value="">请选择数据库类型</option>
+                                    <option value="oracle">ORACLE</option>
+                                    <option value="mysql">MYSQL</option>
+                                    <option value="postgresql">POSTGRESQL</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-3 control-label">用户名</label>
+
+                            <div class='col-sm-6'>
+                                <input type='text' class="form-control" name="username" id="username"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-3 control-label">密码</label>
+
+                            <div class='col-sm-6'>
+                                <input type='text' class="form-control" name="password" id="password"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-3 control-label">实例地址</label>
+
+                            <div class='col-sm-6'>
+                                <input type='text' class="form-control" name="instance_url" id="instance_url"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-3 control-label">实例端口</label>
+
+                            <div class='col-sm-6'>
+                                <input type='text' class="form-control" name="port" id="port"/>
+                            </div>
+                        </div>
+                        {#      <div class="form-group">#}
+                        {#        <label for="inputEmail3" class="col-sm-3 control-label">实例类型</label>#}
+                        {#        <div class='col-sm-6'>#}
+                        {#            <select name="instance_type" id="instance_type" class="form-control">#}
+                        {#                <option value="">请选择实例类型</option>#}
+                        {#                <option value="master">MASTER</option>#}
+                        {#                <option value="slave">SLAVE</option>#}
+                        {#            </select>#}
+                        {#        </div>#}
+                        {#      </div>#}
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-3 control-label">IDC</label>
+
+                            <div class='col-sm-6'>
+                                <select name="idc" id="idc" class="form-control">
+                                    {% for item in idc %}
+                                        <option value="{{ item.id }}">{{ item.name_ch }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green" id="submit1">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="editValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="editForm" method="POST">
+                    <input type="hidden" name="id" id="id">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="myModalLabel">修改数据库实例</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-3 control-label">数据库名</label>
+
+                            <div class='col-sm-6'>
+                                <input type='text' class="form-control" name="edbname" id="edbname"/>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-3 control-label">数据库类型</label>
+
+                            <div class='col-sm-6'>
+                                <select name="edb_type" id="edb_type" class="form-control">
+                                    <option value="">请选择数据库类型</option>
+                                    <option value="oracle">ORACLE</option>
+                                    <option value="mysql">MYSQL</option>
+                                    <option value="postgresql">POSTGRESQL</option>
+                                </select>
+                                {#            <input type='text' class="form-control" name="edb_type" id="edb_type"/>#}
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-3 control-label">用户名</label>
+
+                            <div class='col-sm-6'>
+                                <input type='text' class="form-control" name="eusername" id="eusername"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-3 control-label">密码</label>
+
+                            <div class='col-sm-6'>
+                                <input type='text' class="form-control" name="epassword" id="epassword"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-3 control-label">实例地址</label>
+
+                            <div class='col-sm-6'>
+                                <input type='text' class="form-control" name="einstance_url" id="einstance_url"/>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-3 control-label">实例端口</label>
+
+                            <div class='col-sm-6'>
+                                <input type='text' class="form-control" name="eport" id="eport"/>
+                            </div>
+                        </div>
+                        {#      <div class="form-group">#}
+                        {#        <label for="inputEmail3" class="col-sm-3 control-label">实例类型</label>#}
+                        {#        <div class='col-sm-6'>#}
+                        {#            <select name="einstance_type" id="einstance_type" class="form-control">#}
+                        {#                <option value="">请选择实例类型</option>#}
+                        {#                <option value="master">MASTER</option>#}
+                        {#                <option value="slave">SLAVE</option>#}
+                        {#            </select>#}
+                        {#        </div>#}
+                        {#      </div>#}
+                        <div class="form-group">
+                            <label for="inputEmail3" class="col-sm-3 control-label">IDC</label>
+
+                            <div class='col-sm-6'>
+                                <select name="eidc" id="eidc" class="form-control">
+                                    {% for item in idc %}
+                                        <option value="{{ item.id }}">{{ item.name_ch }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                        <button type="submit" class="btn btn-green" id="submit1">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="descriptionValue" tabindex="-1" role="dialog"
+         aria-labelledby="descriptionValueValueTitle"
+         aria-hidden="true" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog" style="width:800px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="descriptionValueForm1" method="POST">
+                    <input type="hidden" name="edit_id" id="edit_id" value="">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id=""><span id="descriptionValueValueTitle"></span></h4>
+                    </div>
+
+                    <div class="modal-body">
+                        <div id="show_db_group1_div">
+                            <table id="show_db_group1"></table>
+                        </div>
+                        <div style="display: none" id="show_db_group2_div">
+                            <table id="show_db_group2"></table>
+                        </div>
+                    </div>
+                    <div class="modal-footer" id="view_button">
+                        <input type="button" class="btn btn-info" id="di_btn" value="配置文件">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="toolbar">
+        <div class="form-inline" role="form">
+            {% if db_permission %}
+            <button id="create" data-toggle="modal" data-target="#addValue" class="btn btn-green">
+                <i class="glyphicon glyphicon-plus"></i> 新增
+            </button>
+                <button id="copy_st" data-toggle="modal" data-target="#copy_value" class="btn btn-green">
+                    <i class="glyphicon glyphicon-copyright-mark"></i> 复制
+                </button>
+            {% endif %}
+            <button id="db_st" class="btn btn-green">
+                <i class="glyphicon glyphicon-comment"></i> 标准参考
+            </button>
+            &nbsp;&nbsp;&nbsp;&nbsp;
+            <select name="params_idc" id="params_idc" class="form-control control_api_url">
+                <option value="">筛选IDC</option>
+                {% for item in idc %}
+                    <option value="{{ item.id }}">{{ item.name_ch }}</option>
+                {% endfor %}
+            </select>
+            <select name="params_dbtype" id="params_dbtype" class="form-control control_api_url_dbtyp">
+                <option value="">筛选数据库类型</option>
+                <option value="oracle">ORACLE</option>
+                <option value="mysql">MYSQL</option>
+            </select>
+            {#    <select name="params_instancetype" id="params_instancetype" class="form-control control_api_url_instancetype">#}
+            {#        <option value="">筛选实例类型</option>#}
+            {#        <option value="MASTER">MASTER</option>#}
+            {#        <option value="SLAVE">SLAVE</option>#}
+            {#    </select>#}
+        </div>
+    </div>
+
+    <div class="modal fade" id="db_copy_view" tabindex="-1" role="dialog"
+         aria-labelledby="dbValueTitle"
+         aria-hidden="true" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog" style="width:1024px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="db_copy_form" method="POST">
+                    <input type="hidden" name="edit_id" id="edit_id" value="">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="dbValueTitle">DB实例复制</h4>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="base_domain" class="col-sm-1 control-label">源：</label>
+
+                            <div class='col-sm-4'>
+                                <select name="base_domain" id="base_domain" class="form-control">
+                                    <option value="">请选择复制源</option>
+                                    {% for item in db_instance %}
+                                        <option value="{{ item.port }}">{{ item.instance_url }}:{{ item.port }}
+                                            || {{ item.idc__name_ch }} || {{ item.idc }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-1 control-label">目标：</label>
+
+                            <div class='col-sm-4'>
+                                <input type='text' class="form-control" name="target_domian" id="target_domian"
+                                       placeholder="域名"/>
+                            </div>
+                            <div class='col-sm-2'>
+                                <input type='text' class="form-control" name="target_port" id="target_port"
+                                       placeholder="端口"/>
+                            </div>
+                            <div class='col-sm-2'>
+                                <select name="target_idc" id="target_idc" class="form-control">
+                                    <option value="">IDC</option>
+                                    {% for item in idc %}
+                                        <option value="{{ item.id }}">{{ item.name_ch }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class='col-sm-12'>
+                                <div id="db_copy_table_div">
+                                    <table id="db_copy_table">
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer" id="view_button">
+                            <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                            <button type="submit" class="btn btn-green" id="db_copy_submit">保存</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="dbValue" tabindex="-1" role="dialog"
+         aria-labelledby="dbValueTitle"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width:800px;">
+            <div class="modal-content">
+                <form class="form-horizontal" role="form" id="dbValueForm1" method="POST">
+                    <input type="hidden" name="edit_id" id="edit_id" value="">
+
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span
+                                class="sr-only">Close</span></button>
+                        <h4 class="modal-title" id="dbValueTitle">标准参考</h4>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-11 control-label"
+                                   style="text-align: center">标准参考</label>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-4 control-label">ORACLE JDBC URL:</label>
+                            <label for="inputPassword3" class="col-sm-7 control-label" style="text-align: left">jdbc:oracle:thin:@//[host]:[port]/[ServiceName]</label>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-4 control-label">MySQL JDBC URL:</label>
+                            <label for="inputPassword3" class="col-sm-7 control-label" style="text-align: left">jdbc:mysql://[host]:[port]/[database_name]</label>
+                        </div>
+                        <div class="modal-header">
+                        </div>
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-11 control-label" style="text-align: center">JDBCKEY设置说明</label>
+                        </div>
+                        <div class="form-group">
+                            <label for="inputPassword3" class="col-sm-3 control-label"
+                                   style="text-align: center">JDBCKEY</label>
+                            <label for="inputPassword3" class="col-sm-5 control-label"
+                                   style="text-align: center">JDBCVAL</label>
+                            <label for="inputPassword3" class="col-sm-2 control-label"
+                                   style="text-align: center">type</label>
+                            <label for="inputPassword3" class="col-sm-1 control-label"
+                                   style="text-align: center">db</label>
+                        </div>
+                        {% for item in db_default_instances %}
+                            <div class="form-group">
+                                <label for="inputPassword3" class="col-sm-3 control-label"
+                                       style="text-align: left">{{ item.jdbckey }}</label>
+                                <label for="inputPassword3" class="col-sm-5 control-label"
+                                       style="text-align: center">{{ item.jdbcval }}</label>
+                                <label for="inputPassword3" class="col-sm-2 control-label" style="text-align: center">
+                                    {% if item.jdbctype == 1 %}
+                                        不可更改
+                                    {% elif item.jdbctype == 2 %}
+                                        自定义
+                                    {% endif %}
+                                </label>
+                                <label for="inputPassword3" class="col-sm-1 control-label"
+                                       style="text-align: center">{{ item.dbtype }}</label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="modal-footer" id="view_button">
+                        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <table id="asset">
+    </table>
+
+
+    <script>
+        $(document).ready(function () {
+            $('#di_btn').click(function () {
+                if ($('#show_db_group1_div').css('display') == 'block') {
+                    $('#show_db_group1_div').css('display', 'none');
+                    $('#show_db_group2_div').css('display', '');
+                    $('#di_btn').val('配置组')
+                    $('#descriptionValueValueTitle').text('关联配置文件')
+                } else {
+                    $('#show_db_group1_div').css('display', '');
+                    $('#show_db_group2_div').css('display', 'none');
+                    $('#di_btn').val('配置文件')
+                    $('#descriptionValueValueTitle').text('关联配置组')
+                }
+            });
+
+            $('#db_st').click(function () {
+                $('#dbValue').modal('show');
+            });
+
+            db_copy_form_validator();
+
+            $('#db_copy_view').on('hidden.bs.modal', function () {
+                $("#db_copy_form").data('bootstrapValidator').destroy();
+                $('#db_copy_form').data('bootstrapValidator', null);
+                db_copy_form_validator();
+            });
+
+            ;
+            $('#copy_st').click(function () {
+                $('#target_domian').val('');
+                $('#target_port').val('');
+                $('#base_domain').selectpicker('refresh');
+                {#                alert($('#base_domain').find('option:selected').text());#}
+                $('#db_copy_view').modal('show');
+            });
+
+            $('#base_domain').selectpicker({
+                'liveSearch': true,
+                'liveSearchPlaceholder': '搜索',
+                'width': 'fit',
+            }).on('change', function () {
+                var pool_table = $('#db_copy_table  tr').val();
+                if ($(this).find("option:selected").text().indexOf('||') != -1) {
+                    var text = $(this).find("option:selected").text();
+                    var domian_port = $.trim(text.split('||')[0]);
+                    var idc = $.trim(text.split('||')[2]);
+                    var db_url = '{{ CMDBAPI_URL }}cmdb/db/get_dbinstance_list/?domian_port=' + domian_port + '&idc=' + idc;
+                    var columns = [
+                        {
+                            field: 'id',
+                            visible: false
+                        },
+                        {
+                            field: 'cname',
+                            title: '标识符',
+                            sortable: true,
+                        },
+                        {
+                            field: 'name_ch',
+                            title: 'IDC',
+                            sortable: true,
+                        },
+                    ]
+                    if (pool_table == undefined) {
+                        $('#db_copy_table').bootstrapTable({
+                            url: db_url,
+                            method: 'get',
+                            ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                            undefinedText: '-',
+                            cache: false,
+                            pagination: true,
+                            pageSize: 50,
+                            pageNumber: 1,
+                            sortable: true,
+                            search: false,
+                            sortName: 'id',
+                            columns: columns,
+                            showHeader: false
+                        });
+                    } else {
+                        $('#db_copy_table').bootstrapTable('refresh', {
+                            url: db_url,
+                        });
+                    }
+                    ;
+                }
+            });
+
+            window.operateEvents = {
+                'click .edit': function (e, value, row, index) {
+                    $('#editValue').modal('show');
+                },
+                'click .view': function (e, value, row, index) {
+                    $('#descriptionValue').modal('show');
+                    $('#di_btn').val('配置文件')
+                    $('#descriptionValueValueTitle').text('关联配置组')
+                    $('#show_db_group1_div').css('display', '');
+                    $('#show_db_group2_div').css('display', 'none');
+                    var pool_table = $('#show_db_group1  tr').val();
+                    var url1 = '{{ CMDBAPI_URL }}cmdb/db/instanes_group/?id=' + row.id + '&ct_type=instance'
+                    if (pool_table == undefined) {
+                        $('#show_db_group1').bootstrapTable({
+                            url: url1,
+                            method: 'get',
+                            ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                            undefinedText: '-',
+                            cache: false,
+                            pagination: true,
+                            pageSize: 20,
+                            pageNumber: 1,
+                            sortable: true,
+                            sortName: 'app_name',
+                            sortOrder: '',
+                            columns: [
+                                {
+                                    field: 'site_name',
+                                    title: '站点名',
+                                },
+                                {
+                                    field: 'app_name',
+                                    title: '应用名',
+                                    sortable: true,
+                                },
+                                {
+                                    field: 'group_id',
+                                    title: '配置组',
+                                    sortable: true,
+                                },
+                                {
+                                    field: 'idc',
+                                    title: 'IDC',
+                                    sortable: true,
+                                },
+                                {
+                                    field: 'domain_name',
+                                    title: '部门',
+                                    sortable: true,
+                                },
+                                {
+                                    field: 'domain_leader',
+                                    title: '负责人',
+                                    sortable: true,
+                                },
+                            ],
+                        });
+                    } else {
+                        $('#show_db_group1').bootstrapTable('refresh', {
+                            url: url1
+                        });
+                    }
+                    var pool_table2 = $('#show_db_group2  tr').val();
+                    var url2 = '{{ CMDBAPI_URL }}cmdb/db/instanes_configinfo/?id=' + row.id + '&ct_type=instance'
+                    if (pool_table2 == undefined) {
+                        $('#show_db_group2').bootstrapTable({
+                            url: url2,
+                            method: 'get',
+                            ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                            undefinedText: '-',
+                            cache: false,
+                            pagination: true,
+                            pageSize: 20,
+                            pageNumber: 1,
+                            sortable: true,
+                            sortName: 'group_id',
+                            sortOrder: '',
+                            columns: [
+                                {
+                                    field: 'data_id',
+                                    title: '配置文件',
+                                },
+                                {
+                                    field: 'group_id',
+                                    title: '配置组',
+                                    sortable: true,
+                                },
+                                {
+                                    field: 'idc',
+                                    title: 'IDC',
+                                    sortable: true,
+                                },
+                                {
+                                    field: 'env',
+                                    title: '环境',
+                                    sortable: true,
+                                },
+                                {
+                                    field: 'domain_name',
+                                    title: '部门',
+                                    sortable: true,
+                                },
+                                {
+                                    field: 'domain_leader',
+                                    title: '负责人',
+                                    sortable: true,
+                                },
+                            ],
+                        });
+                    } else {
+                        $('#show_db_group2').bootstrapTable('refresh', {
+                            url: url2
+                        });
+                    }
+                }
+            };
+
+            $('#asset').on('click-row.bs.table', function (e, row, $element) {
+                //初始化select
+                var edbtype = row.db_type
+                {#        var einstancetype = row.instance_type#}
+                $("#edb_type").find("option").removeAttr("selected");
+                {#        $("#einstance_type").find("option").removeAttr("selected");#}
+                $("#eidc").find("option").removeAttr("selected");
+                //Datalist
+                $("#id").val(row.id);
+                $("#edbname").val(row.dbname);
+                {#        $("#edb_type").val(edbtype);#}
+                var count = $("#edb_type option").length;
+                for (var i = 0; i < count; i++) {
+                    if ($("#edb_type").get(0).options[i].value == row.db_type) {
+                        $("#edb_type").get(0).options[i].selected = true;
+                        break;
+                    }
+                }
+                var count = $("#eidc option").length;
+                for (var i = 0; i < count; i++) {
+                    if ($("#eidc").get(0).options[i].value == row.idc) {
+                        $("#eidc").get(0).options[i].selected = true;
+                        break;
+                    }
+                }
+                {#        $("#edb_type option[value="+edbtype.toLowerCase()+"]").attr("selected","selected");#}
+                $("#eusername").val(row.username);
+                $("#epassword").val(row.password);
+                $("#einstance_url").val(row.instance_url);
+                $("#eport").val(row.port);
+                {#        $("#einstance_type option[value="+einstancetype.toLowerCase()+"]").attr("selected","selected");#}
+                {#        $("#eidc option[value="+row.idc+"]").attr("selected","selected");#}
+                $.ajax({
+                    url: '{{ CMDBAPI_URL }}cmdb/db/instanes_edit/?id=' + row.id,
+                    ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                    type: 'GET',
+                    async: false,
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response['success']) {
+                            $('#edbname').attr("readonly", true)
+                            $('#edb_type').attr("disabled", "disabled")
+                            $('#eusername').attr("readonly", true)
+                            {#                    $('#epassword').attr("readonly",true)#}
+                            $('#einstance_url').attr("readonly", true)
+                            $('#eport').attr("readonly", true)
+                        } else {
+                            $('#edbname').attr("readonly", false)
+                            $('#edb_type').removeAttr("disabled")
+                            $('#eusername').attr("readonly", false)
+                            {#                    $('#epassword').attr("readonly",false)#}
+                            $('#einstance_url').attr("readonly", false)
+                            $('#eport').attr("readonly", false)
+                        }
+                    },
+                });
+            });
+
+            function getValDB() {
+                var params_idc = $("#params_idc option:selected").val();
+                var params_dbtype = $("#params_dbtype option:selected").val().toLowerCase();
+                {#        var params_instancetype = $("#params_instancetype option:selected").val().toLowerCase();#}
+                var api_url_base = '{{ CMDBAPI_URL }}cmdb/db/instances/?';
+                var params = ['format=json'];
+                if (params_idc != "") {
+                    params.push('idc__id=' + params_idc)
+                }
+                if (params_dbtype != "") {
+                    params.push('db_type=' + params_dbtype)
+                }
+                {#        if (params_instancetype !="") {#}
+                {#            params.push('instance_type='+params_instancetype)#}
+                {#        }#}
+                var api_url = api_url_base + params.join('&')
+                return api_url
+            };
+            $(".control_api_url").change(function () {
+                $('#asset').bootstrapTable('refresh', {
+                    url: getValDB()
+                });
+            });
+            $(".control_api_url_dbtyp").change(function () {
+                $('#asset').bootstrapTable('refresh', {
+                    url: getValDB()
+                });
+            });
+            $(".control_api_url_instancetype").change(function () {
+                $('#asset').bootstrapTable('refresh', {
+                    url: getValDB()
+                });
+            });
+
+            $('#asset').bootstrapTable({
+                url: '{{ CMDBAPI_URL }}cmdb/db/instances/?format=json',
+                ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                columns: [
+                    {
+                        field: 'id',
+                        visible: false
+                    },
+                    {
+                        field: 'cname',
+                        title: '标识符'
+                    },
+                    {
+                        field: 'dbname',
+                        title: '数据库名'
+                    },
+                    {
+                        field: 'db_type',
+                        title: '数据库类型'
+                    },
+                    {
+                        field: 'username',
+                        title: '用户名'
+                    },
+                    {
+                        field: 'password',
+                        title: '密码',
+                    },
+                    {
+                        field: 'instance_url',
+                        title: '实例地址'
+                    },
+                    {
+                        field: 'port',
+                        title: '端口'
+                    },
+                    {#            {#}
+                    {#                field: 'instance_type',#}
+                    {#                title: '实例类型',#}
+                    {#                visible: false#}
+                    {#            },#}
+                    {
+                        field: 'idc_name',
+                        title: 'IDC'
+                    },
+                    {% if tmp == "admin" %}
+                        {
+                            field: 'operate',
+                            title: '操作',
+                            align: 'center',
+                            formatter: operateFormatter,
+                            events: operateEvents
+                        }
+                    {% endif %}
+                ],
+                responseHandler: function (res) {
+                    var result = new Object();
+                    result.rows = res.results;
+                    result.total = res.count;
+                    return result
+                },
+                queryParams: function (p) {
+                    return {
+                        page_size: p.limit,
+                        page: p.offset / p.limit + 1,
+                        search: p.search
+                    };
+                },
+                pagination: true,
+                pageSize: 10,
+                pageList: [10, 20, 100],
+                sidePagination: 'server',
+                showRefresh: true,
+                search: true,
+                showColumns: true,
+                toolbar: "#toolbar",
+                cache: false
+            });
+
+            function operateFormatter(value, row, index) {
+                var hrefarr = [];
+                {% if db_permission %}
+                hrefarr.push('<a class="edit">',
+                        '<span class="glyphicon glyphicon-pencil" title="编辑" style="cursor:pointer;margin-right:10px;"></span>',
+                        '</a>');
+                {% endif %}
+                hrefarr.push('<a class="view">',
+                        '<span class="glyphicon glyphicon-list" title="查看所属配置组" style="cursor:pointer;margin-right:10px;"></span>',
+                        '</a>');
+                return hrefarr.join('')
+            };
+
+            $('#addForm')
+                    .bootstrapValidator({
+                        fields: {
+                            dbname: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '数据库名不能为空。'
+                                    }
+                                }
+                            },
+                            db_type: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '数据库类型不能为空。'
+                                    }
+                                }
+                            },
+                            username: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '用户名不能为空。'
+                                    }
+                                }
+                            },
+                            password: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '密码不能为空。'
+                                    }
+                                }
+                            },
+                            instance_url: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '实例地址不能为空。'
+                                    }
+                                }
+                            },
+                            port: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '端口不能为空。'
+                                    }
+                                }
+                            },
+                            {#                instance_type: {#}
+                            {#                    validators: {#}
+                            {#                        notEmpty: {#}
+                            {#                            message: '实例类型不能为空。'#}
+                            {#                        }#}
+                            {#                    }#}
+                            {#                },#}
+                            idc: {
+                                validators: {
+                                    notEmpty: {
+                                        message: 'IDC不能为空。'
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        var cname = "id:" + $("#db_type option:selected").val().toLowerCase() + "://" + $.trim($("#instance_url").val()) + ":" + $.trim($("#port").val()) + "/" + $.trim($("#dbname").val()) + "//" + $.trim($("#username").val())
+                        var inputdata = {
+                            'cname': cname,
+                            'dbname': $("#dbname").val(),
+                            'db_type': $("#db_type option:selected").val().toLowerCase(),
+                            'username': $("#username").val(),
+                            'password': $("#password").val(),
+                            {#                'instance_type': $("#instance_type option:selected").val().toLowerCase(),#}
+                            'idc': $("#idc option:selected").val(),
+                            'instance_url': $("#instance_url").val(),
+                            'port': $("#port").val()
+                        };
+                        $.ajax({
+                            url: '{{ CMDBAPI_URL }}cmdb/db/instances/',
+                            type: 'POST',
+                            async: false,
+                            data: inputdata,
+                            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                            success: function (json) {
+                                $('#alert').empty().append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>添加数据库实例</div>');
+                                $('#addValue').modal('hide');
+                                $('#addForm').bootstrapValidator('resetForm', true);
+                                $('#asset').bootstrapTable('refresh', {
+                                    silent: true
+                                });
+                            },
+                            error: function (json) {
+                                $('#alert').empty().append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加数据库实例' + JSON.stringify(json.responseText) + '</div>');
+                                $('#addValue').modal('hide');
+                            }
+                        });
+                    });
+            $('#editForm')
+                    .bootstrapValidator({
+                        fields: {
+                            edbname: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '数据库名不能为空。'
+                                    }
+                                }
+                            },
+                            edb_type: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '数据库类型不能为空。'
+                                    }
+                                }
+                            },
+                            eusername: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '用户名不能为空。'
+                                    }
+                                }
+                            },
+                            epassword: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '密码不能为空。'
+                                    }
+                                }
+                            },
+                            einstance_url: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '实例地址不能为空。'
+                                    }
+                                }
+                            },
+                            eport: {
+                                validators: {
+                                    notEmpty: {
+                                        message: '端口不能为空。'
+                                    }
+                                }
+                            },
+                            {#                einstance_type: {#}
+                            {#                    validators: {#}
+                            {#                        notEmpty: {#}
+                            {#                            message: '实例类型不能为空。'#}
+                            {#                        }#}
+                            {#                    }#}
+                            {#                },#}
+                            eidc: {
+                                validators: {
+                                    notEmpty: {
+                                        message: 'IDC不能为空。'
+                                    }
+                                }
+                            }
+                        }
+                    })
+                    .on('success.form.bv', function (e) {
+                        e.preventDefault();
+                        var ecname = "id:" + $("#edb_type option:selected").val().toLowerCase() + "://" + $.trim($("#einstance_url").val()) + ":" + $.trim($("#eport").val()) + "/" + $.trim($("#edbname").val()) + "//" + $.trim($("#eusername").val())
+                        var id = $("#id").val();
+                        var inputdata = {
+                            'id': id,
+                            'cname': ecname,
+                            'dbname': $("#edbname").val(),
+                            'db_type': $("#edb_type option:selected").val().toLowerCase(),
+                            'username': $("#eusername").val(),
+                            'password': $("#epassword").val(),
+                            {#                'instance_type': $("#einstance_type option:selected").val().toLowerCase(),#}
+                            'idc': $("#eidc option:selected").val(),
+                            'instance_url': $("#einstance_url").val(),
+                            'port': $("#eport").val()
+                        };
+                        $.ajax({
+                            url: '{{ CMDBAPI_URL }}cmdb/db/instances/' + id + '/',
+                            type: 'PATCH',
+                            async: false,
+                            data: inputdata,
+                            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                            success: function (json) {
+                                $('#alert').empty().append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>修改数据库实例</div>');
+                                $('#editValue').modal('hide');
+                                $('#editForm').bootstrapValidator('resetForm', true);
+                                $('#asset').bootstrapTable('refresh', {
+                                    silent: true
+                                });
+                            },
+                            error: function (json) {
+                                $('#alert').empty().append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>修改数据库实例' + JSON.stringify(json.responseText) + '</div>');
+                                $('#editValue').modal('hide');
+                            }
+                        });
+                    });
+
+            function db_copy_form_validator() {
+                $('#db_copy_form').bootstrapValidator({
+                    fields: {
+                        target_domian: {
+                            validators: {
+                                notEmpty: {
+                                    message: '目标域名不能为空。'
+                                }
+                            }
+                        },
+                        target_port: {
+                            validators: {
+                                notEmpty: {
+                                    message: '目标端口不能为空。'
+                                },
+                                integer: {
+                                    message: '目标端口请输入数字。'
+                                },
+                                between: {
+                                    min: '0',
+                                    max: '65535',
+                                    message: '目标端口范围0-65535'
+                                }
+                            }
+                        },
+                        target_idc: {
+                            validators: {
+                                notEmpty: {
+                                    message: '目标端口不能为空。'
+                                }
+                            }
+                        },
+                        base_domain: {
+                            validators: {
+                                notEmpty: {
+                                    message: '源不能为空。'
+                                },
+                                stringLength: {
+                                    message: 'message',
+                                    min: '1000',
+                                    max: '100000'
+                                },
+                                emailAddress: {}
+                            }
+                        },
+                    }
+                });
+                db_copy_form_submit();
+            }
+
+            function db_copy_form_submit() {
+                $('#db_copy_form').on('success.form.bv', function (e) {
+                    e.preventDefault();
+                    var text = $('#base_domain').find("option:selected").text();
+                    var domian_port = $.trim(text.split('||')[0]);
+                    var idc = $.trim(text.split('||')[2]);
+                    var target_domian = $('#target_domian').val();
+                    var target_port = $('#target_port').val();
+                    var target_idc = $('#target_idc').val();
+                    var inputdata = {
+                        'domian_port': domian_port,
+                        'idc': idc,
+                        'target_domian': target_domian,
+                        'target_port': target_port,
+                        'target_idc': target_idc,
+                    };
+                    $.ajax({
+                        url: '{{ CMDBAPI_URL }}cmdb/db/copy_db_instance/',
+                        type: 'POST',
+                        async: false,
+                        data: inputdata,
+                        dataType: "json",
+                        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                        success: function (json) {
+                            window.console.log(json.result)
+                            if (json.result) {
+                                $('#alert').empty().append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>修改数据库实例</div>');
+                                $('#db_copy_view').modal('hide');
+                                $('#db_copy_form').bootstrapValidator('resetForm', true);
+                                $('#asset').bootstrapTable('refresh', {
+                                    silent: true
+                                });
+                            } else {
+                                $('#alert').empty().append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong> ' + json.msg + '</div>');
+                                $('#db_copy_view').modal('hide');
+                            }
+                        },
+                        error: function (json) {
+                            $('#alert').empty().append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong> ' + JSON.stringify(json.responseText) + '</div>');
+                            $('#db_copy_view').modal('hide');
+                        }
+                    });
+                });
+            }
+        });
+    </script>
+{% endblock %}

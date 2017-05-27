@@ -1,0 +1,145 @@
+{% extends "mobile/base/return_base.html" %}
+
+{% block title %}今日值班-详情{% endblock %}
+
+{% block content %}
+<link href="{{ STATIC_URL }}mobile/libs/mui/css/mui.picker.css" rel="stylesheet" />
+<link href="{{ STATIC_URL }}mobile/libs/mui/css/mui.poppicker.css" rel="stylesheet" />
+<style>
+    .mui-btn {
+        font-size: 16px;
+        padding: 8px;
+        margin: 3px;
+    }
+    h5.mui-content-padded {
+        margin-left: 3px;
+        margin-top: 20px !important;
+    }
+    h5.mui-content-padded:first-child {
+        margin-top: 12px !important;
+    }
+    .ui-alert {
+        text-align: center;
+        padding: 20px 10px;
+        font-size: 16px;
+    }
+</style>
+{% if activity_id %}
+<div mui-content-padded>
+    <h4 style="margin-top: 10px; margin-left:5px;">{{ activity.name }}</h4>
+    <h5 style="margin-left:5px;">{{ start_time }} - {{ end_time }}</h5>
+    <hr/>
+    <button id='showDomainRota' class="mui-btn mui-btn-primary mui-btn-block" type='button'>根据二级部门/三级部门/Domain筛选</button>
+{#    <div id='cityResult' class="ui-alert"></div>#}
+</div>
+<div id="duty_content">
+
+</div>
+{% else %}
+    <div class="mui-card"><div class="mui-card-header"><p>参数activity缺失，无法查看活动值班详情</p></div></div>
+{% endif %}
+<script src="{{ STATIC_URL }}mobile/libs/mui/js/arttmpl.js"></script>
+
+<script type="text/templete" id="activity_duty_list">
+<% if(results.length > 0){ %>
+    <% for (var i in results) { var rota = results[i]; %>
+        <div class="mui-card">
+{#            <div class="mui-card-header"><%=act.name%></div>#}
+            <div class="mui-card-content">
+                <div class="mui-card-content-inner">
+                    <h4><%=rota.duty_domain%></h4>
+                    &nbsp;&nbsp;&nbsp;&nbsp;值班人员：<%=rota.duty%> <br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;Backup人员：<%=rota.duty_backup%>
+                </div>
+            </div>
+            <div class="mui-card-footer">
+                <p><%=rota.start_time%> - <%=rota.end_time%></p>
+                <% if(rota.duty_way == 0){ %>
+                    <span class="mui-pull-right mui-badge mui-badge-success mui-badge-inverted"><%=rota.duty_way_name%></span>
+                <% }else if(rota.duty_way == 1){ %>
+                    <span class="mui-pull-right mui-badge mui-badge-primary mui-badge-inverted"><%=rota.duty_way_name%></span>
+                <% }else { %>
+                    <span class="mui-pull-right mui-badge mui-badge-warning mui-badge-inverted"><%=rota.duty_way_name%></span>
+                <% } %>
+            </div>
+        </div>
+    <% } %>
+<% }else{ %>
+    <div class="mui-card"><div class="mui-card-header"><p>今日无匹配值班信息</p></div></div>
+<% } %>
+</script>
+
+<script src="{{ STATIC_URL }}mobile/libs/mui/js/mui.picker.js"></script>
+<script src="{{ STATIC_URL }}mobile/libs/mui/js/mui.poppicker.js"></script>
+<script>
+{% if activity_id %}
+(function($, doc) {
+    $.init();
+    $.ready(function() {
+        var init_api = '{{ ROOT_URL }}api/yellow/duty/info/?activity_id={{ activity_id }}';
+        find_user(init_api);
+
+        //默认展示今日值班
+        function find_user(api_url) {
+            mui.ajax(api_url, {
+                dataType: 'json',
+                type: 'get',
+                timeout: 3000,
+                headers: {'Content-Type': 'application/json'},
+                success: function (data) {
+                    template.config('escape', false);
+                    document.getElementById('duty_content').innerHTML = template('activity_duty_list', JSON.parse(data));
+                },
+                error:function(xhr,type,errorThrown){
+                    mui.toast(errorThrown);
+                }
+            });
+        }
+
+        //级联示例
+        var cityPicker = new $.PopPicker({
+            layer: 3
+        });
+
+        mui.ajax('{{ ROOT_URL }}api/cmdb/deptv2/dept/domain/', {
+            dataType: 'json',
+            type: 'get',
+            timeout: 3000,
+            headers: {'Content-Type': 'application/json'},
+            success: function (data) {
+                cityPicker.setData(data);
+                var buttonResult = doc.getElementById('showDomainRota');
+                mui('.mui-content').on('tap', '#showDomainRota', function() {
+                    cityPicker.show(function(items) {
+                        //更改已选显示
+                        buttonResult.innerText = items[0].text + "/" + items[1].text+ "/" + items[2].text;
+                        //查询
+                        var domain_id = items[2].value;
+                        var dept_id = items[1].value;
+                        var deptv2_id = items[0].value;
+
+                        var api_url = init_api;
+                        if(domain_id != 0){
+                            api_url = api_url+ '&domain_id='+ domain_id;
+                        }
+                        if(dept_id != 0){
+                            api_url = api_url+ '&dept_id='+ dept_id;
+                        }
+                        if(deptv2_id != 0){
+                            api_url = api_url+ '&deptv2_id='+ deptv2_id;
+                        }
+                        find_user(api_url);
+                    });
+                });
+            },
+            error:function(xhr,type,errorThrown){
+                mui.toast(errorThrown);
+            }
+        });
+
+    });
+})(mui, document);
+{% else %}
+{% endif %}
+</script>
+{% endblock %}

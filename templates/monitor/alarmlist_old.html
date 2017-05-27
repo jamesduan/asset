@@ -1,0 +1,586 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-multiselect/css/bootstrap-multiselect.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-multiselect/js/bootstrap-multiselect.js"></script>
+
+<style>
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+    .table{
+        width: 100%;
+        table-layout: fixed;
+    }
+   .table tr:hover td{
+       overflow: visible;
+       white-space: normal;
+   }
+    .table td {
+        word-wrap: break-word;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .table th {
+        text-align: center;
+    }
+    .table > tbody > tr > td{
+        vertical-align: middle;
+    }
+   .table td xmp:hover{
+        overflow: visible;
+        white-space: normal;
+   }
+    .table td xmp {
+        word-wrap: break-word;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>
+
+<div id="alert">
+</div>
+<div id="toolbar">
+<div class="form-inline" role="form">
+    <select id="alarm_source_select" class="form-control select_api_url multiselect" multiple="multiple">
+        {%  for item in alarm_source_list %}
+            <option value="{{ item.id }}">{{ item.name }}</option>
+        {%  endfor %}
+    </select>
+
+    <select id="alarm_media_select" class="form-control select_api_url selectpicker">
+        <option value="">请选择告警方式</option>
+        <option value="1">Email</option>
+        <option value="2">SMS</option>
+        <option value="3">Voice</option>
+        <option value="4">TTS</option>
+    </select>
+
+    <select id="eventtype_select" class="form-control select_api_url multiselect" multiple="multiple">
+        {%  for item in event_type_list %}
+            <option value="{{ item.id }}">{{ item.name }}</option>
+        {%  endfor %}
+    </select>
+
+    <select id="eventlevel_select" class="form-control select_api_url multiselect" multiple="multiple">
+        {%  for item in event_level_list %}
+            <option value="{{ item.id }}" title="{{ item.description }}">{{ item.name }}</option>
+        {%  endfor %}
+    </select>
+
+    <select id="app_select" class="form-control selectpicker">
+        <option value=" ">请选择Site/Pool</option>
+        {%  for item in app_list %}
+            <option value="{{ item.id }}">{{ item.site.name }}/{{ item.name }}</option>
+        {%  endfor %}
+    </select>
+
+   <label style="width: 65px;">开始时间:</label>
+   <input size="16" style="width: 130px;" type="datetime" value="{{ start_time }}" name="start_time" id="start_time_picker" class="form-control datetimepicker">
+   <label style="width: 65px;">结束时间:</label>
+   <input size="16" style="width: 130px;" type="text" value="{{ end_time }}" name="end_time" id="end_time_picker" class="form-control datetimepicker">
+
+   <button id="btn_refresh" type="button" class="btn btn-green  glyphicon glyphicon-refresh" title="刷新"> </button>
+</div>
+</div>
+
+<table id="alarm_table">
+</table>
+
+<script>
+var $table = $('#alarm_table');
+
+$('#app_select').selectpicker({
+    'liveSearch': true,
+    'liveSearchPlaceholder': '搜索',
+    'width': 'fit'
+}).change(function(){
+    var app = $("#app_select").val();
+    if (app!=''){
+        refresh_by_url(false);
+    }
+});
+
+$('.selectpicker').selectpicker({
+    'width': 'fit'
+});
+
+$('#alarm_media_select').change(function(){
+    refresh_by_url(false);
+});
+
+$('.datetimepicker').change(function(){
+    refresh_by_url(false);
+});
+
+function get_url(flag){
+    var starttime = $("#start_time_picker").val().trim();
+    var endtime = $("#end_time_picker").val().trim();
+    if (flag == true) {
+        var now = new Date();
+        var t = now.getTime();
+        t += 60000;//1min
+        now = new Date(t);
+        now = now.Format("yyyy-MM-dd hh:mm");
+
+        $('#end_time_picker').val(now);
+        starttime = $("#start_time_picker").val().trim();
+        endtime = $("#end_time_picker").val().trim();
+    }
+
+    var s_date = new Date(starttime);
+    var e_date = new Date(endtime);
+    var s_t = s_date.getTime()/1000;
+    var e_t = e_date.getTime()/1000;
+
+    if (s_t < 0 || e_t < 0){
+        alert("时间区间不正确，请检查。");
+        return -1;
+    }
+
+    var media = $("#alarm_media_select").val().trim();
+    var source = '';
+    $('#alarm_source_select option:selected').each(
+        function() {
+            if (source != '') {
+                source += ',';
+            }
+            source += $(this).val();
+        }
+    );
+
+    var type = '';
+    $('#eventtype_select option:selected').each(
+        function() {
+            if (type != '') {
+                type += ',';
+            }
+            type += $(this).val();
+        }
+    );
+    var level = '';
+    $('#eventlevel_select option:selected').each(
+        function() {
+            if (level != '') {
+                level += ',';
+            }
+            level += $(this).val();
+        }
+    );
+    var app = $("#app_select").val().trim();
+    var api_url_base = '{{ CMDBAPI_URL }}notification/alarm/?';
+    var params = ['format=json'];
+    params.push('status_id=' + '1');
+    if (media !="") {
+        params.push('method_id='+media)
+    }
+
+    if (source !="") {
+        params.push('source__in='+source)
+    }
+
+    if (type !="") {
+        params.push('type__in='+type)
+    }
+    if (level !="") {
+        params.push('level__in='+level)
+    }
+    if (app !="") {
+        params.push('pool_id='+app)
+    }
+
+    if (starttime!=""){
+        params.push('start_time=' + starttime);
+    }
+
+    if (endtime!=""){
+        params.push('end_time=' + endtime);
+    }
+    var api_url = api_url_base + params.join('&');
+    return api_url;
+}
+
+function refresh_by_url(refresh_flag) {
+    var api_url = get_url(refresh_flag);
+    if (api_url == -1) {
+        return;
+    }
+    $table.bootstrapTable('refresh', {
+        url: api_url
+    });
+}
+
+var sourceArray = [0];
+var typeArray = [0];
+var levelArray = [0];
+
+$(document).ready(function(){
+    $('#alarm_source_select').multiselect({
+        nonSelectedText:'请选择源',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'事件源',
+        numberDisplayed:1,
+        maxHeight:500,
+        onDropdownHide: function(event){
+            multiSelectFilter("alarm_source_select");
+        }
+    });
+
+    $('#eventtype_select').multiselect({
+        nonSelectedText:'请选择类型',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'事件类型',
+        numberDisplayed:1,
+        maxHeight:500,
+        onDropdownHide: function(event){
+            multiSelectFilter("eventtype_select");
+        }
+    });
+
+    $('#eventlevel_select').multiselect({
+        nonSelectedText:'请选择等级',
+        nSelectedText:'项被选中',
+        includeSelectAllOption:true,
+        selectAllText:'全选',
+        allSelectedText:'事件等级',
+        numberDisplayed:1,
+        onDropdownHide: function(event){
+            multiSelectFilter("eventlevel_select");
+        }
+    });
+
+    $('.datetimepicker').datetimepicker({
+        format: 'yyyy-mm-dd hh:ii',
+        autoclose: true,
+        minView: 0,
+        minuteStep:1
+
+    });
+
+    $(function () { $("[data-toggle='tooltip']").tooltip(); });
+
+    var display_columns = [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'source_name',
+                title: '告警源',
+                formatter: getSourceDetail,
+                width: '7%'
+            },
+            {
+                field: 'pool_name',
+                title: 'Pool',
+                width: '12%'
+            },
+            {
+                field: 'ip',
+                title: 'IP',
+                width: '8%'
+            },
+            {
+                field: 'type_name',
+                title: '类型',
+                width: '7%'
+            },
+            {
+                field: 'level_name',
+                title: '等级',
+                cellStyle:formatTableUnit,
+                align:'center',
+                width: '4%'
+            },
+            {
+                field: 'receiver_name',
+                title: '接收人',
+                width: '15%'
+            },
+            {
+                field: 'message',
+                title: '告警内容',
+                formatter:formatMsg
+            },
+            {
+                field: 'level_adjustment_id',
+                title: '调级',
+                align: 'center',
+                formatter: levelAdjustmentFormatter,
+                width: '3%',
+                visible: false
+            },
+            {
+                field: 'method_name',
+                title: '方式',
+                align: 'center',
+                width: '4%'
+            },
+            {
+                field: 'create_time',
+                title: '告警时间',
+                align: 'center',
+                formatter: getCreateTime,
+                width: '7%'
+            },
+            {
+                field: 'error',
+                title: '结果',
+                align: 'center',
+                width: '5%'
+            },
+            {
+                field: 'result',
+                title: '结果详情',
+                width: '5%',
+                visible: false
+            }
+    ];
+
+    var search = window.location.search;
+    var url = '{{ CMDBAPI_URL }}notification/alarm/?format=json&status_id=1';
+    if(search.length > 1) url += '&' + search.substr(1);
+    else url = get_url(false);
+
+    $('#alarm_table').bootstrapTable({
+        url: url,
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: display_columns,
+        responseHandler: function(res){
+            var result = {};
+            result.rows = res.results;
+            result.total = res.count;
+
+            for (event_index in result.rows){
+                var row = result.rows[event_index];
+                var event_detail = row.event_detail;
+                var details = {}, ips=[];
+
+                for (event_detail_index in event_detail){
+                    var site_name = event_detail[event_detail_index].site_name;
+                    var pool_name = event_detail[event_detail_index].pool_name;
+
+                    if (site_name == null) {
+                        site_name = '';
+                    }
+                    site_name += '/';
+
+                    if (pool_name == null) {
+                        pool_name = '';
+                    }
+
+                    var site_pool = site_name + pool_name;
+                    if(site_pool == '/'){
+                        site_pool = '';
+                    }
+                    details[site_pool] = site_pool;
+                    ips.push(event_detail[event_detail_index].ip);
+                }
+                var pool_list = '';
+                for(var key in details){
+                    pool_list += " " + details[key];
+                }
+                row.pool_name = pool_list;
+                row.ip = ips.join(", ")
+            }
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 30,
+        pageList: [10,30,50],
+        sidePagination: 'server',
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false
+
+    });
+
+    function getCreateTime(value, row, index) {
+        return moment.unix(value).format('YYYY-MM-DD HH:mm:ss');
+    }
+
+});
+
+function formatTableUnit(value, row, index) {
+    var front_color, bg_color;
+    switch (row.level_id){
+        case 100:
+            front_color = "#b64fff";
+            bg_color = "White";
+            break;
+        case 200:
+            front_color = "#cc3529";
+            bg_color = "White";
+            break;
+        case 300:
+            front_color = "#fa8c42";
+            bg_color = "White";
+            break;
+        case 350:
+            front_color = "#b7b000";
+            bg_color = "White";
+            break;
+        case 400:
+            front_color = "#33b704";
+            bg_color = "White";
+            break;
+        case 500:
+            front_color = "#000";
+            bg_color = "White ";
+            break;
+        default :
+            front_color = "Aqua";
+            bg_color = "Fuchsia";
+    }
+
+    return {
+        css: {
+            "color":front_color,
+            "background-color": bg_color
+        }
+    };
+}
+
+function formatMsg(value, row, index) {
+    var msg = row.message;
+    if (msg == null){
+        return "";
+    }
+    if (msg.indexOf("<br>") != -1) {
+        var newmsg = msg.replace(/<br>/g, "");
+        msg = newmsg;
+    }
+
+    if (msg.indexOf("<table") != -1) {
+        var max_length = 300;
+        if (msg.length > max_length){
+            msg = msg.substring(0, max_length);
+        }
+        msg = "<xmp>" + msg + "</xmp>...";
+    }
+
+    return msg;
+}
+
+{# format time #}
+Date.prototype.Format = function (fmt) {
+    var o = {
+    "M+": this.getMonth() + 1, //月份
+    "d+": this.getDate(), //日
+    "h+": this.getHours(), //小时
+    "m+": this.getMinutes(), //分
+    "s+": this.getSeconds(), //秒
+    "q+": Math.floor((this.getMonth() + 3) / 3), //季度
+    "S": this.getMilliseconds() //毫秒
+    };
+    if (/(y+)/.test(fmt)) fmt = fmt.replace(RegExp.$1, (this.getFullYear() + "").substr(4 - RegExp.$1.length));
+    for (var k in o)
+    if (new RegExp("(" + k + ")").test(fmt)) fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
+    return fmt;
+}
+
+function getSourceDetail(value, row, index) {
+    return '<a href="{{ ROOT_URL }}srcdtl/?id=' + row.source_id + '" target="_blank" class="tooltip-show" data-toggle="tooltip" title="点击查看Domain详情">' + value + '</a>';
+
+}
+
+
+function multiSelectFilter(selector_name){
+    var selectedOptions = $("#"+selector_name+" option:selected");
+    var selectedLength = selectedOptions.length;
+
+    var flag = false;
+    var oldState;
+
+    switch (selector_name){
+        case "alarm_source_select":
+            oldState = sourceArray;
+            break;
+        case "eventtype_select":
+            oldState = typeArray;
+            break;
+        case "eventlevel_select":
+            oldState = levelArray;
+            break;
+        default:
+            alert("unkown selector");
+            return;
+    }
+
+    if (oldState[0] != selectedLength){
+        flag = true;
+        oldState[0] = selectedLength;
+    }
+    else {
+        var i = 0;
+        for(;i<selectedLength;i++){
+            var optVal = selectedOptions[i].value;
+
+            if (optVal != oldState[i+1]){
+                flag = true;
+                break;
+            }
+        }
+    }
+
+    if (flag){
+        <!----save state -->
+        i = 1;
+        selectedOptions.each(function(){
+            oldState[i] = $(this).val();
+            i++;
+        });
+        <!---- refresh -->
+        refresh_by_url(false);
+    }
+
+}
+
+$("#btn_refresh").click(function(){
+    refresh_by_url(true);
+});
+
+
+function levelAdjustmentFormatter(value, row, index) {
+    var ret_label = "";
+    if (value <= 0){
+        ret_label = "否";
+    }
+    else {
+        ret_label = [
+            '<a href="{{ ROOT_URL }}eventadjust/?id=' +value+'"',
+            ' target="_blank" class="tooltip-show" data-toggle="tooltip" title=' + '点击查看调级规则' + '>',
+            '是',
+            '</a> '
+        ].join('');
+    }
+
+    return ret_label;
+}
+</script>
+{% endblock %}

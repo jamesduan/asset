@@ -1,0 +1,24 @@
+/* overwrite zUI css*/
+.zInputTxt {
+	width:80%;
+    height:100%;
+    margin:2px 0 2px 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-size: 36px;
+}
+
+table.diff{
+    width:100%;
+}
+
+table.diff tbody th {
+    width:10px;
+}
+
+table.diff tbody td {
+    TABLE-LAYOUT:fixed;
+    WORD-BREAK:break-all;
+    width:48%
+}

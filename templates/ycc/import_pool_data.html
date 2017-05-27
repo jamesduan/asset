@@ -1,0 +1,144 @@
+{% extends "common/bootstrap3.html" %}
+
+{% block content %}
+
+
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+
+
+<div class="page-header">
+  <h1>导入pool配置信息<small>:从测试环境中拷贝test环境的数据到新系统所有环境</small></h1>
+</div>
+
+<div id="alert">
+</div>
+
+<div>
+    <div class="col-sm-6">
+        <label for="s_srcgroup" class="col-sm-2">源GROUP_IDC:</label>
+        <div class="col-sm-10">
+            <select name="s_srcgroup" id="s_srcgroup" class="form-control">
+                <option value="">选择源Group_IDC</option>
+                {% for item in srcgroups %}
+                <option value="{{ item.group_id }}">{{ item.group_id }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <label for="s_dstgroup" class="col-sm-2">目的GROUP_IDC:</label>
+        <div class="col-sm-10">
+            <select name="s_dstgroup" id="s_dstgroup" class="form-control">
+                <option value="">选择目的Group_IDC</option>
+                {% for item in dstgroups %}
+                <option value="{{ item.group_id }}_{{ item.idc.ycc_code }}">{{ item.group_id }}_{{ item.idc.ycc_code }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</div>
+
+<div id="toolbar" style="margin:5px 0 10px 0">
+    <button id="import_btn" class="btn btn-primary">
+        <i class="glyphicon glyphicon-import"></i>导入
+    </button>
+    <button id="import_all_btn" class="btn btn-primary">
+        <i class="glyphicon glyphicon-import"></i>执行SQL
+    </button>
+</div>
+
+
+{% if debug  %}
+<h3>SQL excute in this Request</h3>
+<!-- debug: show the sql excute in this request -->
+{% for query in sql_queries %}<h3>Excute times: {{query.time}}</h3>
+<p>
+<code>
+{{query.sql}}
+</code>
+</p>
+{% endfor %}<!-- debug ends here -->
+{% endif %}
+
+
+<script>
+
+function showSuccess(info) {
+    $('#alert').empty().append('<div class="alert alert-success text-center" role="alert">' +
+                                    '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                                        '<span aria-hidden="true">&times;</span>' +
+                                    '</button>' +
+                                    '<strong>成功</strong>' + info +
+                                '</div>');
+}
+
+function showError(err) {
+    $('#alert').empty().append('<div class="alert alert-danger text-center" role="alert">' +
+                                    '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                                        '<span aria-hidden="true">&times;</span>' +
+                                    '</button>' +
+                                    '<strong>错误!</strong>' + err +
+                                '</div>');
+}
+
+function importPoolConfs(srcgroup, dstgroup, dstidc) {
+    $.ajax({
+        url:  '{{ CMDBAPI_URL }}ycc/import/?format=json&srcgroup=' +
+            srcgroup + '&dstgroup=' + dstgroup + '&dstidc=' + dstidc,
+        type: 'POST',
+        async:  false,
+        headers: {'Authorization':'Token {{ API_TOKEN }}'},
+        success: function( json ) {
+            var desc = '从' + srcgroup + '导入到' + dstgroup + ':' + dstidc;
+            desc += '</br>导入环境为: ' + json.envs;
+            desc += '</br>导入' + json.dataidnum + '个配置文件: ' + json.dataids;
+            showSuccess(desc);
+        },
+        error: function( json ) {
+            showError('导入配置组失败' + JSON.stringify(json.responseText));
+        }
+    });
+}
+
+function importAllPoolConfs() {
+    $.ajax({
+        url:  'http://oms.yihaodian.cn/ycc-server/config.co?dataId=datasource_product_standby.properties&group=yihaodian_backend-product-sales&env=test',
+        type: 'GET',
+        async:  false,
+        headers: {'Authorization':'Token {{ API_TOKEN }}'},
+        success: function( json ) {
+            var desc = '导入所有配置组';
+            showSuccess(desc);
+        },
+        error: function( json ) {
+            showError('导入配置组失败' + JSON.stringify(json.responseText));
+        }
+    });
+}
+
+function initBtn() {
+    $('#import_btn').bind('click', function() {
+        var srcgroup = $("#s_srcgroup").val();
+        var dstgroup = $("#s_dstgroup").val();
+        if (srcgroup == '' || dstgroup == '') {
+            showError('请先选择GROUP_IDC。');
+        } else {
+            var dstidc = dstgroup.substring(dstgroup.length - 2, dstgroup.length);
+            dstgroup = dstgroup.substring(0, dstgroup.length - 3);
+            importPoolConfs(srcgroup, dstgroup, dstidc);
+        }
+    });
+    $('#import_all_btn').bind('click', function() {
+        importAllPoolConfs();
+    });
+}
+
+$("#s_srcgroup").combobox({
+});
+$("#s_dstgroup").combobox({
+});
+initBtn();
+</script>
+
+{% endblock %}

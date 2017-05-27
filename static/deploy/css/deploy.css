@@ -1,0 +1,30 @@
+/**
+ * gray.css v1.0 | yinwei@yihaodian.com
+ * http://oms.yihaodian.com.cn
+ */
+.wrapper { margin:10px;}
+header { margin-bottom:10px;}
+.search-condition { margin-bottom:10px;}
+.search-condition select, #s_site, #s_app, #s_depid { margin-right:10px;}
+.new-submit {}
+.new-submit dl:after { content:'.'; display:block; height:0; clear:both; visibility:hidden; font-size:0;}
+.new-submit dl { min-height:1%; margin-bottom:10px;}
+.new-submit dt, .new-submit dd { float:left;}
+.new-submit dt { width:8em;}
+.new-submit input { margin-right:5px; vertical-align:middle;}
+.new-submit label { margin-right:15px; vertical-align:middle;}
+.new-submit select, .new-submit .zui-input-text, .new-submit .textarea { margin-right:15px;}
+.new-submit .zui-input-text { width:12em;}
+.new-submit .input-text { width:15em;}
+select { height:25px; vertical-align:middle;}
+#datepicker { width:142px; margin-right:15px;}
+#ftp_file { width:142px; overflow-x:hidden;}
+/*#ftp_file option { width:142px; overflow-x:hidden;}*/
+.dl-ftp, .dl-stag { display:none;}
+.dl-show { display:block;}
+.target-list { float:left; height:79px; width:210px; margin-right:15px; padding:0 2px; border:1px solid #ccc; overflow-y:auto; overflow-x:hidden;}
+.dept-pages { padding:10px 0;}
+
+.rollback-check p { margin-bottom:10px;}
+.rollback-check label { display:inline-block; width:5em;}
+.rollback-check .input-text, .rollback-check .textarea { font-size:12px; width:180px; vertical-align:text-top;}

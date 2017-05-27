@@ -1,0 +1,523 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-select-1.12.0/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-dinggo/aside.css" rel="stylesheet"/>
+
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select-1.12.0/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/echarts-2.2.7/echarts-all.js"></script>
+<style>
+    .my-toolbar {
+        margin: 0 4px;
+    }
+    .icon-bar {
+        color: #04CCBA;
+        cursor: pointer;
+    }
+
+    .table {
+        width: 100%;
+        table-layout: fixed;
+    }
+    .table td:hover {
+       overflow: visible;
+       white-space: normal;
+    }
+    .table td {
+        word-wrap: break-word;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    #detail_table {
+        background-color: #FFF5EE;
+    }
+    .detail_count {
+        color: #fa8c42;
+    }
+    .detail-view > td{
+        padding-left: 30px !important;
+        padding-right: 0 !important;
+    }
+
+
+</style>
+
+</body>
+    <div id="toolbar">
+        <div class="form-inline" role="form">
+            <select id="source_select" class="selectpicker" data-title="选择源" multiple>
+                {%  for item in event_source_list %}
+                    <option value="{{ item.id }}">{{ item.name }}</option>
+                {%  endfor %}
+            </select>
+            <select id="type_select" class="selectpicker" data-title="选择类型" multiple>
+                {%  for item in event_type_list %}
+                    <option value="{{ item.id }}">{{ item.name }}</option>
+                {%  endfor %}
+            </select>
+            <select id="level_select" class="selectpicker" data-title="选择等级" multiple>
+                {%  for item in event_level_list %}
+                    <option value="{{ item.id }}">{{ item.name }}</option>
+                {%  endfor %}
+            </select>
+            <select id="pool_select" class="form-control selectpicker" data-live-search="true">
+                <option value=0>请选择Site/Pool</option>
+                {%  for item in app_list %}
+                    <option value="{{ item.id }}">{{ item.site.name }}/{{ item.name }}</option>
+                {%  endfor %}
+            </select>
+
+            <label class="my-toolbar">开始：</label>
+            <input type="datetime" name="start_time" id="start_time_picker" class="form-control datetimepicker my-toolbar" >
+            <label class="my-toolbar">结束：</label>
+            <input type="datetime" name="end_time" id="end_time_picker" class="form-control datetimepicker my-toolbar" >
+            <button id="search" class="btn btn-primary my-toolbar">
+                <i class="glyphicon glyphicon-search"></i>
+            </button>
+            <label class="my-toolbar">收敛</label>
+            <input id= "shoulian_chk" type="checkbox" class="my-toolbar">
+           <span id="show_detail" class="my-toolbar icon-bar">
+			    <i class="glyphicon glyphicon glyphicon-th-large"></i>
+		    </span>
+        </div>
+    </div>
+
+    <table id="bootstrap_table" class="table">
+    </table>
+
+    <div class="modal left fade" id="my_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+		<div class="modal-dialog" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+					<h4 class="modal-title" id="myModalLabel">可视化</h4>
+				</div>
+				<div id="my_modal_chart" class="modal-body" style="width:640px;">
+				</div>
+			</div><!-- modal-content -->
+		</div><!-- modal-dialog -->
+	</div><!-- modal -->
+</body>
+<!-- 先引入 Vue -->
+<!-- type="text/x-template" 防止自定义组件收到html标准的限制 -->
+
+
+<script>
+    (function(global, $, doc){
+        var AIClass = function(){
+
+            this.winHeight = $(global).height();
+            //全局dom对象
+            this.dom_my_modal_chart = doc.getElementById('my_modal_chart');
+
+            this.api_url = '{{ CMDBAPI_URL }}notification/AI/';
+
+            this.series_data = [];//table渲染完以后给他赋值，提供图表数据
+
+            this.level_color_map = {
+                100: '#b64fff',
+                200: '#cc3529',
+                300: '#fa8c42',
+                350: '#b7b000',
+                400: '#33b704',
+                500: '#000000'
+            };
+
+            this.columns = [{
+                field: 'tag',
+                title: '标记',
+                align: 'center',
+                width: '100px'
+            },{
+                field: 'pool_name',
+                title: 'Pool',
+                align: 'center',
+                width: '10%'
+            },{
+                field: 'source_name',
+                title: '来源',
+                align: 'center',
+                width: '100px'
+            },{
+                field: 'level_name',
+                title: '等级',
+                align: 'center',
+                //bind(this) 是为了把当前的上下文环境传到函数中，不然render函数里的this.levelmap 是undefined,作用域不同
+                cellStyle:this.bt_render_level.bind(this),
+                width: '50px'
+            },{
+                field: 'type_name',
+                title: '类型',
+                align: 'center',
+                width: '130px'
+            },{
+                field: 'message',
+                title: '内容',
+                halign: 'center'
+            },{
+                field: 'ip',
+                title: 'IP',
+                align: 'center',
+                width: '150px'
+            },{
+                field: 'get_time_format',
+                title: '发生时间',
+                align: 'center',
+                width: '120px'
+            }];
+
+            this.eventsMap = {
+                'click #search': this.my_render,
+                'click #show_detail': this.show_model
+            };
+            //初始化全局jq对象)
+            this.initialize_elements();
+            //初始化
+            this.initialization();
+        }
+        //注册全局jq对象，方便调用
+        AIClass.JQel = {
+            $html: 'html',
+            $body: 'body',
+            $doc: doc,//这个是闭包参数传过来的
+            $source_select: "#source_select",
+            $bt_table: '#bootstrap_table',
+            $class_selectpicker: '.selectpicker',
+            $source_selectpicker:'#source_select',
+            $type_selectpicker:'#type_select',
+            $level_selectpicker:'#level_select',
+            $pool_selectpicker:'#pool_select',
+            $class_datetimepicker: '.datetimepicker',
+            $start_time_picker: '#start_time_picker',
+            $end_time_picker: '#end_time_picker',
+            $shoulian_chk: '#shoulian_chk',
+            $my_modal: '#my_modal',
+            $my_modal_chart: "#my_modal_chart" //用来存放图表，下面需要初始化它的高度
+        }
+        //工具类
+        var utils = {
+            get_now_format_date: function(stamp_offset, need_sec){
+                var date = new Date();
+                if(stamp_offset) date.setTime(date.getTime() + stamp_offset);
+                var seperator1 = "-";
+                var seperator2 = ":";
+                var month = date.getMonth() + 1;
+                var strDate = date.getDate();
+                if (month >= 1 && month <= 9){
+                    month = "0" + month;
+                }
+                if (strDate >= 0 && strDate <= 9){
+                    strDate = "0" + strDate;
+                }
+                var currentdate = date.getFullYear() + seperator1 + month + seperator1 + strDate
+                        + " " + date.getHours() + seperator2 + date.getMinutes();
+                if(need_sec) currentdate += seperator2 + date.getSeconds();
+                return currentdate;
+            }
+        }
+
+        AIClass.prototype = {
+            constructor: AIClass,
+//----------业务代码-------------------
+            get_url: function(){
+                var start_time = this.$start_time_picker.val().trim();
+                var end_time = this.$end_time_picker.val().trim();
+                var shoulian = this.$shoulian_chk.is(':checked');
+                if(shoulian == true) shoulian = 1;
+                else shoulian = 0;
+                var source_str = this.get_select_value(this.$source_selectpicker).join(",");
+                var type_str = this.get_select_value(this.$type_selectpicker).join(",");
+                var level_str = this.get_select_value(this.$level_selectpicker).join(",");
+                var pool_id = this.get_pool_select();
+
+                var url = this.api_url + "?format=json" + '&start_time=' + start_time;
+                url += '&end_time=' + end_time;
+                url += '&shoulian=' + shoulian;
+                url += '&source_id=' + source_str;
+                url += '&type_id=' + type_str;
+                url += '&level_id=' + level_str;
+                url += '&pool_id=' + pool_id;
+                return url;
+            },
+
+            my_render: function(){
+                this.$bt_table.bootstrapTable('refresh', {
+                    url:this.get_url()
+                })
+            },
+            init_date_time: function(){
+                this.$class_datetimepicker.datetimepicker({
+                    format: 'yyyy-mm-dd hh:ii',
+                    autoclose: true,
+                    minView: 0,
+                    minuteStep:1
+                });
+            },
+            init_selectpicker: function(){
+                this.$class_selectpicker.selectpicker({
+                    actionsBox: true,
+                    width: "100px",
+                    selectAllText: '全选',
+                    deselectAllText: '取消',
+                    selectedTextFormat: "count"
+                });
+            },
+            get_pool_select: function(){
+                var selected = this.$pool_selectpicker.children("option:selected");
+                var l = selected.length;
+                if(l > 0){
+                    var v = selected[0].value;
+                    return v;
+                }else{
+                    return 0;
+                }
+            },
+            get_select_value: function($obj){
+                var selected = $obj.children("option:selected");
+                var l = selected.length;
+
+                var selected_list = [];
+                if(l > 0){
+                   selected.each(function(){
+                        selected_list.push(this.value);
+                    });
+                }
+                return selected_list;
+            },
+            set_start_time: function(default_time){
+                this.$class_datetimepicker.val(default_time ? default_time : utils.get_now_format_date(-86400000));
+            },
+            set_end_time: function(default_time){
+                this.$end_time_picker.val(default_time ? default_time : utils.get_now_format_date());
+            },
+            init_modal_chart: function(){
+                //echarts 绘图需要提供固定的高度（宽度已在html里写好）
+                this.$my_modal_chart.height(this.winHeight-95-50);
+            },
+            init_bar: function(){
+                this.init_date_time();
+                this.init_selectpicker();
+                this.set_start_time();
+                this.set_end_time();
+                this.init_modal_chart();
+            },
+            init_table: function(){
+                this.$bt_table.bootstrapTable({
+                    url: this.get_url(),
+                    ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+                    columns: this.columns,
+                    responseHandler: this.bt_response_handler.bind(this),
+                    onPageChange: this.bt_page_change.bind(this),//函数里如果用到外部this就要bind
+                    onExpandRow:this.bt_expand_row.bind(this),
+                    pagination: true,
+                    pageSize: 30,
+                    pageList: [10, 30, 100, 500],
+                    sidePagination: 'server',
+                    search: true,
+                    toolbar: "#toolbar",
+                    showColumns: true,
+                    cache: false,
+                    detailView: true
+                })
+            },
+            bt_response_handler: function(res){
+                //这个setTimeout模拟多线程提前生成图表需要的数据
+                var thiz = this;
+                setTimeout(function(){
+                    thiz.series_data = [];
+                    var series_data_map = {};
+                    for(var i2 in res.data){
+                        var _obj2 = res.data[i2];
+                        var pool_name = _obj2['pool_name'];
+                        if(pool_name && pool_name[0] != ""){
+                            var name_list = pool_name.split(',');
+                            for(var index in name_list){
+                                var name = name_list[index];
+                                if(!series_data_map.hasOwnProperty(name)) series_data_map[name] = 1;
+                                else series_data_map[name] += 1;
+                            }
+                        }
+                    }
+                    if(!$.isEmptyObject(series_data_map)){
+                        for(var key in series_data_map){
+                            thiz.series_data.push({
+                                name: key,
+                                value: series_data_map[key]
+                            });
+                        }
+                    }
+                }, 1);
+
+                var result = {};
+                for(var i in res.data){
+                    var _obj = res.data[i];
+                    var l = _obj['details'].length;
+                    if(l > 0) _obj['message'] = "<span class='detail_count'>(" + l + ")</span>" + _obj['message'];
+                }
+                result.rows = res.data;
+                result.total = res.count;
+                return result;
+            },
+            bt_expand_row: function(index, row, $detail){
+                var details = row['details'];
+                if(details.length > 0){
+                    var tr = '';
+                    for(var j in details){
+                        var td = '';
+                        for(var i in this.columns){
+                            var field = this.columns[i]['field'];
+                            var width = '';
+                            if(this.columns[i].hasOwnProperty('width')) width = 'width:'+this.columns[i]['width']+';';
+                            td += '<td style="'+ width + '">' + details[j][field] + "</td>";
+                        }
+                        tr += "<tr>" + td + "</tr>";
+                    }
+                    var s = [
+                        "<table id='detail_table' data-toggle='table'>",
+                            "<tbody>",
+                            tr,
+                            "</tbody>",
+                        "</table>"
+                    ];
+                    $detail.html(s.join(""));
+                    $("#detail_table").bootstrapTable();
+                }
+            },
+            bt_render_level: function(value, row, index){
+                var level_id = row.level_id;
+                var front_color = 'Aqua';
+                var bg_color = 'Fuchsia';
+                if (this.level_color_map.hasOwnProperty(level_id)){
+                    front_color = this.level_color_map[level_id];
+                    bg_color = "#ffffff";
+                };
+                return {
+                    css: {
+                        "color":front_color,
+                        "background-color": bg_color
+                    }
+                };
+            },
+            bt_page_change: function(){
+                this.$html.animate({scrollTop:0}, 'fast');
+            },
+            show_model: function(){
+                this.$my_modal.modal('show');
+                this.render_my_chart("pool当前页占比(demo)", this.series_data, this.dom_my_modal_chart);
+            },
+            render_my_chart:function(title, series_data, dom){
+                var legend_data = [];
+                for(var i in series_data){
+                    legend_data.push(series_data[i]['name']);
+                };
+                var option = {
+                    title : {
+                        text: title,
+                        subtext: '©ledog',
+                        x:'center'
+                    },
+                    tooltip : {
+                        trigger: 'item',
+                        formatter: "{a} <br/>{b} : {c} ({d}%)"
+                    },
+                    legend: {
+                        orient : 'vertical',
+                        x : 'left',
+                        data:legend_data
+                    },
+                    toolbox: {
+                        show : true,
+                        feature : {
+                            mark : {show: true},
+                            dataView : {show: true, readOnly: false},
+                            magicType : {
+                                show: true,
+                                type: ['pie', 'funnel'],
+                                option: {
+                                    funnel: {
+                                        x: '25%',
+                                        width: '50%',
+                                        funnelAlign: 'left',
+                                        max: 1548
+                                    }
+                                }
+                            },
+                            restore : {show: true},
+                            saveAsImage : {show: true}
+                        }
+                    },
+                    calculable : true,
+                    series : [
+                        {
+                            name:'占比',
+                            type:'pie',
+                            radius : '55%',
+                            center: ['50%', '60%'],
+                            data:series_data
+                        }
+                    ]
+                };
+                var myChart = echarts.init(dom);
+                myChart.setOption(option);
+            },
+//----------结构代码-------------------
+            initialize_elements: function(){
+                var eles = AIClass.JQel;
+                for (var name in eles) {
+                    if (eles.hasOwnProperty(name)){
+                        this[name] = $(eles[name]);
+                    }
+                }
+            },
+
+            initialization: function(){
+                this.init_bar();
+                this.init_table();
+                this.bind_event();
+            },
+
+            bind_event: function(){
+                var maps = this.eventsMap;
+                this._scan_event_map(maps, true);
+            },
+
+            unbind_event: function(){
+                var maps = this.eventsMap;
+                this._scan_event_map(maps, true);
+            },
+
+            _scan_event_map: function(maps, isOn){
+                var zhengze = /^(\S+)\s*(.*)$/;
+                var bind_fun = isOn ? this._delegate : this._undelegate;
+                for (var keys in maps) {
+                    if (maps.hasOwnProperty(keys)) {
+                        var matchs = keys.match(zhengze);
+                        bind_fun.apply(this, [matchs[1], matchs[2], maps[keys].bind(this)]);
+{#                        bind_fun(matchs[1], matchs[2], maps[keys].bind(this));#}
+                    }
+                }
+            },
+
+            //动态绑定事件底层方法
+            _delegate: function(name, selector, func) {
+                this.$doc.on(name, selector, func);
+            },
+            //动态解绑事件底层方法
+            _undelegate: function(name, selector, func) {
+                this.$doc.off(name, selector, func);
+            }
+        }
+
+        $(function() {
+            new AIClass();
+        });
+
+    })(this, this.jQuery, document)
+</script>
+{% endblock %}

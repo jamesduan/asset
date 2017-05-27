@@ -1,0 +1,121 @@
+{% extends "deploy/base.html" %}
+
+{% block title %}
+    <title>redis</title>
+{% endblock %}
+
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/bootstrap/css/bootstrap.min.css"/>
+{% endblock %}
+
+{% block js %}
+    <script src="{{ STATIC_URL }}libs/bootstrap/js/bootstrap.min.js"></script>
+    <script src="{{ STATIC_URL }}deploy/js/jquery.json.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            $('#get').bind('click', function () {
+                $.ajax({
+                    url: '/api/deploy/redis/default/',
+                    type: 'get',
+                    async: false,
+                    data: {key: $('#key').val(), many: 1, format: 'json'},
+                    headers: {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    },
+                    success: function(json) {
+                        $('div.modal-header h4').text('配置文件列表');
+                        $('div.modal-body').empty();
+                        $('div.modal-body').append($('<ul>').attr({
+                            'class': 'nav nav-tabs',
+                            'role': 'tablist'
+                        }));
+                        $('div.modal-body').append($('<div>').attr('class', 'tab-content'));
+                        $.each(json, function(key, value){
+                            var key_array = key.split('.');
+                            if(key_array.length < 6)
+                                return;
+                            var properties = [key_array[4], key_array[5]].join('.');
+                            var li = $('<li>').attr({
+                                'role': 'presentation',
+                            });
+                            li.append($('<a>').attr({
+                                'href': '#' + key_array[4],
+                                'aria-controls': key_array[4],
+                                'role': 'tab',
+                                'data-toggle': 'tab'
+                            }).text(properties));
+                            $('div.modal-body>ul').append(li);
+                            $('div.modal-body>ul>li:first').addClass('active');
+                            $('div.modal-body>div').append($('<div>').attr({
+                                'role': 'tabpanel',
+                                'class': 'tab-pane',
+                                'id': key_array[4]
+                            }).text(value));
+                            $('div.modal-body>div>div:first').addClass('active');
+                        });
+                        $('div.modal').modal('show');
+                    },
+                    error: function(jqXHR) {
+                        alert(jqXHR.responseText);
+                    }
+                });
+            })
+            $('#del').bind('click', function () {
+                $.ajax({
+                    url: '/api/deploy/redis/default/',
+                    type: 'delete',
+                    async: false,
+                    data: {key: $('#key').val(), many: 1, format: 'json'},
+                    headers: {
+                        'Authorization': 'Token {{ API_TOKEN }}'
+                    },
+                    success: function(json) {
+                        $('div.modal-header h4').text('删除的配置文件列表');
+                        $('div.modal-body').empty();
+                        $('div.modal-body').append($('<ul>').attr('class', 'list-group'));
+                        $.each(json, function(key, value){
+                            $('div.modal-body>ul').append($('<li>').attr('class', 'list-group-item').text(value));
+                        });
+                        $('div.modal').modal('show');
+                    },
+                    error: function(jqXHR) {
+                        alert(jqXHR.responseText);
+                    }
+                });
+            })
+        })
+    </script>
+{% endblock %}
+
+{% block body %}
+    <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" style="width: 800px">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span
+                            aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="myModalLabel"></h4>
+                </div>
+                <div class="modal-body">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid">
+        <div class="row" style="margin-top: 20px">
+            <div class="col-lg-6">
+                <div class="input-group">
+                    <input type="text" class="form-control" placeholder="如ycc.1.staging.yihaodian_user-center.*.md5" id="key">
+                    <div class="input-group-btn">
+                        <button type="button" class="btn btn-default" id="get">查看</button>
+                        <button type="button" class="btn btn-default" id="del">删除</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

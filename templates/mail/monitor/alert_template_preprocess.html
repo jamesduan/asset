@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>事件告警</title>
+		<style>
+			/*公用样式 */
+			*{
+				margin:0;
+				-webkit-box-sizing: border-box;
+				-moz-box-sizing: border-box;
+				box-sizing: border-box;
+                font-family: 'Microsoft YaHei',Arial,SimSun,tahoma,sans-serif;
+				font-size:12px;
+				color:#333;
+			}
+            body{ min-width:600px;width:auto !important; width:600px;}
+
+			table{
+				border-bottom: 1px solid #13B890;
+				border-collapse: collapse !important;
+				border-radius: 1px;
+				border-spacing: 0;
+				table-layout:fixed;
+			}
+			.h3{font-weight:bold;font-size:16px;font-family: 'Microsoft YaHei'; color:#fff;line-height:30px; padding-left:10px;}
+			table td,table th{
+				font-size:14px;color:#333;font-family:'Microsoft YaHei';vertical-align:top; padding:8px; line-height:20px;border:1px solid #13B890;
+			}
+			table th,table th div{ font-size:14px;font-family: 'Microsoft YaHei'; color:#fff;}
+			.td-first{
+				width:90px;
+				background-color:#E8FAF8;
+				color:#000;
+				font-size:16px;
+				text-align: center;
+				vertical-align: middle;
+			}
+            .level-critical{color:#ff5126;}
+            .level-high{color:#fc832b;}
+            .level-normal{color:#FF69B4;}
+            .level-warning{color:#FF69B4;}
+            .level-info{color:#FF69B4;}
+			/*table*/
+			.table2 .h3{ background-color:#0BC799;}
+		</style>
+	</head>
+	<body>
+		<div class="table2">
+			<div class="h3">【告警信息】</div>
+			<table class="table2" width="100%">
+			    <tbody>
+                <tr><td class='td-first'>内容</td><td>{{ alarm_html_body_content }}</td></tr>
+                <tr><td class='td-first'>起止时间</td><td>{{ alarm_html_time }}</td></tr>
+                <tr><td class='td-first'>原因</td><td>{{ alarm_html_reason }}</td></tr>
+			    </tbody>
+			</table>
+            <div class="h3">【{{ alarm_html_title }}】</div>
+			<table class="table2" width="100%">
+			    <tbody>
+                    {{ event_html_content | safe}}
+			    </tbody>
+			</table>
+		</div>
+    <table width="100%" style="border:none;"  >
+    <tr><td height="100" style="border:none;border-bottom:1px solid #E4E4E4;padding:0cm 0cm 11.0pt 0cm;margin-top:22.5pt"></td></tr>
+    <tr><td height="10" style="border:none;"></td></tr>
+    <tr><td style="border:none; padding-left:10px; font-weight:bold">相关链接：</td></tr>
+    <tr><td style="border:none; padding-left:10px;"><a href="http://oms.yihaodian.com.cn/home/" style="color:#5E9C8D;font-size:14px;">乐道云平台</a></td></tr>
+    <tr><td style="border:none; padding-left:10px;"><a href="http://oms.yihaodian.com.cn/docs/?p=1684" style="color:#5E9C8D;font-size:14px;">新版事件告警文档</a></td></tr>
+    <tr><td style="border:none; font-size:14px;padding-left:10px;">产品反馈：<a href="mailto:caijiaying@yhd.com" style="font-size:14px; color:#5E9C8D;">蔡佳颖< caijiaying@yhd.com ></a></td></tr>
+    <tr><td height="20" style="border:none;padding:0cm 0cm 11.0pt 0cm;padding-left:10px;margin-top:22.5pt"></td></tr>
+    </table>
+	</body>
+</html>

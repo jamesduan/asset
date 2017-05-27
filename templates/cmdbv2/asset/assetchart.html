@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ room.comment }}设备分布图</title>
+    <link href="{{ STATIC_URL }}libs/bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet"/>
+    <link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+    <script src="{{ STATIC_URL }}libs/jquery/jquery-1.11.2.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap/js/bootstrap.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+    <script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+    <style>
+      #table-container{
+          overflow: auto;
+          margin: 5px 0px 5px 0px;
+          border: 1px solid #DDD;
+      }
+      #table-container table{
+          width: 100%;
+          border-width: 0;
+          border-collapse: collapse;
+      }
+      #table-container table td{
+          padding: 0;
+          border-right: 1px solid #DDD;
+          border-bottom: 1px solid #DDD;
+          background: #FFF;
+      }
+      #table-container .table-top td,
+      #table-container .table-lt td,
+      #table-container .table-rt td,
+      #table-container .table-left td,
+      #table-container .table-right td{background: #BDB76B;}
+      #table-container .table-center .server3{background-color: #FF4500}
+      #table-container .table-center .server2{background-color: #90EE90}
+      #table-container .table-center .server1{background-color: #DAA520}
+      #table-container .table-center .server0{background-color: #FFFF66}
+      #table-container .table-center .other{background-color: #E6E6FA}
+
+      #table-container .table-top td:last-child{border-right: 0px solid #DDD;}
+      #table-container .table-top td:last-child{border-bottom: 0px solid #DDD;}
+      #table-container .table-center td:last-child{border-right: 0px solid #DDD;}
+      #table-container .table-center tr:last-child td{border-bottom: 0px solid #DDD;}
+      #table-container .table-left tr:last-child td{border-bottom: 0px solid #DDD;}
+      #table-container .table-right tr:last-child td{border-bottom: 0px solid #DDD;}
+
+      #table-container .table-top td div{
+          display: inline-block;
+          width: 200px;
+          margin:5px;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          white-space:nowrap;
+          text-align: center;
+          line-height: 30px;
+          height:30px;
+          vertical-align: middle;
+      }
+
+      #table-container .table-lt td div,
+      #table-container .table-rt td div{
+          display: inline-block;
+          width: 30px;
+          margin:5px;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          white-space:nowrap;
+          text-align: center;
+          line-height: 30px;
+          height:30px;
+          vertical-align: middle;
+      }
+
+      #table-container .table-center td div{
+          display: inline-block;
+          width: 200px;
+          margin:5px;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          white-space:nowrap;
+          text-align: left;
+          line-height: 18px;
+          height: 36px;
+          vertical-align: middle;
+      }
+      #table-container .table-left td div,
+      #table-container .table-right td div{
+          display: inline-block;
+          width: 30px;
+          margin:5px;
+          overflow:hidden;
+          text-overflow:ellipsis;
+          white-space:nowrap;
+          text-align: center;
+          line-height: 36px;
+          height:36px;
+          vertical-align: middle;
+      }
+
+      #table-container .table-lt{position: fixed; z-index:3;}
+      #table-container .table-rt{position: fixed; right: 0px; z-index:3;}
+      #table-container .table-top{position: fixed;overflow:hidden;z-index:2;}
+      #table-container .table-left{position: fixed;overflow:hidden; z-index:2;}
+      #table-container .table-center{position: relative;z-index:1;}
+      #table-container .table-right{position: fixed;overflow:hidden;top: 40px;right: 0px;z-index:2;}
+      #table-container .table-mask{position: relative;}
+
+    .detail-title {
+          background-color: #222222;
+    }
+    .dropdown-menu>.active>a, .dropdown-menu>.active>a:focus, .dropdown-menu>.active>a:hover{ background-color: #00BEBE;}
+    .btn-green{
+        background: #05BBB2;
+        color:#fff;
+    }
+    .popover {
+        background-color: #ABC8F4;
+    }
+    .popover.top>.arrow:after{
+        border-top-color: #ABC8F4;
+    }
+    .popover-title{
+        font-weight: bold;
+        background-color: #77A7FB;
+    }
+    </style>
+</head>
+<body>
+<div class="form-inline" role="form" style="margin-top: 5px;  margin-bottom:0px; vertical-align: bottom; font-size: 16px; font-family: 宋体; height: 30px;">
+    <span style="vertical-align: middle; margin-top: 5px; font-size: 18px;"><strong>{{ room.comment }}设备分布图</strong></span>
+    <select name="room_id" id="room_id" class="form-control select_url">
+        <option value=" ">请选择机房</option>
+        {%  for r in roomlist %}
+            <option value="{{ r.id }}">{{ r.comment }}</option>
+        {%  endfor %}
+    </select>
+    <select name="rack_type_id" id="rack_type_id" class="form-control select_url">
+        <option value=" ">请选择机柜类型</option>
+        <option value="1">真实机柜</option>
+        <option value="0">刀片笼子</option>
+    </select>
+    <button id="to_print_version" class="btn btn-green" style="vertical-align: middle;">打印版</button>
+    <table align="right" style="vertical-align: bottom; margin-top: 10px; font-size: 14px">
+        <tr>
+            <td> <i class="glyphicon glyphicon-stop" style="color: #FFFF66"></i>未交付服务器</td>
+            <td> <i class="glyphicon glyphicon-stop" style="color: #DAA520"></i>已申请服务器</td>
+            <td> <i class="glyphicon glyphicon-stop" style="color: #90EE90"></i>已交付服务器</td>
+            <td> <i class="glyphicon glyphicon-stop" style="color: #FF4500"></i>已保修服务器</td>
+            <td> <i class="glyphicon glyphicon-stop" style="color: #E6E6FA"></i>其它设备</td>
+        </tr>
+    </table>
+</div>
+<div id="table-container">
+      <div class="table-lt">
+        <table>
+          <tbody>
+            <tr>
+              <td>
+                <div>
+                  编号
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-top">
+        <div class="table-mask">
+          <table>
+            <tbody>
+              <tr>
+                  {% for r in racklist %}
+                <td>
+                  <div>{{ r.name }} (<strong>{{ r.height }}U</strong>)</div>
+                </td>
+                  {% endfor %}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <div class="table-rt">
+        <table>
+          <tbody>
+            <tr>
+              <td>
+                <div>
+                  编号
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-left">
+        <div class="table-mask">
+          <table>
+            <tbody>
+                {% for no in no_list %}
+                    <tr><td><div>{{ no }}</div></td></tr>
+                {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="table-center">
+        <table>
+          <tbody>
+            {% for no in resultlist %}
+                <tr>
+                    {% for a in no.assets %}
+                        {% if a.asset == None %}
+                            <td><div>&nbsp;</div></td>
+                        {% else %}
+                            {% if a.asset.asset_type_id == 1 or a.asset.asset_type_id == 9 %}
+                                {% if a.asset.new_status == 3 %}
+                                    <td class="server3 value" data-toggle="popover" data-placement="auto" data-container="body">
+                                {% elif a.asset.new_status == 2 %}
+                                    <td class="server2 value" data-toggle="popover" data-placement="auto" data-container="body">
+                                {% elif a.asset.new_status == 1 %}
+                                    <td class="server1 value" data-toggle="popover" data-placement="auto" data-container="body">
+                                {% else %}
+                                    <td class="server0 value" data-toggle="popover" data-placement="auto" data-container="body">
+                                {% endif %}
+                            {% else %}
+                                <td class="other value" data-toggle="popover" data-placement="auto" data-container="body">
+                            {% endif %}
+                            <div><strong>{{ a.asset.assetid }}</strong><br/>{{ a.asset.asset_model }}</div>
+                            <div class="detail-title hide"><strong>{{ a.asset.asset_type }}详情</strong></div>
+                            <div class="detail-content hide">
+                                <table style="border: 0px">
+                                      <tr><td><strong>设备编号：</strong></td><td><strong>{{ a.asset.assetid }}</strong></td></tr>
+                                      <tr><td><strong>序列号： </strong></td><td>{{ a.asset.service_tag }}</td></tr>
+                                      <tr><td><strong>IP： </strong></td><td><strong>{{ a.ip }}</strong></td></tr>
+                                      <tr><td><strong>管理IP： </strong></td><td>{{ a.mgmt_ip }}</td></tr>
+                                      <tr><td><strong>设备型号： </strong></td><td>{{ a.asset.asset_model }}</td></tr>
+                                      {% if a.asset.new_status == 0 %}
+                                        <tr><td><strong>设备状态： </strong></td><td><strong>未交付</strong></td></tr>
+                                      {% elif a.asset.new_status == 1 %}
+                                        <tr><td><strong>设备状态： </strong></td><td><strong>已申请</strong></td></tr>
+                                      {% elif a.asset.new_status == 2 %}
+                                        <tr><td><strong>设备状态： </strong></td><td><strong>已交付</strong></td></tr>
+                                      {% elif a.asset.new_status == 3 %}
+                                        <tr><td><strong>设备状态： </strong></td><td><strong>已保修</strong></td></tr>
+                                      {% else %}
+                                        <tr><td><strong>设备状态： </strong></td><td><strong></strong></td></tr>
+                                      {% endif %}
+                                </table>
+                            </div>
+                            </td>
+                        {% endif %}
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+        <div class="table-right">
+        <div class="table-mask">
+          <table>
+            <tbody>
+                {% for no in no_list %}
+                    <tr><td><div>{{ no }}</div></td></tr>
+                {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+ </body>
+
+<script type="text/javascript">
+$(document).ready(function() {
+    $('#room_id').val({{ room.id }});
+    $('#rack_type_id').val('{{ type_key | safe }}');
+    $('#room_id, #rack_type_id').combobox({});
+
+    $(function () { $("[data-toggle='popover']").popover(); });
+
+    $('.value').popover({
+        trigger:'manual',
+        title:function() {
+            return $(this).children('div.detail-title').html();
+        },
+        html: true,
+        content:function() {
+            return $(this).children('div.detail-content').html();
+        },
+        animation: false
+    }).on("mouseenter", function () {
+            var _this = this;
+            $(this).popover("show");
+            $(".popover").on("mouseleave", function () {
+                $(_this).popover('hide');
+            });
+        }).on("mouseleave", function () {
+            var _this = this;
+            setTimeout(function () {
+                if (!$(".popover:hover").length) {
+                    $(_this).popover("hide")
+                }
+            }, 1);
+        });
+
+    $('#to_print_version').click(function(){
+        var rack_type = 'real';
+        var room_id = $("#room_id option:selected").val();
+        var rack_type_id = $("#rack_type_id option:selected").val();
+        if(rack_type_id == 0){
+            rack_type = 'virtual';
+        }
+        if (room_id == " " || rack_type_id == " " ) {
+            alert('请选择机房和机柜类型！');
+        }else {
+            window.open('{{ ROOT_URL }}asset/assetchart/' + room_id + '/' + rack_type + '/' + 1 + '/');
+        }
+    });
+
+    $(".select_url").change(function() {
+        var rack_type = 'real';
+        var room_id = $("#room_id option:selected").val();
+        var rack_type_id = $("#rack_type_id option:selected").val();
+        if(rack_type_id == 0){
+            rack_type = 'virtual';
+        }
+        if (room_id == " " || rack_type_id == " " ) {
+            alert('请选择机房和机柜类型！');
+        }else{
+            location.href =  '{{ ROOT_URL }}asset/assetchart/' + room_id + '/' + rack_type + '/' + 0 + '/';
+        }
+    });
+
+    var container = $("#table-container"),
+        ltTable = container.find(".table-lt"),
+        topTable = container.find(".table-top"),
+        rtTable = container.find(".table-rt"),
+        leftTable = container.find(".table-left"),
+        centerTable = container.find(".table-center"),
+        rightTable = container.find(".table-right"),
+
+        containerWidth = 0,
+        containerHeight =0,
+
+        ltTableWidth = 0,
+        ltTableHeight = 0,
+
+        winWidth = 0,
+        winHeight = 0,
+
+        widthJson = {},
+
+        timerLT = null;
+
+    //获取窗口宽度
+    if (window.innerWidth){
+        winWidth = window.innerWidth;
+    }else if ((document.body) && (document.body.clientWidth)){
+        winWidth = document.body.clientWidth;
+    }
+
+    //获取窗口高度
+    if (window.innerHeight){
+        winHeight = window.innerHeight;
+    }else if ((document.body) && (document.body.clientHeight)){
+        winHeight = document.body.clientHeight;
+    }
+
+    //通过深入Document内部对body进行检测，获取窗口大小
+    if (document.documentElement && document.documentElement.clientHeight && document.documentElement.clientWidth)
+    {
+        winHeight = document.documentElement.clientHeight;
+        winWidth = document.documentElement.clientWidth;
+    }
+
+    containerHeight = container.height(winHeight - 50);
+    containerWidth = container.width(winWidth);
+    ltTableWidth = ltTable.width();
+    ltTable.width(ltTableWidth);
+    rtTable.width(ltTableWidth);
+    topTable.css("marginLeft",ltTableWidth);
+    leftTable.width(ltTableWidth);
+    centerTable.css("marginLeft",ltTableWidth);
+    rightTable.width(ltTableWidth);
+
+    ltTableHeight = ltTable.height();
+    ltTable.height(ltTableHeight);
+    rtTable.height(ltTableHeight);
+    leftTable.height(containerHeight - ltTableHeight);
+    rightTable.height(containerHeight - ltTableHeight);
+    leftTable.css("marginTop",ltTableHeight+"px");
+    rightTable.css("marginTop",ltTableHeight+"px");
+    centerTable.css("marginTop",ltTableHeight+"px");
+
+    function setDivWidth(obj){
+      $(obj).find("div").each(function(index){
+        if(!widthJson[index]){
+          widthJson[index] = 0;
+        }
+        if(widthJson[index]<$(this).width()) {
+          widthJson[index] = $(this).width();
+        }
+      });
+    }
+    topTable.find("tr").each(function(){
+      setDivWidth(this);
+    });
+    centerTable.find("tr").each(function(){
+      setDivWidth(this);
+    });
+
+    topTable.find("tr:first div").each(function(index){
+      $(this).width(widthJson[index]);
+    });
+    centerTable.find("tr:first div").each(function(index){
+      $(this).width(widthJson[index]);
+    });
+
+    container.scroll(function(){
+      var currentScrollTop = $(this).scrollTop(),
+          currentScrollLeft = $(this).scrollLeft();
+      topTable.find(".table-mask").css("left", -currentScrollLeft+"px");
+      leftTable.find(".table-mask").css("top", -currentScrollTop+"px");
+      rightTable.find(".table-mask").css("top", -currentScrollTop+"px");
+    });
+
+    $(document).scroll(function(){
+      var currentScrollTop = $(this).scrollTop(),
+      currentScrollLeft = $(this).scrollLeft();
+      ltTable.css("marginTop", -currentScrollTop+"px");
+      topTable.css("marginTop", -currentScrollTop+"px");
+      rtTable.css("marginTop", -currentScrollTop+"px");
+      rtTable.css("marginLeft", -currentScrollLeft+"px");
+      topTable.css("marginLeft", ltTableWidth - currentScrollLeft+"px");
+      leftTable.css("marginTop", ltTableHeight - currentScrollTop+"px");
+      rightTable.css("marginTop", ltTableHeight - currentScrollTop+"px");
+
+    });
+
+    $(window).resize(function(){
+      $(document).scroll();
+    });
+
+    timerLT = setInterval(function(){
+      if(containerWidth != container.width() || containerHeight != container.height()){
+        topTable.width(container.width() - ltTableWidth - (container.innerWidth() - container[0].clientWidth));
+        leftTable.height(container.height() - ltTableHeight - (container.innerHeight() - container[0].clientHeight));
+        rightTable.height(container.height() - ltTableHeight - (container.innerHeight() - container[0].clientHeight));
+
+        containerWidth = container.width();
+        containerHeight = container.height();
+
+        container.scroll();// for IE
+
+      };
+    },0);
+});
+</script>
+
+</html>

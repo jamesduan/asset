@@ -1,0 +1,156 @@
+{% extends "common/base.html" %}
+{% block title %} 异常报表中心 {% endblock %}
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/daterangepicker-bs3.css"rel="stylesheet" type="text/css" media="all"  />
+
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js" type="text/javascript" ></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/daterangepicker.js" type="text/javascript" ></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/highcharts-4.0.3/highcharts.js"></script>
+<script src="{{ STATIC_URL }}libs/highcharts-4.0.3/themes/gray.js"></script>
+<script src="{{ STATIC_URL }}libs/highcharts-4.0.3/modules/exporting.js"></script>
+
+<div class="inner-h1">CMDB异常趋势图
+    <small style="color: #777777">——{{ exception_report.cname }}&nbsp;&nbsp;{{ exception_report.owner }}团队
+{#        <a href="{{ ROOT_URL }}change/exception_report/" target="_self">返回</a>#}
+    </small>
+</div>
+
+<div class="row">
+    <div class='col-md-4'>
+        <div class="input-prepend input-group">
+            <span class="input-group-btn">
+                <button id="select_time_url" class="btn btn-green" type="button">
+                 选择起止日期查询
+               </button>
+            </span>
+            <input type="text" style="width: 250px" name="selectdate" id="selectdate" class="form-control" value="" />
+        </div>
+    </div>
+</div>
+<div id="row"><span>&nbsp;</span></div>
+<div id="chart" ></div>
+
+<script type="text/javascript">
+
+$(document).ready(function() {
+    var xdata = [],
+        ydata = [];
+    {% for item in exception_daily %}
+        xdata.push('{{ item.create_time_str  }}');
+        ydata.push({{ item.exception_count  }});
+    {% endfor %}
+
+    $('#selectdate').val('{{ startDate }} 至 {{ endDate }}');
+
+    var options = {
+        chart:{
+        renderTo:'chart' ,
+        defaultSeriesType:'spline'
+
+        },
+
+        title: {
+            text: '{{ exception_report.cname }} - 趋势图',
+            x: -20,
+            style: {
+                font: 'bold 18px "Trebuchet MS", Verdana, sans-serif'
+            }
+        },
+        subtitle: {
+            text: '{{ exception_report.owner }} 团队请注意',
+            x: 20,
+            style: {
+                font: 'bold 14px "Trebuchet MS", Verdana, sans-serif'
+            }
+        },
+        xAxis: {
+            title: '日期',
+            categories: xdata,
+            labels: {
+                rotation: 45,
+
+            }
+        },
+        yAxis: {
+            title: {
+                text: '异常数据记录数'
+            },
+            plotLines: [{
+                value: 0,
+                width: 1,
+                color: '#808080'
+            }]
+        },
+
+        legend: {
+            layout: 'vertical',
+            align: 'right',
+            verticalAlign: 'middle',
+            borderWidth: 0
+        },
+        series: [{
+            name: '异常数量',
+            data: ydata
+        }]
+    };
+
+    function updateCharts(){
+        var selectdate = $('#selectdate').val().trim();
+        var re = /^(\d{4})-(\d{1,2})-(\d{1,2})( )*\u81f3( )*(\d{4})-(\d{1,2})-(\d{1,2})$/;
+        if(re.test(selectdate) == false){
+            alert('请输入合法的时间段！');
+            return
+        }
+        var start_and_end = selectdate.split('至');
+        var start = '';
+        var end = '';
+        if(start_and_end[0]){
+            start = start_and_end[0].trim();
+        }
+        if(start_and_end[1]){
+            end = start_and_end[1].trim();
+        }
+        var inputdate = {
+            'report_id': {{ exception_report.id }},
+            'start': start,
+            'end': end
+        };
+
+        $.ajax({
+            url: '{{ CMDBAPI_URL }}change/exception_trend/',
+            type: 'POST',
+            async: false,
+            data: inputdate,
+            dataType: "json",
+            cache: false,
+            headers:{'Authorization':'Token {{ API_TOKEN }}'},
+            success: function (result) {
+                if (result) {
+                    xdata = [];
+                    ydata = [];
+                    for(var i=0; i<result.length; i++){
+                        xdata.push(moment.unix(result[i].fields['create_time']).format('YYYY-MM-DD'));
+                        ydata.push(result[i].fields['exception_count']);
+                    }
+                    options.xAxis.categories = xdata;
+                    options.series[0].data = ydata;
+                    chart = new Highcharts.Chart(options);
+                }
+            }
+        });
+    }
+
+    var chart = new Highcharts.Chart(options);
+
+    $('#selectdate').daterangepicker(null, function(start, end, label) {
+        updateCharts();
+    });
+
+})
+</script>
+{% endblock %}

@@ -1,0 +1,220 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block title %} 发布-首页 {% endblock %}
+
+{% block content %}
+    {#    <link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/d3/css/styles.css"/>#}
+    {#    <script type="text/javascript" src="{{ STATIC_URL }}libs/d3/js/d3.js"></script>#}
+    <style>
+        .ru-box {
+            margin: 30px 0px;
+        }
+
+        .ru-box table.link-table {
+            table-layout: fixed;
+        }
+
+        .ru-box .ru-line {
+            height: 1px;
+            background: #ccc;
+            margin: 20px 0px 30px;
+        }
+
+        .ru-box table.link-table tr th, .ru-box table.link-table tr td {
+            border: none;
+            position: relative;
+            padding: 12px;
+        }
+
+        .ru-box table.link-table tr .td1 {
+            font-size: 20px;
+            text-align: right;
+            width: 200px;
+            padding: 0px;
+        }
+
+        .ru-box table.link-table tr .td2 {
+            font-size: 16px;
+            width: 80px;
+            vertical-align: middle;
+            padding-left: 0px;
+        }
+
+        .ru-box table.link-table .line1 {
+            display: inline-block;
+            width: 30px;
+            height: 1px;
+            background-color: #ccc;
+        }
+
+        .ru-box table.link-table .line2 {
+            position: absolute;
+            width: 1px;
+            height: 72px;
+            top: 21px;
+            right: 0px;
+            background-color: #ccc;
+        }
+
+        .ru-box table.link-table .line3 {
+            position: absolute;
+            width: 1px;
+            height: 131px;
+            top: 21px;
+            right: 0px;
+            background-color: #ccc;
+        }
+
+        .ru-box table.link-table tr .td3 {
+            border-bottom: 1px solid #ccc;
+            line-height: 31px;
+        }
+
+        .ru-box table.link-table .btn {
+            margin-right: 10px;
+        }
+    </style>
+    <!-- <div class="inner-h1">发布中心首页<a href="http://oms.yihaodian.com.cn/docs/?p=1243" target="_blank">[点击查看帮助文档]</a></div> -->
+    <div id="alert"></div>
+    <!-- v1 -->
+    {#    <div class="ru-box">#}
+    {#        <table class="table link-table">#}
+    {#            <tr>#}
+    {#                <td class="td1" rowspan="2">Staging <span class="line1"></span>#}
+    {#                    <div class="line2"></div>#}
+    {#                </td>#}
+    {#                <td class="td2"><span class="line1"></span> 配置</td>#}
+    {#                <td class="td3"><a href="/deploy/yccv2/configinfo/v2/?env_id=6"#}
+    {#                                   class="btn btn-green" target="_blank">编辑&amp;发布</a></td>#}
+    {#            </tr>#}
+    {#            <tr>#}
+    {#                <td class="td2"><span class="line1"></span> 代码</td>#}
+    {#                <td><a href="/deploy/jenkins/" class="btn btn-green" target="_blank">发布</a>#}
+    {#                </td>#}
+    {#            </tr>#}
+    {#        </table>#}
+    {#        <div class="ru-line"></div>#}
+    {#        <table class="table link-table">#}
+    {#            <tr>#}
+    {#                <td class="td1" rowspan="2">Production <span class="line1"></span>#}
+    {#                    <div class="line2"></div>#}
+    {#                </td>#}
+    {#                <td class="td2"><span class="line1"></span> 配置</td>#}
+    {#                <td class="td3">#}
+    {#                    <a href="/deploy/yccv2/configinfo/v2/?env_id=7" class="btn btn-green"#}
+    {#                       target="_blank">编辑</a>#}
+    {#                    <a href="/deploy/yccv2/group/" class="btn btn-green"#}
+    {#                       target="_blank">提交审核</a>#}
+    {#                    <a href="/deploy/yccv2/proconfiginfo/v2/" class="btn btn-green"#}
+    {#                       target="_blank">查询版本</a>#}
+    {#                </td>#}
+    {#            </tr>#}
+    {#            <tr>#}
+    {#                <td class="td2"><span class="line1"></span> 代码</td>#}
+    {#                <td>#}
+    {#                    <a href="http://trident.yihaodian.com.cn/secure/createDeployRequestForm.jspa" class="btn btn-green"#}
+    {#                       target="_blank">发布</a>#}
+    {#                    <a href="http://trident.yihaodian.com.cn/secure/createDeployRequestForm!grayDeploy.jspa"#}
+    {#                       class="btn btn-green"#}
+    {#                       target="_blank">灰度发布</a>#}
+    {#                </td>#}
+    {#            </tr>#}
+    {#        </table>#}
+    {#    </div>#}
+    <!-- v2 -->
+    <div class="ru-box">
+        <table class="table link-table">
+            <tr>
+                <td class="td1" rowspan="2">Staging <span class="line1"></span>
+                    <div class="line2"></div>
+                </td>
+                <td class="td2"><span class="line1"></span> 编辑</td>
+                <td class="td3">
+                    <a href="/deploy/yccv2/configinfo/v2/?env_id=6" class="btn btn-green" target="_blank">配置</a>
+                </td>
+            </tr>
+            <tr>
+                <td class="td2"><span class="line1"></span> 发布</td>
+                <td>
+                    <a href="/deploy/jenkins/" class="btn btn-green" target="_blank">代码发布</a>
+                </td>
+            </tr>
+        </table>
+        <div class="ru-line"></div>
+        <table class="table link-table">
+            <tr>
+                <td class="td1" rowspan="3">Production <span class="line1"></span>
+                    <div class="line3"></div>
+                </td>
+                <td class="td2"><span class="line1"></span> 编辑</td>
+                <td class="td3">
+                    <a href="/deploy/yccv2/configinfo/v2/?env_id=7" class="btn btn-green" target="_blank">配置</a>
+                </td>
+            </tr>
+            <tr>
+                <td class="td2"><span class="line1"></span> 发布</td>
+                <td class="td3">
+                    <a href="/deploy/yccv2/group/" class="btn btn-green" target="_blank">配置提交审核</a>
+                    <div class="btn-group" role="group">
+                        <a href="http://trident.yihaodian.com.cn/secure/createDeployRequestForm.jspa"
+                           class="btn btn-green" target="_blank" role="button" style="margin-right: 0">普通发布</a>
+                        <a href="http://trident.yihaodian.com.cn/secure/createDeployRequestForm!grayDeploy.jspa"
+                           class="btn btn-green" target="_blank" role="button">灰度发布</a>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="td2"><span class="line1"></span> 查看</td>
+                <td>
+                    <a href="/deploy/yccv2/proconfiginfo/v2/" class="btn btn-green" target="_blank">配置</a>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <script type="text/javascript">
+        $(document).ready(function () {
+            function modal_copy_alert(alert_class, alert) {
+                $('#alert').empty();
+                $('#alert').append(
+                    $('<div>').attr({
+                        class: ['alert', alert_class, 'alert-dismissible'].join(' '),
+                        role: 'alert'
+                    }).append($('<button>').attr({
+                                type: 'button',
+                                class: 'close',
+                                'data-dismiss': 'alert',
+                                'aria-label': 'Close'
+                            }).append($('<span>').attr('aria-hidden', 'true').html('&times;'))
+                    ).append($('<strong>').html(alert))
+                );
+            };
+            $.ajax({
+                url: '/api/deploy/config/info/',
+                type: 'get',
+                async: false,
+                headers: {
+                    'Authorization': 'Token {{ API_TOKEN }}'
+                },
+                success: function (data, textStatus, jqXHR) {
+                    var error_array = [];
+                    $.each(data, function(index, value){
+                        if(!value.deploy_path)
+                            error_array.push(value.pool_name+'没有配置发布路径，请联系IT_Test_SCM@yhd.com');
+                        if(!value.ftp_path)
+                            error_array.push(value.pool_name+'没有配置ftp路径，请联系IT_Test_SCM@yhd.com');
+                        if(!value.healthcheck)
+                            error_array.push(value.pool_name+
+                                    '没有配置healthcheck，请联系IT_OPS_DEV@yhd.com设置白名单，' +
+                                    '或者点击<a href="/itil/view/monitor/url/url.html" class="alert-link" target="_blank">此处</a>进行配置');
+                    });
+                    if (error_array.length > 0)
+                        modal_copy_alert('alert-danger', error_array.join('<br>'));
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    alert(jqXHR.responseText);
+                }
+            })
+        })
+    </script>
+{% endblock %}

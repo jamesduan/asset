@@ -1,0 +1,663 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+
+<style>
+    .fixed-table-container tbody tr td {
+        line-height: 26px;
+    }
+    .bootstrap-table .table > tbody > tr > th,
+    .bootstrap-table .table > tfoot > tr > th,
+    .bootstrap-table .table > thead > tr > td,
+    .bootstrap-table .table > tbody > tr > td,
+    .bootstrap-table .table > tfoot > tr > td {
+        padding: 4px !important;
+    }
+
+    .fixed-table-container tbody .selected td {
+        background-color: lavender;
+    }
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+</style>
+
+<!-- <div class="inner-h1">装机管理</div> -->
+
+<div id="alert">
+</div>
+
+<div class="modal fade" id="editValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="attributeForm" method="POST">
+  <input type="hidden" name="id" id="id" value="">
+  <input type="hidden" name="ttype" id="ttype" value="">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="myModalLabel">修改装机模板</h4>
+  </div>
+  <div class="modal-body">
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">系统模板</label>
+        <div class='col-sm-6'>
+            <select name="server_os_template_id" id="server_os_template_id" class="form-control" >
+                <option value="">请选择</option>
+                <optgroup label="物理机"></optgroup>
+                {% for item in server_os_template %}
+                {% if item.type == 1 %}
+                <option value="{{ item.id }}" server_tt="1">{{ item.show_name }}</option>
+                {% endif %}
+                {% endfor %}
+                <optgroup label="虚拟机"></optgroup>
+                {% for item in server_os_template %}
+                {% if item.type == 2 %}
+                <option value="{{ item.id }}" server_tt="2">{{ item.show_name }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">应用模板</label>
+        <div class='col-sm-6'>
+            <select name="server_app_template_id" id="server_app_template_id" class="form-control" >
+                <option value="">请选择</option>
+                <optgroup label="物理机"></optgroup>
+                {% for item in server_app_template %}
+                {% if item.type == 1 %}
+                <option value="{{ item.id }}" server_tt="1">{{ item.show_name }}</option>
+                {% endif %}
+                {% endfor %}
+                <optgroup label="虚拟机"></optgroup>
+                {% for item in server_app_template %}
+                {% if item.type == 2 %}
+                <option value="{{ item.id }}" server_tt="2">{{ item.show_name }}</option>
+                {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+      </div>
+  </div>
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn btn-green" id="submit1">保存</button>
+  </div>
+</form>
+</div>
+</div>
+</div>
+
+<div class="modal fade" id="batchQueryModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="batchQueryForm" method="POST" action="{{ API_HYBRID_SAVE }}">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="myModalLabel">批量查询</h4>
+  </div>
+  <div class="modal-body">
+      <div class="form-group">
+        <label for="inputEmail3" class="col-sm-3 control-label">查询条件:</label>
+        <div class='col-sm-6'>
+            <select name="query_key" id="query_key" class="form-control" >
+                <option name="query_ip" value="ip">IP地址</option>
+                <option name="query_assetid" value="assetid">资产号</option>
+                <option name="query_name" value="hostname">主机名</option>
+            </select>
+        </div>
+      </div>
+      <div class="form-group">
+          <div class='col-sm-10 col-sm-push-1'>
+            <textarea name="query_value" id="query_value" class="form-control" rows="5" placeholder="输入查询内容" aria-multiline="true"></textarea>
+        </div>
+      </div>
+  </div>
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn btn-green" id="submit3">确定</button>
+  </div>
+</form>
+</div>
+</div>
+</div>
+
+<div id="toolbar">
+    <div class="form-inline" role="form">
+    <button id="install_nvwa" class="btn btn-green" disabled>
+        装机
+    </button>
+    <button id="change_template" data-toggle="modal" data-target="#addValue" class="btn btn-green" disabled>
+        修改模板
+    </button>
+    <button id="reset" class="btn btn-danger" disabled>
+        置为待装机
+    </button>
+    <button id="reset_install" class="btn btn-danger" disabled>
+        置为装机中
+    </button>
+    <button id="reset_free" class="btn btn-danger" disabled>
+        置为空闲
+    </button>
+    <select name="params_server_status_id" id="params_server_status_id" class="form-control control_api_url selectpicker">
+        <option value="">主机状态</option>
+        {%  for item in server_status %}
+            <option value="{{ item.id }}">{{ item.comment }}</option>
+        {%  endfor %}
+    </select>
+    <select name="params_server_type_id" id="params_server_type_id" class="form-control control_api_url selectpicker">
+        <option value="">主机类型</option>
+        {%  for item in server_type %}
+            <option value="{{ item.id }}">{{ item.comment }}</option>
+        {%  endfor %}
+    </select>
+    <button id="batch_query" class="btn btn-green" data-toggle="modal" data-target="#batchQueryModal">
+        批量查询
+    </button>
+    </div>
+</div>
+
+<table id="asset">
+</table>
+
+
+<script>
+$(document).ready(function() {
+    $("#params_server_status_id").val('');
+    $('.selectpicker').selectpicker({
+        'width': 'auto',
+    });
+
+    $(function () { $("[data-toggle='tooltip']").tooltip(); });
+    $("#install_nvwa,#change_template,#reset,#reset_install,#reset_free").attr("disabled",true);
+    window.operateEvents = {
+        'click .edit': function (e, value, row, index) {
+            if(row.server_status_id != 30 && row.server_status_id != 60 && row.server_status_id != 100) {
+                alert("服务器状态不允许修改模板，请将服务器置为空闲");
+            }else {
+                $('#editValue').modal('show');
+            }
+        }
+    };
+
+    $('#reset').click(function () {
+        var flag = true;
+        var ids = [];
+        $.map($('#asset').bootstrapTable('getSelections'), function (row) {
+            if(row.server_status_id != 50 && row.server_status_id != 60) {
+                flag = false;
+            }
+            ids.push(row.id);
+        });
+        if(flag) {
+            $.each(ids,function(key,value){
+                $.ajax({
+                    url:'{{ CMDBAPI_URL }}server/install/' + value + '/',
+                    type: 'PATCH',
+                    async:  false,
+                    data: {
+                        'server_status_id': 30
+                    },
+                    headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                    success: function( json ) {
+                        $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>置为待装机' + json.assetid +'</div>');
+                        $('#asset').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                    },
+                    error: function( json ) {
+                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>置为待装机失败：</strong>' + JSON.stringify(json.responseText) +'</div>');
+                    }
+                });
+            });
+        }else{
+            alert("选中的服务器中状态不允许重置状态，请检查!")
+        }
+
+    });
+
+    $('#reset_install').click(function () {
+        var flag = true;
+        var ids = [];
+        $.map($('#asset').bootstrapTable('getSelections'), function (row) {
+            if(row.server_status_id != 30 && row.server_status_id != 60 && row.server_status_id !=100) {
+                flag = false;
+            }
+            ids.push(row.id);
+        });
+        if(flag) {
+            $.each(ids,function(key,value){
+                $.ajax({
+                    url:'{{ CMDBAPI_URL }}server/install/' + value + '/',
+                    type: 'PATCH',
+                    async:  false,
+                    data: {
+                        'server_status_id': 50
+                    },
+                    headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                    success: function( json ) {
+                        $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>置为装机中' + json.assetid +'</div>');
+                        $('#asset').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                    },
+                    error: function( json ) {
+                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>置为装机中失败：</strong>' + JSON.stringify(json.responseText) +'</div>');
+                    }
+                });
+            });
+        }else{
+            alert("选中的服务器中状态不允许置为装机中状态，请检查!")
+        }
+
+    });
+
+    $('#reset_free').click(function () {
+        var flag = true;
+        var ids = [];
+        $.map($('#asset').bootstrapTable('getSelections'), function (row) {
+            if(row.server_status_id != 30) {
+                flag = false;
+            }
+            ids.push(row.id);
+        });
+        if(flag) {
+            $.each(ids,function(key,value){
+                $.ajax({
+                    url:'{{ CMDBAPI_URL }}server/install/' + value + '/',
+                    type: 'PATCH',
+                    async:  false,
+                    data: {
+                        'server_status_id': 100,
+                    },
+                    headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                    success: function( json ) {
+                        $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>置为空闲' + json.assetid +'</div>');
+                        $('#asset').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                    },
+                    error: function( json ) {
+                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>置为空闲失败：</strong>' + JSON.stringify(json.responseText) +'</div>');
+                    }
+                });
+            });
+        }else{
+            alert("选中的服务器中状态不允许置为空闲状态，请检查!")
+        }
+
+    });
+
+    $('#install_nvwa').click(function () {
+        bootbox.confirm('是否继续？', function (result) {
+            if (!result)
+                return;
+            var flag_status = true;
+            var flag_info = true;
+            $.map($('#asset').bootstrapTable('getSelections'), function (row) {
+                if (row.server_status_id != 30 && row.server_status_id != 60 && row.server_status_id != 100) {
+                    flag_status = false;
+                }
+                if (row.server_type_id == 0) {
+                    if (row.ip == "" || row.server_os_template_id == 0 || row.server_app_template_id == 0) {
+                        flag_info = false;
+                    }
+                } else {
+                    if (row.ip == "" || row.mgmt_ip == "" || row.server_os_template_id == 0 || row.server_app_template_id == 0) {
+                        flag_info = false;
+                    }
+                }
+
+            });
+            if (flag_status) {
+                if (flag_info) {
+                    $.map($('#asset').bootstrapTable('getSelections'), function (row) {
+                        if (row.server_type_id == 0) {
+                            var api_url = '{{ CMDBAPI_URL }}server/sn/' + row.sn + '/?is_call_nvwa=1&is_virtual=1'
+                        } else {
+                            var api_url = '{{ CMDBAPI_URL }}server/sn/' + row.sn + '/?is_call_nvwa=1&is_virtual=0'
+                        }
+                        $.ajax({
+                            url: api_url,
+                            type: 'GET',
+                            headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                            async: false,
+                            success: function (json) {
+                                $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>提交装机请求</div>');
+                                $('#asset').bootstrapTable('refresh', {
+                                    silent: true
+                                });
+
+                            },
+                            error: function (json) {
+                                $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>提交装机请求出现错误:</strong>' + JSON.stringify(json.responseText) + '</div>');
+                            }
+                        });
+
+                    });
+                } else {
+                    alert("选中的服务器中IP、管理IP、系统模板、应用模板的值为空请检查!")
+                }
+
+            } else {
+                alert("选中的服务器中状态不允许装机，请检查!")
+            }
+        })
+    });
+
+    $('#change_template').click(function () {
+        var flag = true;
+        var ids = [];
+        var old_server_type=false;
+        $.map($('#asset').bootstrapTable('getSelections'), function (row) {
+            if(row.server_status_id != 30 && row.server_status_id != 60 && row.server_status_id != 100) {
+                flag = false;
+            }
+            if(old_server_type) {
+                if(old_server_type != row.server_type_id) {
+                    flag = false;
+                }
+            }else{
+                old_server_type = row.server_type_id
+            }
+
+            ids.push(row.id);
+        });
+        if(flag) {
+            $("#server_app_template_id option").removeAttr("selected");
+            $("#server_os_template_id option").removeAttr("selected");
+            $("#server_app_template_id option").prop("disabled",false);
+            $("#server_os_template_id option").prop("disabled",false);
+            $("#ttype").val(2);
+            if (old_server_type == 0) {
+                $("#server_app_template_id option[server_tt=1]").prop("disabled",true);
+                $("#server_os_template_id option[server_tt=1]").prop("disabled",true);
+            }else{
+                $("#server_app_template_id option[server_tt=2]").prop("disabled",true);
+                $("#server_os_template_id option[server_tt=2]").prop("disabled",true);
+            }
+            $('#editValue').modal('show');
+            $('#id').val(ids.join(','));
+        } else {
+            alert("服务器状态不允许修改模板,请将服务器置为空闲/或选择的服务器既包含物理机，又包含虚拟机，");
+        }
+    });
+
+
+    $(".control_api_url").change(function() {
+        var params_server_status_id = $("#params_server_status_id option:selected").val();
+        var params_server_type_id = $("#params_server_type_id option:selected").val();
+        var api_url_base = '{{ CMDBAPI_URL }}server/install/?';
+        var params = ['format=json'];
+        if (params_server_status_id !="") {
+            params.push('server_status_id=' + params_server_status_id)
+        }
+        if (params_server_type_id !="") {
+            params.push('server_type_id=' + params_server_type_id)
+        }
+        var api_url = api_url_base + params.join('&')
+        $('#asset').bootstrapTable('refresh', {
+            url: api_url
+        });
+    });
+
+
+    $('#asset').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}server/install/?format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'state',
+                checkbox: true
+            },
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'sn',
+                title: '序列号'
+            },
+            {
+                field: 'assetid',
+                title: '资产号'
+            },
+            {
+                field: 'ip',
+                title: 'IP'
+            },
+            {
+                field: 'mgmt_ip',
+                title: 'MGIP'
+            },
+            {
+                field: 'server_os_template_id',
+                visible: false
+            },
+            {
+                field: 'server_app_template_id',
+                visible: false
+            },
+            {
+                field: 'server_os_template_identy',
+                visible: false
+            },
+            {
+                field: 'server_os_template_identy',
+                visible: false
+            },
+            {
+                field: 'server_os_template_name',
+                title: '系统模板'
+            },
+            {
+                field: 'server_app_template_name',
+                title: '应用模板'
+            },
+            {
+                field: 'server_type_name',
+                title: '硬件类型'
+            },
+            {
+                field: 'server_status_name',
+                title: '状态',
+                formatter: get_server_status
+            },
+            {
+                field: 'server_env_name',
+                title: '环境'
+            },
+            {
+                field: 'room',
+                title: '机房'
+            },
+            {
+                field: 'rack_name',
+                title: '机架'
+            },
+            {
+                field: 'parent_app_name',
+                title: '宿主机类型'
+            },
+            {
+                field: 'operate',
+                title: '操作',
+                align: 'center',
+                formatter: operateFormatter,
+                events: operateEvents
+            }
+        ],
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [10,20,100],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false
+    });
+
+    function operateFormatter(value, row, index) {
+        return [
+            '<a href="#" class="edit" data-toggle="tooltip" title="修改装机模板">',
+            '<span class="glyphicon glyphicon-pencil"></span>',
+            '</a>'
+
+        ].join('');
+    };
+
+    function get_server_status(value, row, index) {
+        if(row.server_type_id==0) {
+{#            return '<a href="http://oms.yihaodian.com.cn/cmdb/log/detail/?type=server&action=virtual&index='+ row.ip +'" target="_blank">' + value + '</a>';#}
+            return '<a href="{{ ROOT_URL }}server/log/detail/?type=server&action=virtual&index='+ row.ip +'" target="_blank">' + value + '</a>';
+        }else{
+{#            return '<a href="http://oms.yihaodian.com.cn/cmdb/log/detail/?type=server&action=install&index='+ row.ip +'" target="_blank">' + value + '</a>';#}
+            return '<a href="{{ ROOT_URL }}server/log/detail/?type=server&action=install&index='+ row.ip +'" target="_blank">' + value + '</a>';
+        }
+
+    }
+
+    $('#asset').on('click-row.bs.table', function (e, row, $element) {
+        $("#server_os_template_id option[value="+row.server_os_template_id+"]").attr("selected","selected");
+        $("#server_app_template_id option[value="+row.server_app_template_id+"]").attr("selected","selected");
+        $("#server_app_template_id option").prop("disabled",false);
+        $("#server_os_template_id option").prop("disabled",false);
+
+        if (row.server_type_id == 0) {
+            $("#server_app_template_id option[server_tt=1]").prop("disabled",true);
+            $("#server_os_template_id option[server_tt=1]").prop("disabled",true);
+        }else{
+            $("#server_app_template_id option[server_tt=2]").prop("disabled",true);
+            $("#server_os_template_id option[server_tt=2]").prop("disabled",true);
+        }
+        $("#id").val(row.id);
+        $("#ttype").val(1);
+    }).on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+        $('#reset').prop('disabled', !$('#asset').bootstrapTable('getSelections').length);
+        $('#reset_free').prop('disabled', !$('#asset').bootstrapTable('getSelections').length);
+        $('#reset_install').prop('disabled', !$('#asset').bootstrapTable('getSelections').length);
+        $('#install_nvwa').prop('disabled', !$('#asset').bootstrapTable('getSelections').length);
+        $('#change_template').prop('disabled', !$('#asset').bootstrapTable('getSelections').length);
+    });
+
+    $('#attributeForm')
+        .bootstrapValidator({})
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var ttype = $("#ttype").val();
+            var server_os_template_id = $("#server_os_template_id option:selected").val();
+            var server_app_template_id = $("#server_app_template_id option:selected").val();
+            if(ttype==1) {
+                $.ajax({
+                    url:'{{ CMDBAPI_URL }}server/install/' + $("#id").val() + '/',
+                    type: 'PATCH',
+                    async:  false,
+                    data: {
+                        'server_os_template_id': server_os_template_id,
+                        'server_app_template_id': server_app_template_id
+                    },
+                    headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                    success: function( json ) {
+                        $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>修改装机模板记录' + json.assetid +'</div>');
+                        $('#asset').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#editValue').modal('hide');
+                        $('#attributeForm').bootstrapValidator('resetForm', true);
+                    },
+                    error: function( json ) {
+                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>修改装机模板记录' + JSON.stringify(json.responseText) +'</div>');
+                        $('#editValue').modal('hide');
+                        $('#attributeForm').bootstrapValidator('resetForm', true);
+                    }
+                });
+            }else if(ttype==2){
+                var ids = $("#id").val().split(',');
+                $.each(ids,function(key,value){
+                    $.ajax({
+                        url:'{{ CMDBAPI_URL }}server/install/' + value + '/',
+                        type: 'PATCH',
+                        async:  false,
+                        data: {
+                            'server_os_template_id': server_os_template_id,
+                            'server_app_template_id': server_app_template_id
+                        },
+                        headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                        success: function( json ) {
+                            $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>修改装机模板记录' + json.assetid +'</div>');
+                            $('#asset').bootstrapTable('refresh', {
+                                silent: true
+                            });
+                            $('#editValue').modal('hide');
+                            $('#attributeForm').bootstrapValidator('resetForm', true);
+                        },
+                        error: function( json ) {
+                            $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>修改装机模板记录' + JSON.stringify(json.responseText) +'</div>');
+                            $('#editValue').modal('hide');
+                            $('#attributeForm').bootstrapValidator('resetForm', true);
+                        }
+                    });
+                });
+            }
+
+        });
+
+    $('#batchQueryForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                query_key: {
+                    validators: {
+                        notEmpty: {
+                            message: '请选择查询条件'
+                        }
+                    }
+                },
+                query_value: {
+                    validators: {
+                        notEmpty: {
+                            message: '请输入查询内容'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var string = $("#query_value").val().trim();
+            var batch_uri = '{{ CMDBAPI_URL }}server/install/?format=json&query_key='+$("#query_key option:selected").val()+'&query_value='+ string.split('\n') +'';
+            $('#asset').bootstrapTable('refresh', {
+                url: batch_uri,
+            });
+            $('#batchQueryForm').bootstrapValidator('resetForm', true);
+            $('#query_key').val('ip');
+            $('#batchQueryModal').modal('hide');
+        });
+});
+</script>
+{% endblock %}

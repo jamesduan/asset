@@ -1,0 +1,455 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block title %} 发布-Stg发布列表 {% endblock %}
+
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+<style>
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+</style>
+<!-- <div class="inner-h1">Stg发布列表</div> -->
+<div id="toolbar">
+    <div class="form-inline" role="form">
+        <button id="create"  data-toggle="modal" data-target="#createStg" class="btn btn-green">创建</button>
+        <select name="select_app_id" id="select_app_id" class="form-control">
+            <option value="">选择站点/POOL</option>
+            {% for item in applist %}
+            <option value="{{ item.id }}">{{ item.site.name }}/{{ item.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="deploy_type" id="deploy_type_id" class="form-control select_api_url">
+            <option value="">发布类型</option>
+            <option value="0">webapps</option>
+            <option value="3">static</option>
+        </select>
+        <select name="status" id="deploy_status_id" class="form-control select_api_url">
+            <option value="">发布状态</option>
+            <option value="1">待发布</option>
+            <option value="2">已发布</option>
+            <option value="3">已回滚</option>
+            <option value="4">发布异常</option>
+            <option value="5">已作废</option>
+        </select>
+    </div>
+</div>
+
+<div class="modal fade" id="createStg" tabindex="-1" role="dialog" aria-labelledby="createStgLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="createStgForm" method="POST">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="createStgLabel1">创建发布申请单</h4>
+  </div>
+  <div class="modal-body">
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">发布包类型</label>
+          <div class='col-sm-6'>
+            <select name="packtype_id" id="packtype_id" class="form-control create_select">
+                <option value="">选择发布包类型</option>
+                <option value="0">webapps</option>
+                <option value="3">static</option>
+            </select>
+          </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputEmail3" class="col-sm-3 control-label">选择Pool</label>
+        <div class='col-sm-6'>
+            <select name="app_id" id="app_id" class="form-control">
+                <option value="">选择POOL</option>
+                {% for item in applist %}
+                <option value="{{ item.id }}">{{ item.site.name }}/{{ item.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">选择源码包</label>
+        <div class="col-sm-6">
+            <input type="text" size="16" value="" name="source_pack" id="source_pack" class=" form-control form_datetime">
+        </div>
+      </div>
+      <div class="form-group">
+        <div class='col-sm-6 col-sm-offset-3'>
+            <select name="ftp_id" id="ftp_id" class="form-control create_select">
+                <option value="">请选择发布包</option>
+                {% for item in package_type %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">是否重启</label>
+        <div class='col-sm-6'>
+            <label class="checkbox-inline">
+              <input type="radio" name="is_restart" id="is_restart1"
+                 value="1" checked>是
+           </label>
+           <label class="checkbox-inline">
+              <input type="radio" name="is_restart" id="is_restart0"
+                 value="0">否
+           </label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">备注</label>
+        <div class='col-sm-6'>
+            <input type="text" size="16" value="" name="comment" id="comment" class="form-control" placeholder="备注可留空">
+        </div>
+      </div>
+    <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">发布IP</label>
+        <div class='col-sm-6'>
+            <select name="server_ids[]" id="server_ids" class="form-control selectpicker" multiple>
+        </select>
+            </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn btn-green" id="submit1">提交</button>
+  </div>
+</form>
+</div>
+</div>
+</div>
+
+<table id="stg_deploy" class="table">
+</table>
+
+<script type="application/javascript">
+    {% if not own_domains %}
+        var a = $('<a>')
+                .attr({href: 'http://oms.yihaodian.com.cn/home/myInfo.action', target: '_blank'})
+                .text('此处')[0].outerHTML;
+        bootbox.alert('无domain信息，请点击' + a + '查看修复方法，或者联系SA');
+    {% endif %}
+
+
+    function update_server_ids(){
+        var app_id = $("#app_id").val().trim();
+        var packtype = $('#packtype_id').val().trim();
+        if(packtype == 3 || (packtype == 0 && app_id != '')){
+            var url = '{{ CMDBAPI_URL }}server/server/?format=json&page_size=500&server_env_id=1&server_status_id=200';
+
+            if(packtype == 3){
+                url += '&app_id={{ static_app_id }}';
+            }else{
+                url += '&app_id=' + app_id;
+            }
+            $("#server_ids").find("option").remove();
+            $.ajax({
+                url: url,
+                async: true,
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (json) {
+                    $.each(json.results, function (i, value) {
+                        $('#server_ids').append($('<option>').text(value.ip).attr('value', value.id));
+                    });
+                    $('.selectpicker').selectpicker('refresh');
+                }
+            });
+            if(packtype != ""){
+                $('#source_pack').val('');
+                $("#ftp_id").find("option").remove();
+                $("#ftp_id").selectpicker('refresh');
+            }
+        }
+
+    }
+
+    function update_table(){
+        var api_url = '{{ CMDBAPI_URL }}deploy/stg/list/?';
+        var params = ['format=json'];
+
+        var app_id = $('#select_app_id').val();
+        var deploy_type = $('#deploy_type_id').val();
+        var status = $('#deploy_status_id').val();
+        if(app_id != '' && app_id != ' ') {
+            params.push('app_id=' + app_id);
+        }
+        if(deploy_type != '' && deploy_type != ' ') {
+            params.push('deploy_type=' + deploy_type);
+        }
+        if(status != '' && status != ' ') {
+            params.push('status=' + status);
+        }
+
+        api_url = api_url + params.join('&');
+
+        $('#stg_deploy').bootstrapTable('refresh', {
+            url: api_url
+        });
+    };
+
+$(document).ready(function() {
+    $('#select_app_id').selectpicker({
+        'liveSearch': true,
+        'liveSearchPlaceholder': '搜索',
+        'width': 'fit',
+    }).on('change', function(){
+        update_table();
+    });
+    $('#app_id').selectpicker({
+        'liveSearch': true,
+        'liveSearchPlaceholder': '搜索',
+    })
+    $('.select_api_url').selectpicker({
+        'width': 'auto'
+    });
+    $('.create_select').selectpicker({
+    });
+    $('.select_api_url').change(function(){
+        update_table();
+    });
+
+    $('.form_datetime').datetimepicker({
+        format: 'yyyy-mm-dd',
+        autoclose: true,
+        showMeridian: true,
+        minView: 2
+    });
+
+    $("#asset_model_id").change(function(){
+        $('#source_pack').data('bootstrapValidator')
+                .updateStatus('source_pack', 'NOT_VALIDATED').validateField('source_pack');
+    });
+    $('#source_pack').change(function () {
+        var app_id = $('#app_id').val().trim();
+        var packtype = $('#packtype_id').val();
+        var ftpdate = moment($("#source_pack").val(), "YYYYMMDD").format("YYYYMMDD");
+        if(packtype != 3){
+            packtype = 0;
+        }
+        if(app_id == '' || ftpdate.trim() == ''){
+            bootbox.alert('请先选择Pool和发布包类型！');
+        }else{
+            $("#ftp_id").find("option").remove();
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}deploy/ftp/list/',
+                dataType: 'json',
+                type: 'GET',
+                async:   false,
+                data: {
+                    format: 'json',
+                    app_id: app_id,
+                    packtype: packtype,
+                    date: ftpdate
+                },
+                headers:{'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+
+                    if(json.length >0){
+                        $('#ftp_id').append($('<option>').text('请选择发布包').attr('value', ''));
+                        $.each(json,function(key,val){
+                            $('#ftp_id').append($('<option>').text(val).attr('value', val));
+                        });
+                    }else{
+                        $('#ftp_id').append($('<option>').text('未找到匹配发布包').attr('value', ''));
+                    }
+                },
+                error: function (json) {
+                    $('#ftp_id').append($('<option>').text('未找到匹配发布包').attr('value', ''));
+                }
+            });
+            $('#ftp_id').selectpicker('refresh');
+        }
+
+    });
+
+    $("#app_id,#packtype_id").change(function() {
+        if($("#app_id").val() != ''){
+            update_server_ids();
+        }
+    });
+
+
+    $('#stg_deploy').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}deploy/stg/list/?format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'depid',
+                title: '发布单号'
+            },
+            {
+                field: 'deploy_type_name',
+                title: '发布类型'
+            },
+            {
+                field: 'app_name',
+                title: '站点/应用',
+                formatter: poolNameFormatter
+            },
+            {
+                field: 'uid',
+                title: '发布人'
+            },
+            {
+                field: 'is_restart',
+                title: '是否重启',
+                formatter: getIsRestartFormatter
+            },
+            {
+                field: 'created_time',
+                title: '创建时间'
+            },
+            {
+                field: 'status_name',
+                title: '发布状态'
+            },
+            {
+                field: 'operate',
+                title: '操作',
+                align: 'center',
+                formatter: operateFormatter
+            }
+        ],
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 20,
+        pageList: [10,20,50,100,500],
+        clickToSelect: true,
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        showExport: true,
+        cache: false
+    });
+
+    function getIsRestartFormatter(value) {
+        if (value == 0) {
+            return '否';
+        }else{
+            return "是";
+        }
+    };
+
+    function poolNameFormatter(value, row, index) {
+        if (row.app_id!=0 && row.app_id != null) {
+            return row.site_name + '/' + row.app_name;
+        }else{
+            return "-";
+        }
+    };
+
+    function operateFormatter(value, row, index) {
+        return '<a href="{{ ROOT_URL }}stg/detail/?depid='+ row.depid+'"  target="_blank">详情</span></a>';
+    }
+
+    $('#createStgForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                app_id: {
+                    validators: {
+                        notEmpty: {
+                            message: 'Pool不能为空。'
+                        }
+                    }
+                },
+                packtype_id: {
+                    validators: {
+                        notEmpty: {
+                            message: '发布包类型不能为空。'
+                        }
+                    }
+                },
+                source_pack: {
+                    validators: {
+                        notEmpty: {
+                            message: '源码包不能为空。'
+                        }
+                    }
+                },
+                ftp_id: {
+                    validators: {
+                        notEmpty: {
+                            message: '发布包不能为空。'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var server_ids = '';
+            $("#server_ids").each(function() {
+                if($(this).val() !=null){
+                    server_ids += $(this).val().toString();
+                }
+            });
+            var inputdata = {
+                'app_id': $('#app_id').val(),
+                'uid': '{{ USER.username }}',
+                'deploy_type': $('#packtype_id').val(),
+                'source_path':  $('#ftp_id').val(),
+                'is_restart': $("input[name='is_restart']:checked").val(),
+                'bz': $('#comment').val(),
+            };
+            if(server_ids != ''){
+                inputdata['server_ids'] =  server_ids;
+            }
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}deploy/stg/list/',
+                type: 'POST',
+                async:  false,
+                data: inputdata,
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    bootbox.alert('成功创建发布申请单，单号为：' + json.depid);
+                    $('#stg_deploy').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#createStg').modal('hide');
+                    $('#createStgForm').bootstrapValidator('resetForm', true);
+                    $('.selectpicker').find("option").remove();
+                    $('.selectpicker').selectpicker('refresh');
+                    $('.create_select').selectpicker('refresh');
+                },
+                error: function( json ) {
+                    bootbox.alert(JSON.stringify(json.responseText));
+                    $('#createStg').modal('hide');
+                }
+            });
+
+        });
+
+});
+</script>
+{% endblock %}

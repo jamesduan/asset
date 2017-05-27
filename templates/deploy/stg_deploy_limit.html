@@ -1,0 +1,375 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block title %} 发布-Stg发布白名单 {% endblock %}
+
+{% block content %}
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootbox/js/bootbox.min.js"></script>
+
+<!-- <div class="inner-h1">Stg发布白名单</div> -->
+<div id="alert">
+</div>
+
+<div id="toolbar">
+    <div class="form-inline" role="form">
+        <button id="create"  data-toggle="modal" data-target="#createLimit" class="btn btn-green">创建</button>
+        <select name="select_app_id" id="select_app_id" class="form-control update_api_url">
+            <option value="">选择站点/POOL</option>
+            <option value=" ">--------</option>
+            {% for item in applist %}
+            <option value="{{ item.id }}">{{ item.site.name }}/{{ item.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="select_deploy_type" id="select_deploy_type" class="form-control update_api_url">
+            <option value="">选择发布包类型</option>
+            <option value=" ">------</option>
+            <option value="0">webapps</option>
+            <option value="3">static</option>
+        </select>
+        <button id="remove" class="btn btn-danger" disabled>
+            <i class="glyphicon glyphicon-remove"></i> 删除
+        </button>
+    </div>
+</div>
+
+<div class="modal fade" id="createLimit" tabindex="-1" role="dialog" aria-labelledby="createLimitLabel" aria-hidden="true">
+<div class="modal-dialog">
+<div class="modal-content">
+<form class="form-horizontal" role="form" id="createLimitForm" method="POST">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+    <h4 class="modal-title" id="createStgLabel1">创建新的Stg发布白名单</h4>
+  </div>
+  <div class="modal-body">
+      <div class="form-group">
+        <label for="inputEmail3" class="col-sm-3 control-label">选择站点&Pool</label>
+        <div class='col-sm-6'>
+            <select name="app_id" id="app_id" class="form-control">
+                <option value="">选择站点/POOL</option>
+                {% for item in applist %}
+                <option value="{{ item.id }}">{{ item.site.name }}/{{ item.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="inputEmail3" class="col-sm-3 control-label">选择发布类型</label>
+        <div class='col-sm-6'>
+            <select name="deploy_type" id="deploy_type" class="form-control">
+                <option value="0">webapps</option>
+                <option value="3">static</option>
+            </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="inputPassword3" class="col-sm-3 control-label">每日最大发布次数</label>
+        <div class='col-sm-6'>
+            <input type="text" size="16" value="" name="maxtime" id="maxtime" class="form-control" placeholder="0代表无限制发布">
+        </div>
+      </div>
+  </div>
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+    <button type="submit" class="btn btn-green" id="submit1">提交</button>
+  </div>
+</form>
+</div>
+</div>
+</div>
+
+<div class="modal fade" id="updateLimit" tabindex="-1" role="dialog" aria-labelledby="updateLimitLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form class="form-horizontal" role="form" id="updateLimitForm" method="POST" action="{{ API_HYBRID_SAVE }}">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+                    <h4 class="modal-title" id="updateLimitTitle">修改每日最大发布次数</h4>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group" hidden="hidden">
+                        <label for="inputEmail3" class="col-sm-3 control-label">ID</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_id" id="e_id"/>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">站点/Pool</label>
+                        <div class='col-sm-6'>
+                            <input type="text" size="16" value="" name="e_app_id" id="e_app_id" class="form-control" readonly>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">发布类型</label>
+                        <div class='col-sm-6'>
+                            <input type="text" size="16" value="" name="e_deploy_type" id="e_deploy_type" class="form-control" readonly>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="inputPassword3" class="col-sm-3 control-label">每日最大发布次数</label>
+                        <div class='col-sm-6'>
+                            <input type='text' class="form-control" name="e_maxtime" id="e_maxtime" />
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-green" id="submit2">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<table id="stg_deploy_limit" class="table">
+</table>
+
+<script type="application/javascript">
+
+$('#select_app_id').change(function(){
+    if($('#select_app_id').val() != '') {
+        update_table();
+    }
+});
+
+$('#select_deploy_type').change(function(){
+    if($('#select_deploy_type').val() != '') {
+        update_table();
+    }
+});
+
+function update_table(){
+    var app_id = $('#select_app_id').val().trim();
+    var deploy_type = $('#select_deploy_type').val().trim();
+    var api_url = '{{ CMDBAPI_URL }}deploy/stg/limit/list/?format=json';
+    if (app_id != '') {
+        api_url += '&app__id=' + app_id
+    }
+    if (deploy_type != '') {
+        api_url += '&deploy_type=' + deploy_type
+    }
+    $('#stg_deploy_limit').bootstrapTable('refresh', {
+        url: api_url
+    });
+}
+
+$(document).ready(function() {
+    $('#select_app_id,#select_deploy_type, #app_id, #deploy_type').combobox({});
+    $("#remove").attr("disabled",true);
+    $(function () { $("[data-toggle='tooltip']").tooltip(); });
+
+    window.operateEvents = {
+        'click .edit': function (e, value, row, index) {
+            $("#e_id").val(row.id);
+            $("#e_app_id").val(row.app_name);
+            $("#e_deploy_type").val(row.deploy_type_name);
+            $("#e_maxtime").val(row.deploy_maxtime);
+            $('#updateLimit').modal('show');
+        }
+    };
+
+    $('#stg_deploy_limit').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}deploy/stg/limit/list/?format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'state',
+                checkbox: true
+            },
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'site_name',
+                title: '站点',
+            },
+            {
+                field: 'app_name',
+                title: '应用',
+            },
+            {
+                field: 'deploy_type_name',
+                title: '发布类型',
+            },
+            {
+                field: 'deploy_maxtime',
+                title: '每日最大发布次数'
+            },
+            {
+                field: 'operate',
+                title: '操作',
+                align: 'center',
+                formatter: operateFormatter,
+                events: operateEvents
+            }
+        ],
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 20,
+        pageList: [10,20,50,100,500],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        toolbar: "#toolbar",
+        cache: false,
+
+    });
+
+    function operateFormatter(value, row, index) {
+        return '<a href="#" class="edit" data-toggle="tooltip"  title="修改"><span class="glyphicon glyphicon-pencil"></span></a>';
+    }
+
+    $("#stg_deploy_limit").on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+        var selections = $("#stg_deploy_limit").bootstrapTable('getSelections');
+
+        if (selections.length) {
+            $("#remove").attr("disabled",false);
+        }else{
+            $("#remove").attr("disabled",true);
+        }
+    });
+
+    $("#remove").click(function () {
+        bootbox.confirm("确定要删除选中的白名单？", function(result) {
+            if (result) {
+                var ids = $.map($("#stg_deploy_limit").bootstrapTable('getSelections'), function (row) {
+                    var outputid = [];
+                    $.ajax({
+                        url: '{{ CMDBAPI_URL }}deploy/stg/limit/detail/' + row.id + '/?format=json',
+                        type: 'DELETE',
+                        async: false,
+                        headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+
+                        success: function (json) {
+                            $("#remove").prop('disabled', true);
+                            outputid.push(row.id);
+                            $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>删除白名单！</div>');
+                        },
+                        error: function (json) {
+                            $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>失败!</strong>原因：' + JSON.stringify(json.responseText) + '</div>');
+                        }
+
+                    });
+                    return outputid;
+                });
+                $("#stg_deploy_limit").bootstrapTable('remove', {
+                    field: 'id',
+                    values: ids
+                });
+            }
+        });
+    });
+
+    $('#createLimitForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                app_id: {
+                    validators: {
+                        notEmpty: {
+                            message: 'Pool名称不能为空。'
+                        }
+                    }
+                },
+                maxtime: {
+                    validators: {
+                        notEmpty: {
+                            message: '最大发布次数不能为空。'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var inputdata = {
+                'app_id': $.trim($("#app_id").val()),
+                'deploy_type': $.trim($("#deploy_type").val()),
+                'deploy_maxtime': $.trim($("#maxtime").val()),
+            };
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}deploy/stg/limit/list/?format=json',
+                type: 'POST',
+                async: false,
+                data: inputdata,
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (json) {
+                    $('#createLimit').modal('hide');
+                    $('#stg_deploy_limit').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#createLimitForm').bootstrapValidator('resetForm', true);
+                    $("#app_id").data('combobox').clearTarget();
+                    $("#app_id").combobox('clearElement');
+                    $("#deploy_type").data('combobox').clearTarget();
+                    $("#deploy_type").combobox('clearElement');
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>成功添加白名单!</div>');
+                },
+                error: function (json) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>添加错误!</strong>原因:' + JSON.stringify(json.responseText) + '</div>');
+                    $('#createLimit').modal('hide');
+                }
+            });
+        });
+
+    $('#updateLimitForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                e_maxtime: {
+                    validators: {
+                        notEmpty: {
+                            message: '最大发布次数不能为空。'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var inputdata = {
+                'deploy_maxtime': $.trim($("#e_maxtime").val()),
+            };
+            $.ajax({
+                url: '{{ CMDBAPI_URL }}deploy/stg/limit/detail/' + $("#e_id").val() + '/',
+                type: 'PATCH',
+                async: false,
+                data: inputdata,
+                headers: {'Authorization': 'Token {{ API_TOKEN }}'},
+                success: function (json) {
+                    $('#updateLimit').modal('hide');
+                    $('#stg_deploy_limit').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#updateLimitForm').bootstrapValidator('resetForm', true);
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>成功修改白名单!</div>');
+                },
+                error: function (json) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>修改错误!</strong>原因:' + JSON.stringify(json.responseText) + '</div>');
+                    $('#updateLimit').modal('hide');
+                }
+            });
+        });
+
+
+});
+</script>
+{% endblock %}

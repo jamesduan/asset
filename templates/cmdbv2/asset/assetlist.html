@@ -1,0 +1,1398 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/daterangepicker-bs3.css"rel="stylesheet" type="text/css" media="all"  />
+<link href="{{ STATIC_URL }}libs/bootstrap-select/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-select/dist/js/bootstrap-select.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/daterangepicker.js" type="text/javascript" ></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+<style>
+    .fixed-table-container tbody tr td {
+        line-height: 28px;
+    }
+    .bootstrap-table .table > tbody > tr > th,
+    .bootstrap-table .table > tfoot > tr > th,
+    .bootstrap-table .table > thead > tr > td,
+    .bootstrap-table .table > tbody > tr > td,
+    .bootstrap-table .table > tfoot > tr > td {
+        padding: 4px !important;
+    }
+
+    .fixed-table-container tbody .selected td {
+        background-color: lavender;
+    }
+
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+</style>
+<div class="form-inline" style="padding-top: 10px">
+    <select name="new_status" id="new_status" class="form-control select_api_url">
+        <option value="">交付状态</option>
+        <option value="0">未交付</option>
+        <option value="1">已申请</option>
+        <option value="2">已交付</option>
+        <option value="3">已报修</option>
+    </select>
+    <select name="params_asset_type_id" id="params_asset_type_id" class="form-control select_api_url">
+        <option value="">设备类型</option>
+        {%  for item in asset_type %}
+            <option value="{{ item.id }}">{{ item.comment }}</option>
+        {%  endfor %}
+    </select>
+    <select name="params_room_id" id="params_room_id" class="form-control select_api_url">
+        <option value="">IDC</option>
+        {%  for item in room_list %}
+            <option value="{{ item.id }}">{{ item.name }}</option>
+        {%  endfor %}
+    </select>
+    <div class="input-group">
+        <input type="text" id="select_exp_time" class="form-control" style="width: 200px;" value="" placeholder="选择过保日期时间段">
+        <span class="input-group-btn">
+           <button id="select_time_url" class="btn btn-green" type="button">
+             查询
+           </button>
+        </span>
+    </div>
+    <button id="batch_query" class="btn btn-green" data-toggle="modal" data-target="#batchQueryModal">
+        批量查询
+    </button>
+    <select name="room_id" id="room_id" class="form-control">
+        <option value="">选择机房查询设备分布</option>
+        {%  for r in roomlist %}
+            <option value="{{ r.id }}">{{ r.comment }}</option>
+        {%  endfor %}
+    </select>
+</div>
+
+<div class="inner-box inner-list-box">
+    <div id="alert">
+    {% if result %}
+    <div class="alert alert-danger text-center" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button><strong>导入完成</strong>{{ info }}
+        <ul>{{ result_str|safe }}</ul>
+    </div>
+    {% endif %}
+    </div>
+
+    <table id="asset">
+    </table>
+
+    <div class="modal fade" id="addValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+    <div class="modal-content">
+    <form class="form-horizontal" role="form" id="attributeForm" method="POST" action="{{ API_HYBRID_SAVE }}">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="myModalLabel">新增设备</h4>
+      </div>
+      <div class="modal-body">
+          <div class="form-group">
+            <label for="inputEmail3" class="col-sm-3 control-label">设备类型</label>
+            <div class='col-sm-6'>
+                <select name="asset_type_id" id="asset_type_id" class="form-control" >
+                    <option value="">请选择</option>
+                    {%  for item in asset_type %}
+                        <option value="{{ item.id }}">{{ item.comment }}</option>
+                    {%  endfor %}
+                </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">序列号</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="sn" id="sn" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">设备型号</label>
+            <div class='col-sm-6'>
+                <select name="asset_model_id" id="asset_model_id" class="form-control">
+                    <option value="">请选择型号</option>
+                    {% for item in asset_model %}
+
+                    <option value="{{ item.id }}">{{ item.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">过保时间</label>
+            <div class="col-sm-6">
+                <input type="text" value="{{ current_date }}" readonly size="16" name="expiration_time" id="expiration_time" class=" form-control form_datetime">
+            </div>
+          </div>
+          <hr />
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">机架号</label>
+            <div class='col-sm-6'>
+                <select name="rack_id" id="rack_id" class="form-control">
+                    <option value="">请输入机架</option>
+                    {% for item in rack_info %}
+                    <option value="{{ item.id }}">{{ item.cname }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">机位号</label>
+            <div class='col-sm-6'>
+                <select name="rack_sapce_id[]" id="rack_sapce_id" class="form-control selectpicker" multiple>
+                </select>
+            </div>
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-green" id="submit1">保存</button>
+      </div>
+    </form>
+    </div>
+    </div>
+    </div>
+
+    <div class="modal fade" id="editValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel1" aria-hidden="true">
+    <div class="modal-dialog">
+    <div class="modal-content">
+    <form class="form-horizontal" role="form" id="attributeForm1" method="POST">
+    <input type="hidden" name="e_id" id="e_id">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="myModalLabel1">修改设备</h4>
+      </div>
+      <div class="modal-body">
+          <div class="form-group">
+            <label for="inputEmail3" class="col-sm-3 control-label">资产编号</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="e_assetid" id="e_assetid" readonly />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">序列号</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="e_sn" id="e_sn" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">设备型号</label>
+            <div class='col-sm-6'>
+                <select name="e_asset_model_id" id="e_asset_model_id" class="form-control">
+                    {% for item in asset_model %}
+                    <option value="{{ item.id }}">{{ item.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">过保时间</label>
+            <div class="col-sm-6">
+                <input type="text" size="16" value="" name="e_expiration_time" id="e_expiration_time" class=" form-control form_datetime">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">机架号</label>
+            <div class='col-sm-6'>
+                <select name="e_rack_id" id="e_rack_id" class="form-control">
+                    <option value="0">请输入机架</option>
+                    {% for item in rack_info %}
+                    <option value="{{ item.id }}">{{ item.cname }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">机位号</label>
+            <div class='col-sm-6'>
+                <select name="e_rack_sapce_id[]" id="e_rack_sapce_id" class="form-control selectpicker" multiple>
+                </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputEmail3" class="col-sm-3 control-label">备注</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="e_comment" id="e_comment"/>
+            </div>
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-green" id="submit2">修改</button>
+      </div>
+    </form>
+    </div>
+    </div>
+    </div>
+
+    <div class="modal fade" id="importValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+    <div class="modal-content">
+    <form class="form-horizontal" role="form" id="attributeForm2" method="POST" enctype="multipart/form-data">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="myModalLabel">批量导入设备</h4>
+      </div>
+      <div class="modal-body">
+          <div class="form-group">
+              <input type="hidden" id="cur_session" name="cur_session" value="{{ cur_session }}">
+            <label for="inputEmail3" class="col-sm-3 control-label">选择文件</label>
+            <div class='col-sm-6'>
+                <input type="file" id="filename" name="filename">
+                <p class="help-block">请上传后缀为csv的文件.</p>
+            </div>
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-green" id="submit1">上传</button>
+      </div>
+    </form>
+    </div>
+    </div>
+    </div>
+
+
+    <div class="modal fade" id="bindipValue" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+    <div class="modal-content">
+    <form class="form-horizontal" role="form" id="attributeForm3" method="POST">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="myModalLabel">IP绑定/解绑</h4>
+      </div>
+    <input type="hidden" name="ip_assetid" id="ip_assetid" value="">
+    <input type="hidden" name="ip_asset_type_id" id="ip_asset_type_id" value="">
+    <div class="modal-body">
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">当前绑定的内网IP</label>
+            <div class="col-sm-6">
+                <input type="text" readonly size="16" value="" name="show_ip" id="show_ip" class=" form-control">
+            </div>
+          </div>
+
+          <div class="form-group">
+                <label for="inputPassword3" class="col-sm-3 control-label">内网IP分配</label>
+                <div class='col-sm-6'>
+                <input type='text' class="form-control" name="ip" id="ip" placeholder="暂不绑定,解绑IP请填写 -1" />
+                </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">当前绑定的管理IP</label>
+            <div class="col-sm-6">
+                <input type="text" readonly size="16" value="" name="show_mgip" id="show_mgip" class=" form-control">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">管理IP分配</label>
+            <div class='col-sm-6'>
+                <input type='text' class="form-control" name="mgip" id="mgip" placeholder="暂不绑定,解绑IP请填写 -1" />
+            </div>
+          </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-green" id="submit1">确定</button>
+      </div>
+    </form>
+    </div>
+    </div>
+    </div>
+
+
+    <div class="modal fade" id="installModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+    <div class="modal-content">
+    <form class="form-horizontal" role="form" id="attributeForm4" method="POST">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="myModalLabel">新装机申请</h4>
+      </div>
+    <input type="hidden" name="install_assetid" id="install_assetid" value="">
+    <div class="modal-body">
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">业务类型</label>
+            <div class="col-sm-6">
+                <select name="install_type" id="install_type" class="form-control">
+                    <option value="">请输入业务类型</option>
+                    <option value="1">xenserver</option>
+                    <option value="12">docker</option>
+                    <option value="2">db</option>
+                    <option value="3">物理机应用</option>
+                    <option value="4">squid</option>
+                    <option value="5">memcache</option>
+                    <option value="6">hadoop</option>
+                    <option value="7">后台</option>
+                    <option value="8">软负载项目</option>
+                    <option value="9">特殊业务</option>
+                    <option value="11">windows</option>
+                    <option value="10">其他</option>
+                </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+                <label for="inputPassword3" class="col-sm-3 control-label">操作系统模板</label>
+                <div class='col-sm-6'>
+                    <select name="server_os_template_id" id="server_os_template_id" class="form-control">
+                        <option value="">请选择系统模板</option>
+                        {% for item in server_os_template %}
+                            <option value="{{ item.id }}">{{ item.show_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+          </div>
+
+          <div class="form-group">
+                <label for="inputPassword3" class="col-sm-3 control-label">应用模板</label>
+                <div class='col-sm-6'>
+                    <select name="server_app_template_id" id="server_app_template_id" class="form-control">
+                        <option value="">请选择应用模板</option>
+                        {% for item in server_app_template %}
+                            <option value="{{ item.id }}">{{ item.show_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+          </div>
+
+          <div class="form-group">
+                <label for="inputPassword3" class="col-sm-3 control-label">环境</label>
+                <div class='col-sm-6'>
+                    <select name="server_env_id" id="server_env_id" class="form-control">
+{#                        <option value="">请选择环境</option>#}
+                        {% for item in server_env %}
+                            <option value="{{ item.id }}">{{ item.comment }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+          </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-green" id="submit1">确定</button>
+      </div>
+    </form>
+    </div>
+    </div>
+    </div>
+
+
+    <div class="modal fade" id="range_exp_time" tabindex="-1" role="dialog" aria-labelledby="range_exp_timeLabel" aria-hidden="true">
+    <div class="modal-dialog">
+    <div class="modal-content">
+    <form class="form-horizontal" role="form" id="range_exp_timeForm" method="POST">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="range_exp_timeLabel">选择过保日期段查询</h4>
+      </div>
+      <div class="modal-body">
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">起始日期</label>
+            <div class="col-sm-6">
+                <input type="text" name="start_exp_time"  id="start_exp_time" class="form-control form_datetime" placeholder="起始日期" value="">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="inputPassword3" class="col-sm-3 control-label">结束日期</label>
+            <div class="col-sm-6">
+                <input type="text" name="end_exp_time"  id="end_exp_time" class="form-control form_datetime" placeholder="结束日期" value="">
+            </div>
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+        <button type="button" class="btn btn-green" id="select_date_ok">确定</button>
+      </div>
+    </form>
+    </div>
+    </div>
+    </div>
+
+
+    <div class="modal fade" id="assetRepair" tabindex="-1" role="dialog" aria-labelledby="asset_repairModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+    <div class="modal-content">
+    <form class="form-horizontal" role="form" id="attributeForm5" method="POST">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="asset_repairModalLabel">新建维修记录</h4>
+      </div>
+        <input type="hidden" name="repair_asset_id" id="repair_asset_id" value="">
+    <div class="modal-body">
+        <div class="form-group">
+                <label for="inputPassword3" class="col-sm-3 control-label">故障类型</label>
+                <div class='col-sm-6'>
+                    <select name="repair_type" id="repair_type" class="form-control">
+                         <option value="">请输入故障类型</option>
+                         <option value="1">主板故障</option>
+                         <option value="2">内存故障</option>
+                         <option value="3">硬盘故障</option>
+                         <option value="4">电源故障</option>
+                    </select>
+                </div>
+          </div>
+
+          <div class="form-group">
+                <label for="inputPassword3" class="col-sm-3 control-label">故障描述</label>
+                <div class='col-sm-6'>
+                    <input type='text' class="form-control" name="repair_reson" id="repair_reson" />
+                </div>
+          </div>
+    </div>
+      <div class="modal-footer">
+        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-green" id="submit5">确定</button>
+      </div>
+    </form>
+    </div>
+    </div>
+    </div>
+
+    <div class="modal fade" id="batchQueryModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+    <div class="modal-content">
+    <form class="form-horizontal" role="form" id="batchQueryForm" method="POST" action="{{ API_HYBRID_SAVE }}">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+        <h4 class="modal-title" id="myModalLabel">批量查询</h4>
+      </div>
+      <div class="modal-body">
+          <div class="form-group">
+            <label for="inputEmail3" class="col-sm-3 control-label">查询条件:</label>
+            <div class='col-sm-6'>
+                <select name="query_key" id="query_key" class="form-control" >
+                    <option name="query_assetid" value="assetid">资产号</option>
+                    <option name="query_sn" value="muti_sn">序列号</option>
+                    <option name="query_ip" value="ip">IP地址(服务器)</option>
+                    <option name="query_app" value="site_app">站点名/Pool名(已上架主机)</option>
+                </select>
+            </div>
+          </div>
+          <div class="form-group">
+              <div class='col-sm-10 col-sm-push-1'>
+                <textarea name="query_value" id="query_value" class="form-control" rows="5" placeholder="输入查询内容" aria-multiline="true"></textarea>
+            </div>
+          </div>
+      </div>
+      <div class="modal-footer">
+        <button type="reset" class="btn btn-default" data-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-green" id="submit3">确定</button>
+      </div>
+    </form>
+    </div>
+    </div>
+    </div>
+
+    <div id="toolbar">
+    <div class="form-inline" role="form">
+        <button id="create" data-toggle="modal" data-target="#addValue" class="btn btn-green">
+            <i class="glyphicon glyphicon-plus"></i>新增
+        </button>
+        <a id="import" href="{{ ROOT_URL }}asset/gettemplate/" target="_blank" class="btn btn-green">
+            <i class="glyphicon glyphicon-download-alt"></i>模板下载
+        </a>
+        <button id="import" data-toggle="modal" data-target="#importValue" class="btn btn-green">
+            <i class="glyphicon glyphicon-import"></i>导入
+        </button>
+        <button id="used" class="btn btn-green" disabled>
+            <i class="glyphicon glyphicon-circle-arrow-up"></i>交付
+        </button>
+        <button id="remove" class="btn btn-danger" disabled>
+            <i class="glyphicon glyphicon-remove"></i>删除
+        </button>
+
+    </div>
+    </div>
+
+</div>
+
+<script>
+var $table = $('#asset'),
+    $remove = $('#remove');
+$(document).ready(function() {
+    $("#new_status").val('');
+    $("#params_asset_type_id").val('');
+    $("#used,#remove").attr("disabled",true);
+    $("#asset_model_id").combobox({
+    });
+    $("#room_id").combobox({
+    });
+    $("#select_exp_time").val('');
+    $("#asset_model_id").change(function(){
+        $('#attributeForm').data('bootstrapValidator')
+                .updateStatus('asset_model_id', 'NOT_VALIDATED').validateField('asset_model_id');
+    });
+
+    $("#e_asset_model_id").combobox({
+    });
+    $("#rack_id").combobox({
+    });
+    $("#e_rack_id").combobox({
+    });
+    $(function () { $("[data-toggle='tooltip']").tooltip(); });
+
+    $('#select_exp_time').daterangepicker(null, function(start, end, label) {
+    });
+
+    function timestr2stamp(time_str){
+        var date = time_str.toString()+ ' 00:00:00';
+        date = new Date(Date.parse(date.replace(/-/g, "/"))).getTime();
+        var timestamp =  parseInt(date)/1000;
+        return timestamp;
+    }
+
+    $("#room_id").change(function() {
+        var room_id = $("#room_id option:selected").val();
+        if (room_id !="") {
+            window.open('{{ ROOT_URL }}asset/assetchart/' + room_id + '/real/0/' );
+            $("#room_id").val('');
+        }
+    });
+
+    function select_by_url(){
+        var api_url_base = '{{ CMDBAPI_URL }}asset/asset/?';
+        var params = ['format=json'];
+
+        var select_exp_time = $("#select_exp_time").val().trim();
+        var new_status = $("#new_status option:selected").val();
+        var params_asset_type_id = $("#params_asset_type_id option:selected").val();
+        var params_room_id = $("#params_room_id option:selected").val();
+
+        if(select_exp_time != ""){
+            select_exp_time = select_exp_time.trim();
+            var re1 = /^(\d{4})-(\d{1,2})-(\d{1,2})( )*\u81f3( )*(\d{4})-(\d{1,2})-(\d{1,2})$/;
+            var re2 = /^\u81f3( )*(\d+)-(\d{1,2})-(\d{1,2})$/;
+            var re3 = /^(\d+)-(\d{1,2})-(\d{1,2})( )*\u81f3$/;
+            if(re1.test(select_exp_time) == true || re2.test(select_exp_time) == true || re3.test(select_exp_time) == true){
+                var start_and_end = select_exp_time.split('至');
+                var start_exp_time = '';
+                var end_exp_time = '';
+                if(start_and_end[0]){
+                    start_exp_time = start_and_end[0].trim();
+                }
+                if(start_and_end[1]){
+                    end_exp_time = start_and_end[1].trim();
+                }
+                if(start_exp_time != ""){
+                    start_exp_time = timestr2stamp(start_exp_time);
+                    params.push('start_exp_time=' + start_exp_time);
+                }
+                if(end_exp_time != ""){
+                    end_exp_time = timestr2stamp(end_exp_time);
+                    params.push('end_exp_time=' + end_exp_time);
+                }
+            }else{
+                alert('请输入合法的时间段！');
+                return;
+            }
+        }
+        if (new_status !="") {
+            params.push('new_status='+new_status)
+        }
+        if (params_asset_type_id !="") {
+            params.push('asset_type=' + params_asset_type_id);
+        }
+        if (params_room_id !="") {
+            params.push('rack__room__id=' + params_room_id);
+        }
+
+        var api_url = api_url_base + params.join('&');
+        $('#asset').bootstrapTable('refresh', {
+            url: api_url
+        });
+    };
+
+    $('.select_api_url').change(function(){
+        select_by_url();
+    });
+
+    $('#select_time_url').click(function(){
+        select_by_url();
+    });
+
+    $("#rack_id").change(function() {
+        if($(this).val()) {
+            var rack_id = $(this).val();
+            $("#rack_sapce_id").find("option").remove();
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/rackspace/?rack_id='+ rack_id +'&page_size=500&format=json',
+                async:   false,
+                headers:{'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $.each(json.results, function(i, value) {
+                        if (value.assetid !="") {
+                            $('#rack_sapce_id').append($('<option>').text(value.unit_no).attr('value', value.id).attr('disabled', 'disabled'));
+                        } else {
+                            $('#rack_sapce_id').append($('<option>').text(value.unit_no).attr('value', value.id));
+                        }
+                    });
+                    $('.selectpicker').selectpicker('refresh');
+                }
+            });
+        }
+    });
+    $("#e_rack_id").change(function() {
+        if($(this).val()) {
+            var rack_id = $(this).val();
+            $("#e_rack_sapce_id").find("option").remove();
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/rackspace/?rack_id='+ rack_id +'&page_size=500&format=json',
+                async:   false,
+                headers:{'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $.each(json.results, function(i, value) {
+                        if (value.assetid !="") {
+                            if (value.assetid == $("#e_assetid").val()) {
+                                $('#e_rack_sapce_id').append($('<option>').text(value.unit_no).attr('value', value.id).attr('selected', 'selected'));
+                            }else{
+                                $('#e_rack_sapce_id').append($('<option>').text(value.unit_no).attr('value', value.id).attr('disabled', 'disabled'));
+                            }
+                        } else {
+                            $('#e_rack_sapce_id').append($('<option>').text(value.unit_no).attr('value', value.id));
+                        }
+
+                    });
+                    $('.selectpicker').selectpicker('refresh');
+                }
+            });
+        }
+    });
+    $('.form_datetime').datetimepicker({
+        format: 'yyyy-mm-dd',
+        autoclose: true,
+        showMeridian: true,
+        minView: 2
+    });
+    window.operateEvents = {
+        'click .edit': function (e, value, row, index) {
+            $("#e_assetid").val(row.assetid);
+            $("#e_id").val(row.id);
+            $("#e_sn").val(row.service_tag);
+            $("#e_expiration_time").val(moment.unix(row.expiration_time).format('YYYY-MM-DD'));
+            $("#e_comment").val(row.comment);
+            var count=$("#e_asset_model_id option").length;
+            for(var i=0;i<count;i++) {
+                if($("#e_asset_model_id ").get(0).options[i].text == row.asset_model_name) {
+                    $("#e_asset_model_id ").get(0).options[i].selected = true;
+                    break;
+                }
+            }
+            $("#e_asset_model_id").data('combobox').refresh();
+
+            var count1=$("#e_rack_id option").length;
+            var select_name = row.idc + '-' + row.rack_name
+            var not_selected = true;
+            for(var i=0;i<count1;i++) {
+                if($("#e_rack_id ").get(0).options[i].text == select_name) {
+                    $("#e_rack_id ").get(0).options[i].selected = true;
+                    not_selected = false;
+                    break;
+                }
+            }
+            if(not_selected) {
+                $("#e_rack_id").find("option").removeAttr("selected");
+                $("#e_rack_id ").append("<option value='0' selected='selected'>请输入机架</option>");
+            }
+            $("#e_rack_id").data('combobox').refresh();
+
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/rackspace/?rack_id='+ $("#e_rack_id option:selected").val() +'&page_size=500&format=json',
+                async:   false,
+                headers:{'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $("#e_rack_sapce_id").find("option").remove();
+                    $.each(json.results, function(i, value) {
+                        if (value.assetid !="") {
+                            if (value.assetid == $("#e_assetid").val()) {
+                                $('#e_rack_sapce_id').append($('<option>').text(value.unit_no).attr('value', value.id).attr('selected', 'selected'));
+                            }else{
+                                $('#e_rack_sapce_id').append($('<option>').text(value.unit_no).attr('value', value.id).attr('disabled', 'disabled'));
+                            }
+                        } else {
+                            $('#e_rack_sapce_id').append($('<option>').text(value.unit_no).attr('value', value.id));
+                        }
+                    });
+                    $('.selectpicker').selectpicker('refresh');
+                }
+            });
+
+            $('#editValue').modal('show');
+        },
+
+        'click .ip': function (e, value, row, index) {
+            $('#bindipValue').modal('show');
+        },
+
+        'click .asset_repair': function (e, value, row, index) {
+            if(row.new_status!=3) {
+                $('#assetRepair').modal('show');
+            }else{
+                alert("该状态无法报修，请检查。");
+            }
+        },
+
+        'click .install': function (e, value, row, index) {
+            if(row.asset_type == 1) {
+                if(row.new_status == 0) {
+                    $('#installModal').modal('show');
+                }else{
+                    alert('该设备已经初始化，请移至装机界面进行信息修改');
+                }
+
+            }else{
+                alert('只有服务器类型的设备才允许装机');
+            }
+
+        }
+    };
+
+    $('#asset').bootstrapTable({
+        url: '{{ CMDBAPI_URL }}asset/asset/?format=json',
+        ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+        columns: [
+            {
+                field: 'state',
+                checkbox: true
+            },
+            {
+                field: 'id',
+                visible: false
+            },
+            {
+                field: 'assetid',
+                title: '设备编号'
+            },
+            {
+                field: 'asset_type',
+                visible: false
+            },
+            {
+                field: 'asset_type_name',
+                title: '设备类型'
+            },
+            {
+                field: 'service_tag',
+                title: '序列号'
+            },
+            {
+                field: 'rack_name',
+                title: '机架'
+            },
+            {
+                field: 'rack_space',
+                title: '位置编号',
+                formatter: getposition,
+                visible: false
+            },
+            {
+                field: 'idc',
+                title: '机房',
+                align: 'center'
+            },
+            {
+                field: 'asset_model_name',
+                title: '型号'
+            },
+            {
+                field: 'ip_info',
+                title: 'IP地址',
+                formatter: getip
+            },
+            {
+                field: 'ip_info',
+                title: '管理IP地址',
+                formatter: getmgip
+            },
+            {
+                field: 'expiration_time',
+                title: '过保时间',
+                formatter: getExpire_date
+            },
+            {
+                field: 'status_name',
+                title: '交付？',
+                formatter: getStatus_name
+            },
+            {
+                field: 'comment',
+                title: '备注',
+                visible: false
+            },
+            {
+                field: 'operate',
+                title: '操作',
+                align: 'center',
+                formatter: operateFormatter,
+                events: operateEvents
+            }
+        ],
+        responseHandler: function(res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset/p.limit+1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [10,20,50,100,500],
+        clickToSelect: true,
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        showExport: true,
+        cache: false
+    });
+
+    function getStatus_name(value, row, index) {
+        if(value == '已申请' || value == '已交付') {
+            return '<a href="{{ ROOT_URL }}server/install/?search='+ row.service_tag +'" target="_blank">' + value + '</a>';
+        }else if(value == '已报修'){
+            return '<a href="{{ ROOT_URL }}asset/repair/?search='+ row.service_tag +'" target="_blank">' + value + '</a>';
+        }else{
+            return value;
+        }
+    }
+
+    function getExpire_date(value) {
+        return moment.unix(value).format('YYYY-MM-DD');
+    };
+
+    function getposition(value, row, index) {
+        var position = null;
+        $.each(value, function(i, item) {
+            position = item.unit_no;
+            return false;
+        });
+        return position;
+    };
+
+    function getip(value, row, index) {
+        var ip = null;
+        $.each(value, function(i, item) {
+            if(item.type == 3) {
+                ip = item.ip;
+                return false;
+            }
+        })
+        return ip;
+    };
+
+    function getmgip(value, row, index) {
+        var ip = null;
+        $.each(value, function(i, item) {
+            if(item.type == 2) {
+                ip = item.ip;
+                return false;
+            }
+        })
+        return ip;
+    };
+
+    function operateFormatter(value, row, index) {
+        return [
+            '<a href="#" class="edit" data-toggle="tooltip" title="修改设备信息">',
+            '<span class="glyphicon glyphicon-pencil"></span>',
+            '</a>&nbsp;',
+            '<a href="#" class="install" id="install" data-toggle="tooltip" title="装机初始化">',
+            '<span class="glyphicon glyphicon-tower"></span>',
+            '</a>&nbsp;',
+            '<a href="#" class="ip" id="ip_bind" data-toggle="tooltip" title="绑定/解绑IP">',
+            '<span class="glyphicon glyphicon-screenshot"></span>',
+            '</a>&nbsp;',
+            '<a href="#" class="asset_repair" id="asset_repair" data-toggle="tooltip" title="设备维修">',
+            '<span class="glyphicon glyphicon-wrench"></span>',
+            '</a>'
+
+        ].join('');
+
+    }
+
+
+
+    $table.on('check.bs.table uncheck.bs.table check-all.bs.table uncheck-all.bs.table', function () {
+        var selections = $("#asset").bootstrapTable('getSelections');
+        $("#used,#remove").attr("disabled",true);
+        if (selections.length) {
+            var status = -1;
+            var disable = false;
+            for (var i=0; i<selections.length; i++) {
+                if (status >= 0) {
+                    if((status != selections[i].new_status)) {
+                        disable = true;
+                        break;
+                    }else{
+                        disable = false;
+                    }
+                } else {
+                    status = selections[i].new_status;
+                }
+            }
+            if(!disable) {
+                switch (status) {
+                    case 0:
+                        $("#used,#remove").attr("disabled", false);
+                        break;
+                    case 1:
+                        $("#used,#remove").attr("disabled", false);
+                        break;
+                    case 2:
+                        $("#remove").attr("disabled", false);
+                        break;
+                    case 3:
+                        $("#used,#remove").attr("disabled", false);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+        }
+    }).on('click-row.bs.table', function (e, row, $element) {
+        var ip = null;
+        var mgip = null;
+        $.each(row.ip_info, function(i, item) {
+            if(item.type == 3) {
+                ip = item.ip;
+            }
+            if(item.type == 2) {
+                mgip = item.ip;
+            }
+        });
+        $('#show_ip').val(ip);
+        $('#show_mgip').val(mgip);
+        $("#ip_assetid").val(row.assetid);
+        $('#install_assetid').val(row.id);
+        $('#repair_asset_id').val(row.id);
+    });
+
+    $('#used').click(function () {
+        $.map($('#asset').bootstrapTable('getSelections'), function (row) {
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/asset/' + row.id + '/',
+                type: 'PATCH',
+                async:  false,
+                data: {
+                    'new_status': 2
+                },
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>更新设备状态' + json.assetid +'</div>');
+                    $('#asset').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#editValue').modal('hide');
+                    $('#attributeForm').bootstrapValidator('resetForm', true);
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>更新设备状态' + JSON.stringify(json.responseText) +'</div>');
+                    $('#editValue').modal('hide');
+                    $('#attributeForm').bootstrapValidator('resetForm', true);
+                }
+            });
+
+        });
+    });
+
+    $remove.click(function () {
+        var ids = $.map($table.bootstrapTable('getSelections'), function (row) {
+            var outputid = []
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/asset/' + row.id + '/?format=json',
+                type: 'DELETE',
+                async:   false,
+                headers:{'Authorization':'Token {{ API_TOKEN }}'},
+
+                success: function( json ) {
+                    $remove.prop('disabled', true);
+                    outputid.push(row.id);
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>删除设备</div>');
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>失败!</strong>原因：' + JSON.stringify(json.responseText) +'</div>');
+                }
+
+            });
+            return outputid;
+        });
+
+        $table.bootstrapTable('remove', {
+            field: 'id',
+            values: ids
+        });
+    });
+    $('#attributeForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                asset_type_id: {
+                    validators: {
+                        notEmpty: {
+                            message: '设备类型不能为空。'
+                        }
+                    }
+                },
+                sn: {
+                    validators: {
+                        notEmpty: {
+                            message: '序列号不能为空。'
+                        }
+                    }
+                },
+                asset_model_id: {
+                    validators: {
+                        notEmpty: {
+                            message: '设备型号不能为空。'
+                        }
+                    }
+                }
+            }
+            })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var rack_space_id = [];
+            $("#rack_sapce_id").each(function() {
+                if($(this).val() !=null){
+                    rack_space_id.push($(this).val());
+                }
+            });
+            var inputdata = {
+                'service_tag': $.trim($("input[name='sn']").val()),
+                'asset_type': $("#asset_type_id option:selected").val(),
+                'asset_model': $("#asset_model_id option:selected").val(),
+                'expiration_time': moment($("#expiration_time").val()).format('X')
+            };
+            if($("#rack_id option:selected").val() !="") {
+                inputdata['rack'] = $("#rack_id option:selected").val();
+            }
+            if(rack_space_id != "") {
+                inputdata['rack_space_id'] = rack_space_id.join(",");
+            }
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/asset/',
+                type: 'POST',
+                async:  false,
+                data: inputdata,
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>添加设备记录' + json.assetid +'</div>');
+                    $('#asset').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $("#rack_id").data('combobox').clearTarget();
+                    $("#rack_id").data('combobox').clearElement();
+
+                    if($("#asset_type_id option:selected").val() == '9'){
+                        $.ajax({
+                            url:'{{ CMDBAPI_URL }}asset/rack/?format=json&page_size=600',
+                            async:   false,
+                            headers:{'Authorization':'Token {{ API_TOKEN }}'},
+                            success: function( json ) {
+                                $("#rack_id").find("option").remove();
+                                $("#e_rack_id").find("option").remove();
+                                $.each(json.results, function(i, value) {
+                                    $('#rack_id').append('<option value="">请输入机架</option>');
+                                    $('#e_rack_id').append('<option value="">请输入机架</option>');
+                                    $('#rack_id').append($('<option>').text(value.room_name + '-' + value.name).attr('value', value.id));
+                                    $('#e_rack_id').append($('<option>').text(value.room_name + '-' + value.name).attr('value', value.id));
+                                });
+                                $("#rack_id").data('combobox').refresh();
+                                $("#e_rack_id").data('combobox').refresh();
+                            }
+                        });
+                    }
+                    $('#addValue').modal('hide');
+                    $('#attributeForm').bootstrapValidator('resetForm', true);
+                    $("#asset_model_id").data('combobox').clearTarget();
+                    $("#asset_model_id").data('combobox').clearElement();
+
+                    $("#rack_sapce_id").find("option").remove();
+
+                    $('.selectpicker').selectpicker('refresh');
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加设备记录' + JSON.stringify(json.responseText) +'</div>');
+                    $('#addValue').modal('hide');
+                }
+            });
+        });
+
+    $('#attributeForm1')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                e_sn: {
+                    validators: {
+                        notEmpty: {
+                            message: '序列号不能为空。'
+                        }
+                    }
+                }
+            }
+            })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var e_rack_space_id = [];
+            $("#e_rack_sapce_id").each(function() {
+                if($(this).val() !=null){
+                    e_rack_space_id.push($(this).val());
+                }
+            });
+            var rack_val = $("#e_rack_id option:selected").val();
+            if(rack_val == 0) {
+                rack_val = "";
+            }
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/asset/' + $("#e_id").val() + '/',
+                type: 'PATCH',
+                async:  false,
+                data: {
+                    'service_tag': $.trim($("input[name='e_sn']").val()),
+                    'asset_model': $("#e_asset_model_id option:selected").val(),
+                    'expiration_time': moment($("#e_expiration_time").val()).format('X'),
+                    'rack': rack_val,
+                    'rack_space_id': e_rack_space_id.join(","),
+                    'comment': $.trim($("input[name='e_comment']").val())
+                },
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>修改设备记录' + json.assetid +'</div>');
+                    $('#asset').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#editValue').modal('hide');
+                    $('#attributeForm1').bootstrapValidator('resetForm', true);
+                    $("#e_asset_model_id").data('combobox').refresh();
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>添加设备记录' + JSON.stringify(json.responseText) +'</div>');
+                    $('#editValue').modal('hide');
+                }
+            });
+        });
+
+
+    $('#attributeForm3')
+        .bootstrapValidator({})
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var ip_assetid = $('#ip_assetid').val()
+            var ip_asset_type_id = $('#ip_asset_type_id').val()
+            var mgip = $('#mgip').val()
+            var ip = $('#ip').val()
+            if (ip_assetid == "" || (mgip == "" && ip == "")) {
+                $('#bindipValue').modal('hide');
+                $('#attributeForm3').bootstrapValidator('resetForm', true);
+            }else{
+                $.ajax({
+                    url:'{{ CMDBAPI_URL }}ip/ip/bind/',
+                    type: 'POST',
+                    async:  false,
+                    data: {
+                        'assetid': ip_assetid,
+                        'asset_type_id': ip_asset_type_id,
+                        'mgip': mgip,
+                        'ip': ip
+                    },
+                    headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                    success: function( json ) {
+                        $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>操作' +'</div>');
+                        $('#asset').bootstrapTable('refresh', {
+                            silent: true
+                        });
+                        $('#bindipValue').modal('hide');
+                        $('#attributeForm3').bootstrapValidator('resetForm', true);
+                        $('#ip').val("");
+                        $('#mgip').val("");
+                    },
+                    error: function( json ) {
+                        $('#bindipValue').modal('hide');
+                        $('#attributeForm3').bootstrapValidator('resetForm', true);
+                        $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>日志详情' + JSON.stringify(json.responseText) +'</div>');
+
+                    }
+                });
+            }
+
+        });
+
+    $('#attributeForm4')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                install_type: {
+                    validators: {
+                        notEmpty: {
+                            message: '业务类型不能为空。'
+                        }
+                    }
+                },
+                server_os_template_id: {
+                    validators: {
+                        notEmpty: {
+                            message: '系统模板不能为空。'
+                        }
+                    }
+                },
+                server_app_template_id: {
+                    validators: {
+                        notEmpty: {
+                            message: '应用模板不能为空。'
+                        }
+                    }
+                },
+                server_env_id: {
+                    validators: {
+                        notEmpty: {
+                            message: '环境不能为空。'
+                        }
+                    }
+                }
+            }
+            })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}server/server/',
+                type: 'POST',
+                async:  false,
+                data: {
+                    'asset_id': $('#install_assetid').val(),
+                    'install_type': $('#install_type').val(),
+                    'server_os_template_id': $('#server_os_template_id').val(),
+                    'server_app_template_id': $('#server_app_template_id').val(),
+                    'server_env_id': $('#server_env_id').val()
+                },
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>操作</div>');
+                    $('#asset').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#installModal').modal('hide');
+                    $('#attributeForm4').bootstrapValidator('resetForm', true);
+
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>日志详情' + JSON.stringify(json.responseText) +'</div>');
+                    $('#installModal').modal('hide');
+                    $('#attributeForm4').bootstrapValidator('resetForm', true);
+                }
+            });
+
+        });
+
+    $('#attributeForm5')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                repair_type: {
+                    validators: {
+                        notEmpty: {
+                            message: '故障类型不能为空。'
+                        }
+                    }
+                },
+                reason: {
+                    validators: {
+                        notEmpty: {
+                            message: '故障描述不能为空。'
+                        }
+                    }
+                }
+            }
+            })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            $.ajax({
+                url:'{{ CMDBAPI_URL }}asset/repair/',
+                type: 'POST',
+                async:  false,
+                data: {
+                    'asset': $('#repair_asset_id').val(),
+                    'type': $('#repair_type option:selected').val(),
+                    'reson': $('#repair_reson').val(),
+                    'reson_user': '{{ USER.username }}'
+                },
+                headers:   {'Authorization':'Token {{ API_TOKEN }}'},
+                success: function( json ) {
+                    $('#alert').append('<div class="alert alert-success text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>成功</strong>操作</div>');
+                    $('#asset').bootstrapTable('refresh', {
+                        silent: true
+                    });
+                    $('#assetRepair').modal('hide');
+                    $('#attributeForm5').bootstrapValidator('resetForm', true);
+
+                },
+                error: function( json ) {
+                    $('#alert').append('<div class="alert alert-danger text-center" role="alert"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button><strong>错误!</strong>日志详情' + JSON.stringify(json.responseText) +'</div>');
+                    $('#assetRepair').modal('hide');
+                    $('#attributeForm5').bootstrapValidator('resetForm', true);
+                }
+            });
+
+        });
+
+    $('#batchQueryForm')
+        .bootstrapValidator({
+            excluded: ':disabled',
+            fields: {
+                query_key: {
+                    validators: {
+                        notEmpty: {
+                            message: '请选择查询条件'
+                        }
+                    }
+                },
+                query_value: {
+                    validators: {
+                        notEmpty: {
+                            message: '请输入查询内容'
+                        }
+                    }
+                }
+            }
+        })
+        .on('success.form.bv', function(e) {
+            e.preventDefault();
+            var string = $("#query_value").val().trim();
+            var batch_uri = '{{ CMDBAPI_URL }}asset/asset/?format=json&query_key='+$("#query_key option:selected").val()+'&query_value='+ string.split('\n') +'';
+            $('#asset').bootstrapTable('refresh', {
+                url: batch_uri,
+            });
+            $('#batchQueryForm').bootstrapValidator('resetForm', true);
+            $('#batchQueryModal').modal('hide');
+            $("#new_status").val('');
+            $("#params_asset_type_id").val('');
+            $("#params_room_id").val('');
+            $("#select_exp_time").val('');
+        });
+
+});
+</script>
+{% endblock %}

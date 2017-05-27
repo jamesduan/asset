@@ -1,0 +1,38 @@
+
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js" ></script>
+<script src="{{ STATIC_URL }}libs/jquery/spin.min.js" ></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+
+<style>
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+</style>
+
+<iframe id="redirect_iframe"  frameborder="0" align="middle" marginwidth="0" marginheight="0" src='{{ actual_url }}' onload="changeFrameHghWth()" height="100%" width="100%"></iframe>
+    <script>
+     function changeFrameHghWth(){
+         var ifm= document.getElementById("redirect_iframe");
+         ifm.height=document.documentElement.clientHeight-150;
+         ifm.width=document.documentElement.clientWidth-60;
+     }
+
+     window.onresize=function(){
+        changeFrameHghWth();
+     }
+
+    </script>
+
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet">
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+
+<style>
+    .inner-h1{
+        margin-bottom: 0px;
+    }
+    .table{
+        width: 100%;
+        table-layout: fixed;
+    }
+   .table tr:hover td{
+       overflow: visible;
+       white-space: normal;
+   }
+    .table td {
+        word-wrap: break-word;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .table th {
+        text-align: center;
+    }
+    .table > tbody > tr > td{
+        vertical-align: middle;
+        text-align: center;
+    }
+</style>
+
+<div id="alert">
+</div>
+
+<table id="source_table" data-toggle="table">
+    <thead>
+        <tr>
+            <th>Domain Name</th>
+            <th>Domain Leader</th>
+            <th>联系方式</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td >{{ SOURCE_DOMAIN.name }}</td>
+            <td>{{ SOURCE_DOMAIN.leader }}</td>
+            <td>{{ SOURCE_DOMAIN.tel }}</td>
+        </tr>
+    </tbody>
+</table>
+
+<script>
+var $table = $('#source_table');
+
+$(document).ready(function() {
+
+    $('#source_table').bootstrapTable();
+
+});
+
+</script>
+{% endblock %}

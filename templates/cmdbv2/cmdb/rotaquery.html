@@ -1,0 +1,257 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+<script src="{{ STATIC_URL }}libs/jquery/spin.min.js" ></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/moment.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-datetimepicker/bootstrap-datetimepicker.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.10.1/bootstrap-table.min.css" rel="stylesheet">
+<script src="{{ STATIC_URL }}libs/bootstrap-select-1.12.0/dist/js/bootstrap-select.min.js"></script>
+<link href="{{ STATIC_URL }}libs/bootstrap-select-1.12.0/dist/css/bootstrap-select.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/extensions/export/bootstrap-table-export.js"></script>
+<script src="{{ STATIC_URL }}libs/jquery/tableExport.js"></script>
+
+<div style="margin-top: 10px">
+    <div class="form-inline" role="form" id="toolbar" >
+    <input type="radio"  name="DutyRadios"  value="0"  >
+    <label for="activity" class="control-label">按值班活动查询：</label>
+
+    <select name="activity" id="activity" class="form-control" disabled>
+        <option value="">--请选择活动--</option>
+            {% for item in activities %}
+            <option value="{{ item.id }}">{{ item.name }}</option>
+            {% endfor %}
+    </select>
+    <input type="radio"  name="DutyRadios"  value="1"  checked >
+    <label for="rota_time" class="control-label">按值班日期查询:</label>
+    <input type="text" name="rota_time" id="rota_time"  class="form-control datepicker" placeholder="请选择日期" />
+    <button id="a" class="btn" style="border:0;background-color: transparent" >
+
+    <a  href="#"><u>今日值班信息</u></a>
+    </button>
+    </div>
+
+    <table id="rotatable" >
+    </table>
+</div>
+
+<script>
+$(document).ready(function() {
+
+    $('#activity').selectpicker({
+        'liveSearch': true,
+		'liveSearchPlaceholder': '搜索',
+        'width':'200px',
+	})
+
+    $('.datepicker').datetimepicker({
+        format: 'yyyy-mm-dd ',
+        autoclose: true,
+        minView: 2,
+    })
+
+    $('#activity').selectpicker('val','');
+
+    $('#rota_time').val(currentdate());
+    $("input[name='DutyRadios'][value='1']").prop("checked",true);
+     $('#rota_time').prop('disabled',false)
+     $('#activity').prop('disabled',true);
+     $('#activity').selectpicker("refresh");
+
+
+    $("input[name=DutyRadios]").change(function(){
+
+        if( $('input[name=DutyRadios]:checked').val()==0){
+        $('#rota_time').prop('disabled',true);
+        $('#a').prop('disabled',true);
+
+        $('#activity').prop('disabled',false);
+        $('#activity').selectpicker("refresh");
+        $('#rota_time').val('');
+        };
+        if( $('input[name=DutyRadios]:checked').val()==1){
+        $('#rota_time').prop('disabled',false);
+        $('#a').prop('disabled',false);
+        $('#activity').prop('disabled',true);
+
+        $('#activity').selectpicker("refresh");
+        $('#activity').selectpicker('val','');
+        };
+    });
+
+    $('#rota_time').change(function(){
+    $('#activity').selectpicker('val','');
+    var date = $("#rota_time").val().toString()+ ' 00:00:00';
+    date = new Date(Date.parse(date.replace(/-/g, "/"))).getTime();
+    var duty_date_0 =  parseInt(date)/1000;
+    var duty_date_24 = duty_date_0 + 24*60*60;
+    var duty_date_0_format = moment.unix(duty_date_0).format('YYYY-MM-DD HH:mm');
+    var duty_date_24_format = moment.unix(duty_date_24).format('YYYY-MM-DD HH:mm');
+    if($('#rota_time').val()){
+    var url = '{{ CMDBAPI_URL }}cmdb/rotaenter/?fotmat=json&duty_date_0=' + duty_date_0_format +'&duty_date_24=' + duty_date_24_format;
+    $('#rotatable').bootstrapTable('refresh' , {url: url,});
+    }
+    });
+    $('#activity').change(function(){
+    $('#rota_time').val('')
+    if ($('#activity').val()){
+    var url = '{{ CMDBAPI_URL }}cmdb/rotaenter/?fotmat=json&activity='+$('#activity').val();
+    $('#rotatable').bootstrapTable('refresh' , {url: url,});
+    }
+    });
+
+    $('#a').click(function(){
+        $('#activity').selectpicker('val','');
+        $('#rota_time').val(currentdate());
+        var date = $("#rota_time").val().toString()+ ' 00:00:00';
+        date = new Date(Date.parse(date.replace(/-/g, "/"))).getTime();
+        var duty_date_0 =  parseInt(date)/1000;
+        var duty_date_24 = duty_date_0 + 24*60*60;
+        var duty_date_0_format = moment.unix(duty_date_0).format('YYYY-MM-DD HH:mm');
+        var duty_date_24_format = moment.unix(duty_date_24).format('YYYY-MM-DD HH:mm');
+        if($('#rota_time').val()) {
+        var url = '{{ CMDBAPI_URL }}cmdb/rotaenter/?fotmat=json&duty_date_0=' + duty_date_0_format + '&duty_date_24=' + duty_date_24_format;
+        $('#rotatable').bootstrapTable('refresh', {url: url,});
+        }
+        })
+
+      function currentdate(){
+      var date = new Date();
+      var month = date.getMonth()+1;
+      var strdate = date.getDate();
+      if(month>=1&&month<=9){
+          month = "0" + month;
+      };
+      if(strdate>=1&&strdate<=9){
+          strdate = "0" + strdate;
+      };
+      var currentdate = date.getFullYear()+"-"+ month +"-"+ strdate ;
+      return currentdate
+    };
+
+    var time=currentdate();
+    var date = time.toString()+ ' 00:00:00';
+    date = new Date(Date.parse(date.replace(/-/g, "/"))).getTime();
+    var duty_date_0 =  parseInt(date)/1000;
+    var duty_date_24 = duty_date_0 + 24*60*60;
+    var duty_date_0_format = moment.unix(duty_date_0).format('YYYY-MM-DD HH:mm');
+    var duty_date_24_format = moment.unix(duty_date_24).format('YYYY-MM-DD HH:mm');
+
+    $('#rotatable').bootstrapTable({
+        url:  '{{ CMDBAPI_URL }}cmdb/rotaenter/?fotmat=json&duty_date_0=' + duty_date_0_format +'&duty_date_24=' + duty_date_24_format,
+        ajaxOptions: {'headers': {'Authorization': 'Token {{ API_TOKEN }}'}},
+        columns: [
+{#             {#}
+{#                field: 'id',#}
+{#                visible: false#}
+{#            },#}
+            {
+                field: 'activity_name',
+                title: '值班活动',
+                align: 'center'
+            },
+            {
+                field: 'duty_date_start',
+                title: '值班时间',
+                formatter: getExpire_date,
+                align: 'center'
+            },
+             {
+                field: 'department_2',
+                title: '二级部门',
+                align: 'center'
+            },
+            {
+                field: 'department_3',
+                title: '三级部门',
+                align: 'center'
+            },
+            {
+                field: 'duty_domain_name',
+                title: '值班Domain',
+                align: 'center'
+            },
+            {
+                field: 'duty_man',
+                title: '值班人员',
+                align: 'center',
+                formatter: getnameform
+            },
+            {
+                field: 'duty_way_name',
+                title: '值班方式',
+                align: 'center'
+            },
+            {
+                field: 'duty_backup',
+                title: 'Backup',
+                align: 'center',
+                formatter: getnameform
+            },
+            {
+                field: 'comment',
+                title: '备注',
+                align: 'center',
+            },
+
+        ],
+        responseHandler: function (res) {
+            var result = new Object();
+            result.rows = res.results;
+            result.total = res.count;
+            return result
+        },
+        queryParams: function (p) {
+            return {
+                page_size: p.limit,
+                page: p.offset / p.limit + 1,
+                search: p.search
+            };
+        },
+        pagination: true,
+        pageSize: 50,
+        pageList: [10, 50, 100],
+        sidePagination: 'server',
+        showRefresh: true,
+        search: true,
+        showColumns: true,
+        toolbar: "#toolbar",
+        cache: false,
+{#        sortName:'duty_date_start',#}
+{#        sortStatus:true#}
+        showExport:true,
+    });
+
+     function getExpire_date(value, row, index) {
+        var str = value.replace('T',' ');
+        var str_end = row.duty_date_end.replace('T',' ');
+        return str.substring(0,str.length-3)+' ~ '+str_end.substring(0,str.length-3);
+
+    };
+    function getnameform(value, row, index){
+        var str=[];
+        var strname=[];
+         $.each(value,function(key,val){
+{#            var display=val.display_name;#}
+{#            display=display.split('_');#}
+{#            display= display[display.length-1].split(')')#}
+{#            strname.push(display[0]);#}
+            strname.push(val.username_ch);
+             str.push(val.username_ch+':'+val.telephone);
+        });
+        str.join(',');
+        strname.join(',');
+        return '<a title="'+str+'" > '+strname+' </a>';
+
+    };
+
+    $('#rotatable').bootstrapTable('hideColumn', 'department_2');
+    $('#rotatable').bootstrapTable('hideColumn', 'department_3');
+
+{#    $('div.search>input[type="text"]').attr('placeholder', '值班活动、Domain、人员查询').width(200);#}
+    $('div.search:last>input[type="text"]').attr('placeholder', '值班活动、Domain、人员查询').width(200);
+    });
+</script>
+ {% endblock %}

@@ -1,0 +1,429 @@
+{% extends "common/bootstrap3.html" %}
+
+{% block content %}
+
+<link href="{{ STATIC_URL }}libs/bootstrap-combobox/css/bootstrap-combobox.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/css/bootstrapValidator.min.css" rel="stylesheet"/>
+<link href="{{ STATIC_URL }}libs/jsdifflib/diffview.css" rel="stylesheet"  />
+<script src="{{ STATIC_URL }}libs/bootstrap-combobox/js/bootstrap-combobox.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.6.0/locale/bootstrap-table-zh-CN.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrapvalidator-dist-0.5.1/dist/js/bootstrapValidator.min.js"></script>
+<script src="{{ STATIC_URL }}libs/jsdifflib/difflib.js"></script>
+<script src="{{ STATIC_URL }}libs/jsdifflib/diffview.js"></script>
+<script src="{{ STATIC_URL }}libs/jsdifflib/jsdiff.js"></script>
+
+<style>
+table.diff{
+    width:100%;
+}
+table.diff tbody th {
+    width:10px;
+}
+table.diff tbody td {
+    TABLE-LAYOUT:fixed;
+    WORD-BREAK:break-all;
+    width:48%
+}
+</style>
+
+<div class="page-header">
+  <h1>对比pool配置信息</h1>
+</div>
+
+<div id="alert">
+</div>
+
+<div class="modal fade" id="diff" tabindex="-1" role="dialog" aria-labelledby="diffTitle" aria-hidden="true">
+<div class="modal-dialog" style="width:1000px;">
+<div class="modal-content">
+
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal">
+        <span aria-hidden="true">&times;</span>
+        <span class="sr-only">Close</span>
+    </button>
+    <h4 class="modal-title" id="diffTitle"></h4>
+  </div>
+
+  <div class="modal-body">
+  <div id="diffoutput" style="clear:both;width:100%;">
+  </div>
+  </div>
+
+  <div class="modal-footer">
+    <button type="reset" class="btn btn-default" data-dismiss="modal">关闭</button>
+  </div>
+
+</div>
+</div>
+</div>
+
+<div>
+    <div class="col-sm-6">
+        <label for="s_group" class="col-sm-2 control-label">Group_IDC</label>
+        <div class="col-sm-10">
+            <select name="s_group" id="s_group" class="form-control">
+                <option value="">选择Group_IDC</option>
+                {% for item in groups %}
+                <option value="{{ item.id }}">{{ item.group_id }}_{{ item.idc.ycc_code }}</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="urlgroup" id="urlgroup">
+        </div>
+    </div>
+    <div class="col-sm-6">
+        <label for="s_env" class="col-sm-2 control-label">环境:</label>
+        <div class="col-sm-10">
+            <select name="s_env" id="s_env" class="form-control">
+                <option value="">选择环境</option>
+                {% for item in envs %}
+                <option value="{{ item.id }}">{{ item.name }}</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="urlenv" id="urlenv">
+        </div>
+    </div>
+</div>
+
+<div id="toolbar" style="margin:5px 0 10px 0">
+    <button id="cmp_btn" class="btn btn-primary">
+        <i class="glyphicon glyphicon-eye-open"></i>对比
+    </button>
+</div>
+
+<table id="configinfo">
+</table>
+
+<script>
+var isTableCreated = false;
+$(document).ready(function() {
+
+function showSuccess(info) {
+    $('#alert').empty().append('<div class="alert alert-success text-center" role="alert">' +
+                                    '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                                        '<span aria-hidden="true">&times;</span>' +
+                                    '</button>' +
+                                    '<strong>成功</strong>' + info +
+                                '</div>');
+}
+
+function showError(err) {
+    $('#alert').empty().append('<div class="alert alert-danger text-center" role="alert">' +
+                                    '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                                        '<span aria-hidden="true">&times;</span>' +
+                                    '</button>' +
+                                    '<strong>错误!</strong>' + err +
+                                '</div>');
+}
+
+function cmpproFormatter(value, row, index, env) {
+    var cmp = value;
+    var hrefarr = [];
+    var desc = '相同';
+    var colorStyle = '';
+    if (cmp == 0) {
+        desc = '相同';
+        colorStyle = 'color:gray';
+    } else if (cmp == 1) {
+        desc = '不同';
+        colorStyle = 'color:blue';
+    } else if (cmp == 2) {
+        desc = '新增';
+        colorStyle = 'color:green';
+    } else if (cmp == 3) {
+        desc = '删除';
+        colorStyle = 'color:red;';
+    }  else if (typeof(cmp) == "undefined") {
+        desc = '无';
+    } else {
+        desc = '未知';
+        colorStyle = 'color:red;';
+    }
+    var click = "viewcmp_" + env;
+    hrefarr.push(
+            '<a class="' + click + '">',
+                '<span class="glyphicon glyphicon-info-sign"' + ' style="cursor:pointer;' + colorStyle + '">' + desc + '</span>',
+            '</a>');
+    return hrefarr.join('');
+}
+function cmpproFormatter_trunk(value, row, index) {
+    return cmpproFormatter(value, row, index, 'trunk');
+}
+function cmpproFormatter_branch(value, row, index) {
+    return cmpproFormatter(value, row, index, 'branch');
+}
+function cmpproFormatter_branch2(value, row, index) {
+    return cmpproFormatter(value, row, index, 'branch2');
+}
+function cmpproFormatter_base(value, row, index) {
+    return cmpproFormatter(value, row, index, 'base');
+}
+function cmpproFormatter_dev(value, row, index) {
+    return cmpproFormatter(value, row, index, 'dev');
+}
+function cmpproFormatter_perf(value, row, index) {
+    return cmpproFormatter(value, row, index, 'perf');
+}
+function cmpproFormatter_staging(value, row, index) {
+    return cmpproFormatter(value, row, index, 'staging');
+}
+function cmpproFormatter_production(value, row, index) {
+    return cmpproFormatter(value, row, index, 'production');
+}
+
+function diffUsingJS(content1, content2, baseTextName) {
+    content1 = difflib.stringAsLines(content1);
+    content2 = difflib.stringAsLines(content2);
+    if (content1 == '')
+        content1 = [];
+    if (content2 == '')
+        content2 = [];
+    var sm = new difflib.SequenceMatcher(content1, content2);
+    var opcodes = sm.get_opcodes();
+    var diffoutputdiv = document.getElementById("diffoutput");
+    while (diffoutputdiv.firstChild)
+        diffoutputdiv.removeChild(diffoutputdiv.firstChild);
+    var contextSize = 1;
+    contextSize = contextSize ? contextSize : null;
+    diffoutputdiv.appendChild(diffview.buildView({ baseTextLines:content1,
+                                                   newTextLines:content2,
+                                                   opcodes:opcodes,
+                                                   baseTextName:baseTextName,
+                                                   newTextName:"current",
+                                                   contextSize:contextSize,
+                                                   viewType: 0}));
+    
+}
+
+function initDiffDlg(row, curenv, cmpenv, baseTextName) {
+    var dataid = row.data_id;
+    var diffTitle = '对比' + ':' + dataid;
+    $('#diffTitle').text(diffTitle);
+    var group = $('#urlgroup').val();
+    var inputdata = {
+        'group': group,
+        'data_id': dataid,
+        'cur_env': curenv,
+        'cmp_env':cmpenv
+    };
+    $.ajax({
+        url: '{{ CMDBAPI_URL }}ycc/diffcontent/?',
+        type: 'GET',
+        async: false,
+        data: inputdata,
+        headers: {'Authorization':'Token {{ API_TOKEN }}'},
+        success: function( json ) {
+            diffUsingJS(json.cmpcontent, json.curcontent, baseTextName);
+        },
+        error: function( json ) {
+            showError('查询配置文件内容' + JSON.stringify(json.responseText));
+        }
+    });
+}
+
+window.operateEvents = {
+    'click .viewcmp_trunk': function (e, value, row, index) {
+        if (value==0 || value==1 || value==2 || value==3) {
+            var curenv = $('#urlenv').val();
+            initDiffDlg(row, curenv, 1, 'trunk');
+            $('#diff').modal(); 
+        }
+    },
+    'click .viewcmp_branch': function (e, value, row, index) {
+        if (value==0 || value==1 || value==2 || value==3) {
+            var curenv = $('#urlenv').val();
+            initDiffDlg(row, curenv, 2, 'branch');
+            $('#diff').modal(); 
+        }
+    },
+    'click .viewcmp_branch2': function (e, value, row, index) {
+        if (value==0 || value==1 || value==2 || value==3) {
+            var curenv = $('#urlenv').val();
+            initDiffDlg(row, curenv, 3, 'branch2');
+            $('#diff').modal();
+        }
+    },
+    'click .viewcmp_base': function (e, value, row, index) {
+        if (value==0 || value==1 || value==2 || value==3) {
+            var curenv = $('#urlenv').val();
+            initDiffDlg(row, curenv, 4, 'base');
+            $('#diff').modal(); 
+        }
+    },
+    'click .viewcmp_dev': function (e, value, row, index) {
+        if (value==0 || value==1 || value==2 || value==3) {
+            var curenv = $('#urlenv').val();
+            initDiffDlg(row, curenv, 5, 'dev');
+            $('#diff').modal(); 
+        }
+    },
+    'click .viewcmp_perf': function (e, value, row, index) {
+        if (value==0 || value==1 || value==2 || value==3) {
+            var curenv = $('#urlenv').val();
+            initDiffDlg(row, curenv, 9, 'perf');
+            $('#diff').modal(); 
+        }
+    },
+    'click .viewcmp_staging': function (e, value, row, index) {
+        if (value==0 || value==1 || value==2 || value==3) {
+            var curenv = $('#urlenv').val();
+            initDiffDlg(row, curenv, 6, 'staging');
+            $('#diff').modal(); 
+        }
+    },
+    'click .viewcmp_production': function (e, value, row, index) {
+        if (value==0 || value==1 || value==2 || value==3) {
+            var curenv = $('#urlenv').val();
+            initDiffDlg(row, curenv, 7, 'production');
+            $('#diff').modal(); 
+        }
+    }
+};
+
+function listCmpConfigInfos() {
+    var group = $('#s_group').val();
+    var env = $('#s_env').val();
+    if (group == '' || env == '') {
+        showError('请先选择GROUP_IDC和环境。');
+    }
+    $('#urlgroup').val(group);
+    $('#urlenv').val(env);
+    var visibleArr =  [false, false, false, false, false, false, false, false, false, false, false, false,
+        false, false, false, false, false, false, false, false,];
+    $('#s_env option').each(function(i){
+        var value = this.value;
+        if (value!=null && value!='')
+            visibleArr[value] = true;
+    });
+    var params = ['format=json'];
+    params.push('group=' + '' + group);
+    params.push('env=' + '' + env);
+    var url = '{{ CMDBAPI_URL }}ycc/cmp/?' + params.join('&');
+    if (isTableCreated) {
+        $('#configinfo').bootstrapTable('refresh', {
+            silent: true,
+            url: url
+        });
+        return;
+    } else {
+        $('#configinfo').bootstrapTable({
+            url: url,
+            ajaxOptions: {'headers':{'Authorization':'Token {{ API_TOKEN }}'}},
+            columns: [
+                {
+                    field: 'data_id',
+                    visible: true,
+                    title: '配置文件',
+                    align: 'center'
+                },
+                {
+                    field: '1',
+                    visible: visibleArr[1],
+                    title: 'vs. trunk',
+                    align: 'center',
+                    formatter: cmpproFormatter_trunk,
+                    events: operateEvents
+                },
+                {
+                    field: '2',
+                    visible: visibleArr[2],
+                    title: 'vs. branch',
+                    align: 'center',
+                    formatter: cmpproFormatter_branch,
+                    events: operateEvents
+                },
+                {
+                    field: '3',
+                    visible: visibleArr[3],
+                    title: 'vs. branch2',
+                    align: 'center',
+                    formatter: cmpproFormatter_branch2,
+                    events: operateEvents
+                },
+                {
+                    field: '4',
+                    visible: visibleArr[4],
+                    title: 'vs. base',
+                    align: 'center',
+                    formatter: cmpproFormatter_base,
+                    events: operateEvents
+                },
+                {
+                    field: '5',
+                    visible: visibleArr[5],
+                    title: 'vs. dev',
+                    align: 'center',
+                    formatter: cmpproFormatter_dev,
+                    events: operateEvents
+                },
+                {
+                    field: '9',
+                    visible: visibleArr[9],
+                    title: 'vs. perf',
+                    align: 'center',
+                    formatter: cmpproFormatter_perf,
+                    events: operateEvents
+                },
+                {
+                    field: '6',
+                    visible: visibleArr[6],
+                    title: 'vs. staging',
+                    align: 'center',
+                    formatter: cmpproFormatter_staging,
+                    events: operateEvents
+                },
+                {
+                    field: '7',
+                    visible: visibleArr[7],
+                    title: 'vs. production',
+                    align: 'center',
+                    formatter: cmpproFormatter_production,
+                    events: operateEvents
+                },
+            ],
+            responseHandler: function (res) {
+                var result = {};
+                result.rows = res.results;
+                result.total = res.count;
+                return result
+            },
+            queryParams: function (p) {
+                return {
+                    page_size: p.limit,
+                    page: p.offset / p.limit + 1,
+                    search: p.search
+                };
+            },
+            pagination: true,
+            pageSize: 50,
+            pageList: [10, 20, 100],
+            sidePagination: 'server',
+            showRefresh: true,
+            search: false,
+            showColumns: true,
+            cache: false
+        });
+        isTableCreated = true;
+    }
+}
+
+function initBtn() {
+    $('#cmp_btn').bind('click', function() {
+        listCmpConfigInfos();
+    });
+}
+
+$("#s_group").combobox({
+});
+$("#s_env").combobox({
+});
+
+initBtn();
+
+});
+
+</script>
+
+{% endblock %}

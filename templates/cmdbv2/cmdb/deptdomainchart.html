@@ -1,0 +1,310 @@
+{% extends "common/common_menu_base.html" %}
+
+{% block content %}
+<link rel="stylesheet" type="text/css" href="{{ STATIC_URL }}libs/d3/css/styles.css"/>
+<link href="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.css" rel="stylesheet"/>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/bootstrap-table.min.js"></script>
+<script src="{{ STATIC_URL }}libs/bootstrap-table-v1.8.1/locale/bootstrap-table-zh-CN.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_URL }}libs/d3/js/d3.js"></script>
+<style type="text/css">
+    .node circle {
+        cursor: pointer;
+        fill: #fff;
+        stroke: steelblue;
+        stroke-width: 1.5px;
+    }
+
+    .node text {
+        font-size: 14px;
+        font-weight: bold;
+    }
+
+    path.link {
+        fill: none;
+        stroke: #ccc;
+        stroke-width: 2.0px;
+    }
+
+    body{
+        background-color: #fafafa;
+    }
+
+    .tooltip{
+        position: absolute;
+        width: 350px;
+        height: auto;
+        font-size: 14px;
+        text-align: left;
+        border-style: solid;
+        border-color: cornflowerblue;
+        border-width: 1px;
+        background-color: #ABC8F4;
+        border-radius: 5px;
+    }
+
+    .tooltip p{
+        font-size: 15px;
+        border-bottom-color: white;
+        border-bottom-style: solid;
+        border-bottom-width: 1px;
+        height: 30px;
+        vertical-align: middle;
+        background-color: #77A7FB;
+    }
+
+
+
+</style>
+
+<!-- <div class="inner-h1">技术平台部组织架构图</div> -->
+
+<div id="chart" style="background-color: #ffffff; border: #f4f4f4 solid"></div>
+<script type="text/javascript">
+var tree_height = {{ tree_height | safe}}
+$(document).ready(function() {
+    loadTree();
+});
+
+var chart = tree();
+
+function loadTree() {
+    nodes = {{ resultlist | safe }}
+    chart.nodes(nodes).render();
+}
+function tree() {
+    var _chart = {};
+    var _width = '100%', _height = tree_height * 30,
+            _margins = {top: 0, left: 250, right: 0, bottom: 0},
+            _svg,
+            _nodes,
+            _i = 0,
+            _tree,
+            _diagonal,
+            _bodyG;
+
+    _chart.render = function () {
+        if (!_svg) {
+            _svg = d3.select("#chart").append("svg")
+                    .attr("height", _height)
+                    .attr("width", _width);
+        }
+
+        renderBody(_svg);
+    };
+
+    function renderBody(svg) {
+        if (!_bodyG) {
+            _bodyG = svg.append("g")
+				.attr("class", "body")
+				.attr("transform", function (d) {
+					return "translate(" + _margins.left 
+						+ "," + _margins.top + ")";
+				});
+        }
+
+        _tree = d3.layout.tree()
+                .size([
+					(_height - _margins.top - _margins.bottom), 
+					(_width - _margins.left - _margins.right)
+				]);
+
+        _diagonal = d3.svg.diagonal()
+                .projection(function (d) {
+                    return [d.y, d.x];
+                });
+
+        _nodes.x0 = (_height - _margins.top - _margins.bottom) / 2;
+        _nodes.y0 = 0;
+
+        render(_nodes);
+    }
+
+    function render(source) {
+        var nodes = _tree.nodes(_nodes).reverse();
+
+        renderNodes(nodes, source);
+
+        renderLinks(nodes, source);
+    }
+
+    function renderNodes(nodes, source) {
+        nodes.forEach(function (d) {
+            d.y = d.depth * 200;
+        });
+
+        var node = _bodyG.selectAll("g.node")
+                .data(nodes, function (d) {
+                    return d.id || (d.id = ++_i);
+                });
+        var nodeEnter = node.enter().append("svg:g")
+                .attr("class", "node")
+                .attr("transform", function (d) {
+                    return "translate(" + source.y0 
+						+ "," + source.x0 + ")";
+                })
+                .on("click", function (d) {
+                    toggle(d);
+                    render(d);
+                });
+        nodeEnter.append("svg:circle")
+                .attr("r", 1e-6)
+                .style("fill", function (d) {
+                    return d._children ? "steelblue" : "#fff";
+                });
+
+        var nodeUpdate = node.transition()
+                .attr("transform", function (d) {
+                    return "translate(" + d.y + "," + d.x + ")";
+                });
+
+        nodeUpdate.select("circle")
+                .attr("r", 5.0)
+                .style("fill", function (d) {
+                    return d._children ? "lightsteelblue" : "#fff";
+                });
+
+        var nodeExit = node.exit().transition()
+                .attr("transform", function (d) {
+                    return "translate(" + source.y 
+						+ "," + source.x + ")";
+                })
+                .remove();
+
+        nodeExit.select("circle")
+                .attr("r", 1e-6);
+
+        renderLabels(nodeEnter, nodeUpdate, nodeExit);
+
+        nodes.forEach(function (d) {
+            d.x0 = d.x;
+            d.y0 = d.y;
+        });
+    }
+
+    function renderLabels(nodeEnter, nodeUpdate, nodeExit) {
+        var tooltip = d3.select("body")
+                .append("div")
+                .attr("class","tooltip")
+                .style("opacity",0.0);
+        var text = nodeEnter.append("svg:text")
+            .attr("x", function (d) {
+                return d.children || d._children ? -15 : 15;
+            })
+            .attr("dy", ".50em")
+            .attr("font-size", '48px')
+            .attr("text-anchor", function (d) {
+                return d.children || d._children ? "end" : "start";
+            })
+            .text(function (d) {
+                return d.name;
+            })
+            .style("fill", function(d){
+                if(d.type == 'domain'){
+                    return '#385B9F';
+                }else{
+                    return '#000000';
+                }
+            })
+            .style("fill-opacity", 1e-6)
+            .on("mouseover", function (d) {
+                title = d.name;
+                if(d.type == 'domain'){
+                    title = d.name + ' (Domain)';
+                }
+                if(d.type == 'dept'){
+                    title = d.name + ' (' + (d.depth) +'级部门）';
+                }
+                var leader = leadermail = ''
+                if(d.leader != null && d.leader != undefined && d.leader != ''){
+                    leader = d.leader;
+                }else{
+                    leader = ''
+                }
+                if(d.mailgroup != null && d.mailgroup != undefined && d.mailgroup != ''){
+                    mailgroup = d.mailgroup
+                }else{
+                    mailgroup = ''
+                }
+                tooltip.html('<p><strong>&nbsp;' + title +'</strong></p><table border="0" cellspacing="10">' +
+                        '<tbody><tr><th>负责人:</th><td>' + leader + '</td></tr>' +
+                        '<tr><th>邮件组:</th><td>' + mailgroup + '</td></toby></table>')
+                    .style("left", (d3.event.pageX) + "px")
+                    .style("top", (d3.event.pageY + 20) + "px")
+                    .style("opacity",1.0);
+            });
+        nodeUpdate.select("text")
+                .style("fill-opacity", 1);
+
+        nodeExit.select("text")
+                .style("fill-opacity", 1e-6);
+    }
+
+    function renderLinks(nodes, source) {
+        var link = _bodyG.selectAll("path.link")
+                .data(_tree.links(nodes), function (d) {
+                    return d.target.id;
+                });
+
+        link.enter().insert("svg:path", "g")
+                .attr("class", "link")
+                .attr("d", function (d) {
+                    var o = {x: source.x0, y: source.y0};
+                    return _diagonal({source: o, target: o});
+                });
+
+        link.transition()
+                .attr("d", _diagonal);
+
+        link.exit().transition()
+                .attr("d", function (d) {
+                    var o = {x: source.x, y: source.y};
+                    return _diagonal({source: o, target: o});
+                })
+                .remove();
+    }
+
+    function toggle(d) {
+        if (d.children) {
+            d._children = d.children;
+            d.children = null;
+        } else {
+            d.children = d._children;
+            d._children = null;
+        }
+    }
+
+    function toggleAll(d) {
+        if (d.children) {
+            d.children.forEach(toggleAll);
+            toggle(d);
+        }
+    }
+
+    _chart.width = function (w) {
+        if (!arguments.length) return _width;
+        _width = w;
+        return _chart;
+    };
+
+    _chart.height = function (h) {
+        if (!arguments.length) return _height;
+        _height = h;
+        return _chart;
+    };
+
+    _chart.margins = function (m) {
+        if (!arguments.length) return _margins;
+        _margins = m;
+        return _chart;
+    };
+
+    _chart.nodes = function (n) {
+        if (!arguments.length) return _nodes;
+        _nodes = n;
+        return _chart;
+    };
+
+    return _chart;
+}
+</script>
+{% endblock %}
